@@ -8,6 +8,22 @@
     }
   },
   {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/nodes",
+      "component": { "$codeRef": "NodesPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/nodes-dashboard",
+      "component": { "$codeRef": "NodesDashboard" }
+    }
+  },
+  {
     "type": "console.navigation/href",
     "properties": {
       "id": "example",
@@ -15,6 +31,26 @@
       "href": "/example",
       "perspective": "admin",
       "section": "home"
+    }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
+      "id": "nodes",
+      "name": "%plugin__console-plugin-template~Nodes Dashboard%",
+      "href": "/nodes",
+      "perspective": "admin",
+      "section": "compute"
+    }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
+      "id": "nodes-overview",
+      "name": "%plugin__console-plugin-template~Node Overview%",
+      "href": "/nodes-dashboard",
+      "perspective": "admin",
+      "section": "compute"
     }
   }
 ]
