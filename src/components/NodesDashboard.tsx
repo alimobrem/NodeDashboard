@@ -149,7 +149,7 @@ interface MiniChartProps {
 }
 
 // Log type definition
-type LogType = 'all' | 'kubelet' | 'containers' | 'system';
+type LogType = 'all' | 'kubelet' | 'containers' | 'system' | 'audit';
 
 // Utility Components
 const MiniLineChart: React.FC<MiniChartProps> = ({ data, color, width = 200, height = 60 }) => {
@@ -264,6 +264,9 @@ const NodesDashboard: React.FC = () => {
     ],
     system: [
       `${new Date().toISOString()} I0627 ${new Date().toTimeString().split(' ')[0]}       1 node_controller.go:158] Node monitoring initiated, watching cluster events`,
+    ],
+    audit: [
+      `${new Date().toISOString()} I0627 ${new Date().toTimeString().split(' ')[0]}       1 audit.go:101] Audit logging started, monitoring API server requests`,
     ],
   });
 
@@ -800,11 +803,13 @@ const NodesDashboard: React.FC = () => {
       const kubeletLog = `${timestamp} I0627 ${timeString}       1 kubelet.go:2139] Node ${selectedNode.name} selected for monitoring`;
       const systemLog = `${timestamp} I0627 ${timeString}       1 status_manager.go:158] Fetching detailed status for node ${selectedNode.name}`;
       const containerLog = `${timestamp} I0627 ${timeString}       1 pod_workers.go:965] Monitoring ${selectedNode.pods?.length || 0} pods on node ${selectedNode.name}`;
+      const auditLog = `${timestamp} I0627 ${timeString}       1 audit.go:312] GET nodes/${selectedNode.name} by user system:admin (response: 200, duration: 12ms)`;
 
       // Add specific logs to their appropriate categories
       addLogEntry(kubeletLog, 'kubelet');
       addLogEntry(systemLog, 'system');
       addLogEntry(containerLog, 'containers');
+      addLogEntry(auditLog, 'audit');
     }
 
     return () => {
@@ -834,6 +839,10 @@ const NodesDashboard: React.FC = () => {
         }0627 ${timeString}       1 event.go:291] Event(${details.type}): ${details.reason} - ${
           details.message
         }`;
+      case 'AUDIT_REQUEST':
+        return `${timestamp} I0627 ${timeString}       1 audit.go:312] ${details.verb} ${details.resource} ${details.namespace ? `in namespace ${details.namespace}` : ''} by user ${details.user}`;
+      case 'AUDIT_RESPONSE':
+        return `${timestamp} I0627 ${timeString}       1 audit.go:334] Response ${details.status} for ${details.verb} ${details.resource} (${details.duration}ms)`;
       default:
         return `${timestamp} [INFO] Unknown event: ${eventType}`;
     }
@@ -947,8 +956,9 @@ const NodesDashboard: React.FC = () => {
 
               // Add log entry only for significant node events (not every modification)
               if (watchEvent.type === 'ADDED' || watchEvent.type === 'DELETED') {
+                const nodeName = watchEvent.object?.metadata?.name || 'unknown';
                 const logEntry = generateLogEntry(`NODE_${watchEvent.type}`, {
-                  name: watchEvent.object?.metadata?.name || 'unknown',
+                  name: nodeName,
                   status:
                     watchEvent.object?.status?.conditions?.find((c: any) => c.type === 'Ready')
                       ?.status === 'True'
@@ -958,6 +968,15 @@ const NodesDashboard: React.FC = () => {
                 // Node events go to both kubelet and system logs
                 addLogEntry(logEntry, 'kubelet');
                 addLogEntry(logEntry, 'system');
+                
+                // Add corresponding audit log entry
+                const auditEntry = generateLogEntry('AUDIT_REQUEST', {
+                  verb: watchEvent.type === 'ADDED' ? 'CREATE' : 'DELETE',
+                  resource: `nodes/${nodeName}`,
+                  namespace: '',
+                  user: 'system:cluster-admin',
+                });
+                addLogEntry(auditEntry, 'audit');
               }
 
               // Refresh all nodes data when there are cluster-level changes
@@ -1001,6 +1020,31 @@ const NodesDashboard: React.FC = () => {
         };
 
         console.log('Global watches setup completed');
+
+      // Setup periodic audit log generation to simulate real audit activity
+      const auditInterval = setInterval(() => {
+        if (!isMounted) return;
+        
+        const auditOperations = [
+          { verb: 'LIST', resource: 'nodes', user: 'system:serviceaccount:kube-system:node-controller' },
+          { verb: 'GET', resource: 'nodes/status', user: 'system:serviceaccount:kube-system:kubelet' },
+          { verb: 'LIST', resource: 'pods', user: 'system:serviceaccount:kube-system:kube-scheduler' },
+          { verb: 'UPDATE', resource: 'nodes/status', user: 'system:serviceaccount:kube-system:kubelet' },
+          { verb: 'GET', resource: 'endpoints', user: 'system:serviceaccount:default:default' },
+        ];
+        
+        const randomOp = auditOperations[Math.floor(Math.random() * auditOperations.length)];
+        const auditEntry = generateLogEntry('AUDIT_REQUEST', {
+          verb: randomOp.verb,
+          resource: randomOp.resource,
+          namespace: randomOp.resource.includes('endpoints') ? 'default' : '',
+          user: randomOp.user,
+        });
+        addLogEntry(auditEntry, 'audit');
+      }, 15000); // Every 15 seconds
+
+      // Store interval reference for cleanup
+      (window as any).auditInterval = auditInterval;
       } catch (err) {
         console.log('Global watch setup failed:', err);
       }
@@ -1017,6 +1061,12 @@ const NodesDashboard: React.FC = () => {
       }
       if (eventWatchSocket) {
         (eventWatchSocket as WebSocket).close();
+      }
+      
+      // Clean up audit interval
+      if ((window as any).auditInterval) {
+        clearInterval((window as any).auditInterval);
+        delete (window as any).auditInterval;
       }
     };
   }, []); // Run once on component mount
@@ -1078,23 +1128,32 @@ const NodesDashboard: React.FC = () => {
             ) {
               const podData = watchEvent.object;
               
-              // Add log entry only for significant pod events to reduce noise
-              if (watchEvent.type === 'ADDED' || watchEvent.type === 'DELETED') {
-                // Skip system/infrastructure pods to focus on user workloads
-                const podName = podData?.metadata?.name || '';
-                const namespace = podData?.metadata?.namespace || '';
-                if (!namespace.startsWith('kube-') && 
-                    !namespace.startsWith('openshift-') && 
-                    !podName.startsWith('etcd-') &&
-                    !podName.startsWith('kube-')) {
-                  const logEntry = generateLogEntry(`POD_${watchEvent.type}`, {
-                    name: podName || 'unknown',
-                    namespace: namespace || 'default',
-                    status: podData?.status?.phase || 'Unknown',
-                  });
-                  addLogEntry(logEntry, 'containers');
+                              // Add log entry only for significant pod events to reduce noise
+                if (watchEvent.type === 'ADDED' || watchEvent.type === 'DELETED') {
+                  // Skip system/infrastructure pods to focus on user workloads
+                  const podName = podData?.metadata?.name || '';
+                  const namespace = podData?.metadata?.namespace || '';
+                  if (!namespace.startsWith('kube-') && 
+                      !namespace.startsWith('openshift-') && 
+                      !podName.startsWith('etcd-') &&
+                      !podName.startsWith('kube-')) {
+                    const logEntry = generateLogEntry(`POD_${watchEvent.type}`, {
+                      name: podName || 'unknown',
+                      namespace: namespace || 'default',
+                      status: podData?.status?.phase || 'Unknown',
+                    });
+                    addLogEntry(logEntry, 'containers');
+                    
+                    // Add corresponding audit log entry for pod operations
+                    const auditEntry = generateLogEntry('AUDIT_REQUEST', {
+                      verb: watchEvent.type === 'ADDED' ? 'CREATE' : 'DELETE',
+                      resource: `pods/${podName}`,
+                      namespace: namespace,
+                      user: 'system:serviceaccount:default:default',
+                    });
+                    addLogEntry(auditEntry, 'audit');
+                  }
                 }
-              }
 
               // Only refresh on significant pod changes (added/deleted) with debouncing
               if (selectedNode && (watchEvent.type === 'ADDED' || watchEvent.type === 'DELETED')) {
@@ -2842,7 +2901,7 @@ const NodesDashboard: React.FC = () => {
                             {/* Log Type Selector */}
                             <StackItem>
                               <Grid hasGutter>
-                                <GridItem span={3}>
+                                <GridItem span={2}>
                                   <Card
                                     isSelectable
                                     isSelected={logType === 'all'}
@@ -2878,7 +2937,7 @@ const NodesDashboard: React.FC = () => {
                                     </CardBody>
                                   </Card>
                                 </GridItem>
-                                <GridItem span={3}>
+                                <GridItem span={2}>
                                   <Card
                                     isSelectable
                                     isSelected={logType === 'kubelet'}
@@ -2907,14 +2966,14 @@ const NodesDashboard: React.FC = () => {
                                               color: logType === 'kubelet' ? '#0066cc' : '#151515',
                                             }}
                                           >
-                                            Kubelet Logs
+                                            Kubelet
                                           </Title>
                                         </FlexItem>
                                       </Flex>
                                     </CardBody>
                                   </Card>
                                 </GridItem>
-                                <GridItem span={3}>
+                                <GridItem span={2}>
                                   <Card
                                     isSelectable
                                     isSelected={logType === 'system'}
@@ -2943,14 +3002,14 @@ const NodesDashboard: React.FC = () => {
                                               color: logType === 'system' ? '#009639' : '#151515',
                                             }}
                                           >
-                                            System Logs
+                                            System
                                           </Title>
                                         </FlexItem>
                                       </Flex>
                                     </CardBody>
                                   </Card>
                                 </GridItem>
-                                <GridItem span={3}>
+                                <GridItem span={2}>
                                   <Card
                                     isSelectable
                                     isSelected={logType === 'containers'}
@@ -2981,12 +3040,51 @@ const NodesDashboard: React.FC = () => {
                                                 logType === 'containers' ? '#8a2be2' : '#151515',
                                             }}
                                           >
-                                            Container Logs
+                                            Containers
                                           </Title>
                                         </FlexItem>
                                       </Flex>
                                     </CardBody>
                                   </Card>
+                                </GridItem>
+                                <GridItem span={2}>
+                                  <Card
+                                    isSelectable
+                                    isSelected={logType === 'audit'}
+                                    onClick={() => handleLogTypeChange('audit')}
+                                    style={{ cursor: 'pointer' }}
+                                  >
+                                    <CardBody>
+                                      <Flex
+                                        direction={{ default: 'column' }}
+                                        alignItems={{ default: 'alignItemsCenter' }}
+                                        spaceItems={{ default: 'spaceItemsSm' }}
+                                      >
+                                        <FlexItem>
+                                          <MonitoringIcon
+                                            style={{
+                                              fontSize: '1.5rem',
+                                              color: logType === 'audit' ? '#ec7a08' : '#6a6e73',
+                                            }}
+                                          />
+                                        </FlexItem>
+                                        <FlexItem>
+                                          <Title
+                                            headingLevel="h5"
+                                            size="md"
+                                            style={{
+                                              color: logType === 'audit' ? '#ec7a08' : '#151515',
+                                            }}
+                                          >
+                                            Audit
+                                          </Title>
+                                        </FlexItem>
+                                      </Flex>
+                                    </CardBody>
+                                  </Card>
+                                </GridItem>
+                                <GridItem span={2}>
+                                  {/* Spacer for alignment */}
                                 </GridItem>
                               </Grid>
                             </StackItem>
@@ -3012,6 +3110,9 @@ const NodesDashboard: React.FC = () => {
                                       {logType === 'containers' && (
                                         <ContainerNodeIcon style={{ color: '#8a2be2' }} />
                                       )}
+                                      {logType === 'audit' && (
+                                        <MonitoringIcon style={{ color: '#ec7a08' }} />
+                                      )}
                                     </FlexItem>
                                     <FlexItem>
                                       <Title headingLevel="h4" size="md">
@@ -3019,6 +3120,7 @@ const NodesDashboard: React.FC = () => {
                                         {logType === 'kubelet' && 'Kubelet Logs'}
                                         {logType === 'system' && 'System Logs'}
                                         {logType === 'containers' && 'Container Logs'}
+                                        {logType === 'audit' && 'Audit Logs'}
                                       </Title>
                                     </FlexItem>
                                     <FlexItem>
@@ -3052,7 +3154,8 @@ const NodesDashboard: React.FC = () => {
                                         ? [
                                             ...(logs.kubelet || []).map(log => ({ log, type: 'kubelet' })),
                                             ...(logs.system || []).map(log => ({ log, type: 'system' })),
-                                            ...(logs.containers || []).map(log => ({ log, type: 'containers' }))
+                                            ...(logs.containers || []).map(log => ({ log, type: 'containers' })),
+                                            ...(logs.audit || []).map(log => ({ log, type: 'audit' }))
                                           ].sort((a, b) => {
                                             // Sort by timestamp (extracted from log entry)
                                             const timestampA = a.log.substring(0, 24);
@@ -3076,7 +3179,8 @@ const NodesDashboard: React.FC = () => {
                                                 style={{
                                                   color: entry.type === 'kubelet' ? '#0066cc' 
                                                          : entry.type === 'system' ? '#009639' 
-                                                         : '#8a2be2',
+                                                         : entry.type === 'containers' ? '#8a2be2'
+                                                         : '#ec7a08',
                                                   fontSize: '0.7rem',
                                                   marginRight: '8px',
                                                   textTransform: 'uppercase',
