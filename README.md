@@ -30,12 +30,30 @@ A comprehensive OpenShift Console dynamic plugin for monitoring and managing clu
 
 ## Screenshots
 
-The plugin adds a "Nodes Dashboard" section to your OpenShift Console navigation, providing:
+### Console Navigation
+The plugin adds a "Nodes Dashboard" section to your OpenShift Console navigation:
 
-1. **Overview Tab**: Cluster-wide statistics and resource utilization
-2. **Node Selection**: Click any node to view detailed information
-3. **Live Logs**: Stream real-time logs from selected nodes
-4. **Alert Monitoring**: View node-specific health alerts and issues
+![Console Navigation](docs/screenshots/console-navigation.png)
+
+### Nodes Dashboard Overview
+Main dashboard showing cluster-wide node statistics and resource utilization:
+
+![Nodes Dashboard Overview](docs/screenshots/nodes-dashboard-overview.png)
+
+### Individual Node Details
+Detailed view of a selected node with tabbed interface:
+
+![Node Details Overview](docs/screenshots/node-details-overview.png)
+
+### Live Log Streaming
+Real-time log viewer with auto-refresh capabilities:
+
+![Node Logs](docs/screenshots/node-logs.png)
+
+### Alert Monitoring
+Node-specific health alerts and status monitoring:
+
+![Node Alerts](docs/screenshots/node-alerts.png)
 
 ## Getting Started
 

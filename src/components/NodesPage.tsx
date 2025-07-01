@@ -68,58 +68,7 @@ const NodesPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
 
-  const getMockData = (): Node[] => {
-    return [
-      {
-        name: 'master-0',
-        status: 'Ready',
-        role: 'Master',
-        version: 'v1.27.6+f67aeb3',
-        cpuUsage: 45,
-        memoryUsage: 62,
-        podCount: 28,
-        cpuCapacity: '8',
-        memoryCapacity: '32Gi',
-        age: '127d',
-        pods: [
-          { name: 'etcd-master-0', namespace: 'kube-system', status: 'Running', restarts: 0, age: '127d' },
-          { name: 'kube-apiserver-master-0', namespace: 'kube-system', status: 'Running', restarts: 0, age: '127d' },
-          { name: 'kube-controller-manager-master-0', namespace: 'kube-system', status: 'Running', restarts: 0, age: '127d' },
-        ]
-      },
-      {
-        name: 'worker-1',
-        status: 'Ready',
-        role: 'Worker',
-        version: 'v1.27.6+f67aeb3',
-        cpuUsage: 72,
-        memoryUsage: 58,
-        podCount: 15,
-        cpuCapacity: '4',
-        memoryCapacity: '16Gi',
-        age: '125d',
-        pods: [
-          { name: 'pod-1', namespace: 'default', status: 'Running', restarts: 0, age: '10d' },
-          { name: 'pod-2', namespace: 'default', status: 'Pending', restarts: 1, age: '5d' },
-        ]
-      },
-      {
-        name: 'worker-2',
-        status: 'NotReady',
-        role: 'Worker',
-        version: 'v1.27.6+f67aeb3',
-        cpuUsage: 25,
-        memoryUsage: 34,
-        podCount: 8,
-        cpuCapacity: '4',
-        memoryCapacity: '16Gi',
-        age: '123d',
-        pods: [
-          { name: 'pod-3', namespace: 'default', status: 'Failed', restarts: 5, age: '2d' },
-        ]
-      }
-    ];
-  };
+
 
   const fetchData = async () => {
     try {
@@ -154,9 +103,9 @@ const NodesPage: React.FC = () => {
         throw new Error('Failed to fetch nodes');
       }
     } catch (err) {
-      console.warn('Failed to fetch real data, using mock data:', err);
-      setNodes(getMockData());
-      setError('Using mock data - cluster connection unavailable');
+      console.error('Failed to fetch node data:', err);
+      setNodes([]);
+      setError('Unable to fetch cluster node data - please check your cluster connection');
     } finally {
       setLoading(false);
     }

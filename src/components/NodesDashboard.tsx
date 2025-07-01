@@ -258,134 +258,12 @@ const NodesDashboard: React.FC = () => {
   const [logs, setLogs] = useState<string[]>([]);
 
 
-  const generateMockMetrics = (): NodeMetrics => {
-    const history = Array.from({ length: 24 }, (_, i) => ({
-      timestamp: Date.now() - (23 - i) * 60 * 60 * 1000,
-      value: Math.random() * 80 + 10
-    }));
-    
-    return {
-      cpu: {
-        current: Math.random() * 80 + 10,
-        history
-      },
-      memory: {
-        current: Math.random() * 85 + 10,
-        history: history.map(h => ({ ...h, value: Math.random() * 85 + 10 }))
-      }
-    };
-  };
 
-  const generateMockConditions = (): NodeCondition[] => [
-    {
-      type: 'Ready',
-      status: 'True',
-      lastTransitionTime: new Date(Date.now() - 60000).toISOString(),
-      reason: 'KubeletReady',
-      message: 'kubelet is posting ready status'
-    },
-    {
-      type: 'MemoryPressure',
-      status: 'False',
-      lastTransitionTime: new Date(Date.now() - 120000).toISOString(),
-      reason: 'KubeletHasSufficientMemory',
-      message: 'kubelet has sufficient memory available'
-    },
-    {
-      type: 'DiskPressure',
-      status: 'False',
-      lastTransitionTime: new Date(Date.now() - 180000).toISOString(),
-      reason: 'KubeletHasNoDiskPressure',
-      message: 'kubelet has no disk pressure'
-    }
-  ];
-
-  const generateMockPods = (count: number): PodResource[] => {
-    const statuses = ['Running', 'Pending', 'Failed', 'Succeeded'];
-    const namespaces = ['kube-system', 'openshift-etcd', 'openshift-apiserver', 'default', 'monitoring'];
-    
-    return Array.from({ length: count }, (_, i) => ({
-      name: `pod-${i + 1}`,
-      namespace: namespaces[Math.floor(Math.random() * namespaces.length)],
-      status: statuses[Math.floor(Math.random() * statuses.length)],
-      cpuUsage: Math.random() * 100,
-      memoryUsage: Math.random() * 100,
-      restarts: Math.floor(Math.random() * 5),
-      age: `${Math.floor(Math.random() * 30)}d`,
-      containers: Math.floor(Math.random() * 3) + 1,
-      readyContainers: Math.floor(Math.random() * 3) + 1
-    }));
-  };
-
-  const generateMockEvents = (): NodeEvent[] => [
-    {
-      type: 'Normal',
-      reason: 'Starting',
-      message: 'Started kubelet',
-      timestamp: new Date(Date.now() - 300000).toISOString(),
-      count: 1
-    },
-    {
-      type: 'Warning',
-      reason: 'FailedMount',
-      message: 'Unable to attach or mount volumes',
-      timestamp: new Date(Date.now() - 600000).toISOString(),
-      count: 3
-    }
-  ];
-
-  const generateMockLogs = (logType: string, nodeName: string): string[] => {
-    const timestamp = () => new Date().toISOString();
-    
-    switch (logType) {
-      case 'kubelet':
-        return [
-          `${timestamp()} I0627 20:22:34.840609       1 kubelet.go:190] Starting kubelet`,
-          `${timestamp()} I0627 20:22:34.841109       1 server.go:417] Version: v1.28.2+fe58a90`,
-          `${timestamp()} I0627 20:22:34.841209       1 server.go:419] Go Version: go1.20.6`,
-          `${timestamp()} I0627 20:22:35.037885       1 kubelet_node_status.go:70] Attempting to register node ${nodeName}`,
-          `${timestamp()} I0627 20:22:35.301066       1 kubelet_node_status.go:73] Successfully registered node ${nodeName}`,
-          `${timestamp()} I0627 20:22:35.468879       1 kubelet.go:2183] Container runtime initialized successfully`,
-          `${timestamp()} I0627 20:22:35.571172       1 server.go:1329] Started kubelet`,
-          `${timestamp()} I0627 20:22:35.611181       1 kubelet.go:2194] kubelet cAdvisor port: 4194`,
-          `${timestamp()} I0627 20:22:35.646735       1 fs_resource_analyzer.go:64] Starting FS ResourceAnalyzer`,
-          `${timestamp()} I0627 20:22:35.700829       1 volume_manager.go:291] Starting Kubelet Volume Manager`,
-        ];
-      case 'system':
-        return [
-          `${timestamp()} [INFO] systemd[1]: Started Kubernetes kubelet.`,
-          `${timestamp()} [INFO] systemd[1]: Starting Docker Application Container Engine...`,
-          `${timestamp()} [INFO] dockerd[1234]: Starting up`,
-          `${timestamp()} [INFO] kernel: [12345.678901] docker0: port 1(veth12345) entered blocking state`,
-          `${timestamp()} [INFO] NetworkManager[567]: <info>  [1234567890.1234] device (docker0): link connected`,
-          `${timestamp()} [INFO] systemd[1]: Started Docker Application Container Engine.`,
-          `${timestamp()} [INFO] systemd[1]: Starting containerd container runtime...`,
-          `${timestamp()} [INFO] containerd[890]: Starting containerd revision=1.6.21`,
-          `${timestamp()} [INFO] systemd[1]: Started containerd container runtime.`,
-          `${timestamp()} [INFO] kernel: [12346.789012] SELinux: initialized (dev tmpfs, type tmpfs), uses transition SIDs`,
-        ];
-      case 'containers':
-        return [
-          `${timestamp()} 2024-06-27T20:22:34.840609123Z container="pod-example-abc123" Creating container`,
-          `${timestamp()} 2024-06-27T20:22:34.841109456Z container="pod-example-abc123" Container created`,
-          `${timestamp()} 2024-06-27T20:22:34.841209789Z container="pod-example-abc123" Starting container`,
-          `${timestamp()} 2024-06-27T20:22:35.037885012Z container="pod-nginx-def456" nginx: [warn] server name "localhost" has suspicious characters`,
-          `${timestamp()} 2024-06-27T20:22:35.301066345Z container="pod-nginx-def456" nginx: the configuration file /etc/nginx/nginx.conf syntax is ok`,
-          `${timestamp()} 2024-06-27T20:22:35.468879678Z container="pod-nginx-def456" nginx: configuration file /etc/nginx/nginx.conf test is successful`,
-          `${timestamp()} 2024-06-27T20:22:35.571172901Z container="pod-redis-ghi789" Redis server v=6.2.5 sha=00000000:0 malloc=jemalloc-5.1.0`,
-          `${timestamp()} 2024-06-27T20:22:35.611181234Z container="pod-redis-ghi789" Server initialized`,
-          `${timestamp()} 2024-06-27T20:22:35.646735567Z container="pod-redis-ghi789" Ready to accept connections`,
-          `${timestamp()} 2024-06-27T20:22:35.700829890Z container="pod-app-jkl012" Application started successfully on port 8080`,
-        ];
-      default:
-        return [`${timestamp()} No logs available for ${logType}`];
-    }
-  };
 
   const handleLogTypeChange = (logType: string) => {
     setSelectedLogType(logType);
     if (selectedNode) {
-      setLogs(generateMockLogs(logType, selectedNode.name));
+      setLogs([`${new Date().toISOString()} No ${logType} logs available - live log streaming not implemented`]);
     }
   };
 
@@ -521,192 +399,7 @@ const NodesDashboard: React.FC = () => {
     });
   };
 
-  const fetchMockData = (): NodeDetail[] => [
-    {
-      name: 'master-0.cluster.local',
-      status: 'Ready',
-      role: 'Control Plane',
-      version: 'v1.27.6+f67aeb3',
-      age: '127d',
-      zone: 'us-east-1a',
-      instanceType: 'm5.2xlarge',
-      operatingSystem: 'linux',
-      architecture: 'amd64',
-      containerRuntime: 'cri-o://1.27.1',
-      cordoned: false,
-      drained: false,
-      labels: {
-        'node-role.kubernetes.io/control-plane': '',
-        'node-role.kubernetes.io/master': '',
-        'kubernetes.io/hostname': 'master-0.cluster.local',
-        'topology.kubernetes.io/zone': 'us-east-1a'
-      },
-      annotations: {
-        'volumes.kubernetes.io/controller-managed-attach-detach': 'true'
-      },
-      allocatableResources: {
-        cpu: '8',
-        memory: '32Gi',
-        pods: '250'
-      },
-      conditions: generateMockConditions(),
-      metrics: generateMockMetrics(),
-      pods: generateMockPods(35),
-      events: generateMockEvents()
-    },
-    {
-      name: 'worker-1.cluster.local',
-      status: 'Ready',
-      role: 'Worker',
-      version: 'v1.27.6+f67aeb3',
-      age: '125d',
-      zone: 'us-east-1b',
-      instanceType: 'm5.large',
-      operatingSystem: 'linux',
-      architecture: 'amd64',
-      containerRuntime: 'cri-o://1.27.1',
-      cordoned: false,
-      drained: false,
-      labels: {
-        'node-role.kubernetes.io/worker': '',
-        'kubernetes.io/hostname': 'worker-1.cluster.local',
-        'topology.kubernetes.io/zone': 'us-east-1b'
-      },
-      annotations: {
-        'volumes.kubernetes.io/controller-managed-attach-detach': 'true'
-      },
-      allocatableResources: {
-        cpu: '4',
-        memory: '16Gi',
-        pods: '110'
-      },
-      conditions: generateMockConditions(),
-      metrics: {
-        cpu: {
-          current: 75,
-          history: Array.from({ length: 24 }, (_, i) => ({
-            timestamp: Date.now() - (23 - i) * 60 * 60 * 1000,
-            value: Math.random() * 30 + 60
-          }))
-        },
-        memory: {
-          current: 68,
-          history: Array.from({ length: 24 }, (_, i) => ({
-            timestamp: Date.now() - (23 - i) * 60 * 60 * 1000,
-            value: Math.random() * 30 + 50
-          }))
-        }
-      },
-      pods: generateMockPods(25),
-      events: [
-        ...generateMockEvents(),
-        {
-          type: 'Warning',
-          reason: 'PodEviction',
-          message: 'Evicted pod due to resource constraints',
-          timestamp: new Date(Date.now() - 450000).toISOString(),
-          count: 2
-        }
-      ]
-    },
-    {
-      name: 'worker-2.cluster.local',
-      status: 'NotReady',
-      role: 'Worker',
-      version: 'v1.27.6+f67aeb3',
-      age: '123d',
-      zone: 'us-east-1c',
-      instanceType: 'm5.large',
-      operatingSystem: 'linux',
-      architecture: 'amd64',
-      containerRuntime: 'cri-o://1.27.1',
-      cordoned: true,
-      drained: true,
-      labels: {
-        'node-role.kubernetes.io/worker': '',
-        'kubernetes.io/hostname': 'worker-2.cluster.local',
-        'topology.kubernetes.io/zone': 'us-east-1c'
-      },
-      annotations: {
-        'volumes.kubernetes.io/controller-managed-attach-detach': 'true'
-      },
-      allocatableResources: {
-        cpu: '4',
-        memory: '16Gi',
-        pods: '110'
-      },
-      conditions: [
-        {
-          type: 'Ready',
-          status: 'False',
-          lastTransitionTime: new Date(Date.now() - 600000).toISOString(),
-          reason: 'NodeNotReady',
-          message: 'Node is not ready due to network connectivity issues'
-        },
-        {
-          type: 'MemoryPressure',
-          status: 'True',
-          lastTransitionTime: new Date(Date.now() - 300000).toISOString(),
-          reason: 'KubeletHasInsufficientMemory',
-          message: 'kubelet has insufficient memory available'
-        },
-        {
-          type: 'DiskPressure',
-          status: 'True',
-          lastTransitionTime: new Date(Date.now() - 180000).toISOString(),
-          reason: 'KubeletHasDiskPressure',
-          message: 'kubelet has disk pressure - available disk space is below threshold'
-        }
-      ],
-      metrics: {
-        cpu: {
-          current: 95,
-          history: Array.from({ length: 24 }, (_, i) => ({
-            timestamp: Date.now() - (23 - i) * 60 * 60 * 1000,
-            value: Math.random() * 20 + 80
-          }))
-        },
-        memory: {
-          current: 92,
-          history: Array.from({ length: 24 }, (_, i) => ({
-            timestamp: Date.now() - (23 - i) * 60 * 60 * 1000,
-            value: Math.random() * 20 + 80
-          }))
-        }
-      },
-      pods: generateMockPods(8),
-      events: [
-        {
-          type: 'Warning',
-          reason: 'NodeNotReady',
-          message: 'Node is not ready due to network connectivity issues',
-          timestamp: new Date(Date.now() - 600000).toISOString(),
-          count: 5
-        },
-        {
-          type: 'Warning',
-          reason: 'FailedMount',
-          message: 'Unable to attach or mount volumes: timeout waiting for disk attachment',
-          timestamp: new Date(Date.now() - 400000).toISOString(),
-          count: 3
-        },
-        {
-          type: 'Warning',
-          reason: 'ImagePullBackOff',
-          message: 'Failed to pull image due to network issues',
-          timestamp: new Date(Date.now() - 200000).toISOString(),
-          count: 2
-        },
-        {
-          type: 'Normal',
-          reason: 'Starting',
-          message: 'Started kubelet',
-          timestamp: new Date(Date.now() - 800000).toISOString(),
-          count: 1
-        }
-      ]
-    }
-  ];
+
 
   const fetchLiveNodeData = async (): Promise<NodeDetail[]> => {
     try {
@@ -751,16 +444,19 @@ const NodesDashboard: React.FC = () => {
             reason: c.reason || 'Unknown',
             message: c.message || 'No message'
           })),
-          metrics: generateMockMetrics(), // Keep metrics as mock for now
-          pods: generateMockPods(Math.floor(Math.random() * 40) + 5), // Keep pods as mock for now
-          events: generateMockEvents() // Keep events as mock for now
+          metrics: {
+            cpu: { current: 0, history: [] },
+            memory: { current: 0, history: [] }
+          },
+          pods: [],
+          events: []
         };
       });
     } catch (error) {
-      console.warn('Failed to fetch live node data, using mock data:', error);
+      console.error('Failed to fetch live node data:', error);
       console.log('API response might be unavailable in development environment');
-      // Fallback to mock data if API fails
-      return fetchMockData();
+      // Return empty array if API fails
+      return [];
     }
   };
 
@@ -834,7 +530,7 @@ const NodesDashboard: React.FC = () => {
   // Initialize logs when a node is selected
   useEffect(() => {
     if (selectedNode) {
-      setLogs(generateMockLogs(selectedLogType, selectedNode.name));
+      setLogs([`${new Date().toISOString()} No ${selectedLogType} logs available - live log streaming not implemented`]);
     }
   }, [selectedNode, selectedLogType]);
 
