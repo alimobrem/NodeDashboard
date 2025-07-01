@@ -266,7 +266,24 @@ const NodesDashboard: React.FC = () => {
       `${new Date().toISOString()} I0627 ${new Date().toTimeString().split(' ')[0]}       1 node_controller.go:158] Node monitoring initiated, watching cluster events`,
     ],
     audit: [
-      `${new Date().toISOString()} I0627 ${new Date().toTimeString().split(' ')[0]}       1 audit.go:101] Audit logging started, monitoring API server requests`,
+      JSON.stringify({
+        "kind": "Event",
+        "apiVersion": "audit.k8s.io/v1",
+        "level": "Metadata",
+        "auditID": "12345678-1234-1234-1234-123456789abc",
+        "stage": "ResponseComplete",
+        "requestURI": "/api/v1/nodes",
+        "verb": "list",
+        "user": {
+          "username": "system:serviceaccount:kube-system:node-controller",
+          "groups": ["system:serviceaccounts", "system:serviceaccounts:kube-system", "system:authenticated"]
+        },
+        "sourceIPs": ["10.0.0.1"],
+        "userAgent": "kube-controller-manager/v1.28.0",
+        "responseStatus": {"code": 200},
+        "requestReceivedTimestamp": new Date().toISOString(),
+        "stageTimestamp": new Date().toISOString()
+      }, null, 2),
     ],
   });
 
@@ -840,9 +857,40 @@ const NodesDashboard: React.FC = () => {
           details.message
         }`;
       case 'AUDIT_REQUEST':
-        return `${timestamp} I0627 ${timeString}       1 audit.go:312] ${details.verb} ${details.resource} ${details.namespace ? `in namespace ${details.namespace}` : ''} by user ${details.user}`;
       case 'AUDIT_RESPONSE':
-        return `${timestamp} I0627 ${timeString}       1 audit.go:334] Response ${details.status} for ${details.verb} ${details.resource} (${details.duration}ms)`;
+        // Generate proper Kubernetes audit log JSON
+        const auditEventId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        const auditEvent = {
+          "kind": "Event",
+          "apiVersion": "audit.k8s.io/v1",
+          "level": details.level || "Metadata",
+          "auditID": auditEventId,
+          "stage": details.stage || "ResponseComplete",
+          "requestURI": details.requestURI || `/api/v1/${details.resource?.replace(/\/.*/, '') || 'nodes'}`,
+          "verb": details.verb?.toLowerCase() || 'get',
+          "user": {
+            "username": details.user || 'system:serviceaccount:kube-system:default',
+            "groups": details.groups || ["system:serviceaccounts", "system:serviceaccounts:kube-system", "system:authenticated"]
+          },
+          "sourceIPs": [details.sourceIP || "10.0.0.1"],
+          "userAgent": details.userAgent || "kubectl/v1.28.0",
+          "objectRef": {
+            "resource": details.resource?.replace(/\/.*/, '') || "nodes",
+            "name": details.resource?.includes('/') ? details.resource.split('/')[1] : "",
+            "namespace": details.namespace || ""
+          },
+          "responseStatus": {"code": details.statusCode || 200},
+          "requestReceivedTimestamp": timestamp,
+          "stageTimestamp": timestamp,
+          "annotations": details.annotations || {}
+        };
+        
+        // Remove empty namespace for cluster-scoped resources
+        if (!auditEvent.objectRef.namespace) {
+          delete auditEvent.objectRef.namespace;
+        }
+        
+        return JSON.stringify(auditEvent, null, 2);
       default:
         return `${timestamp} [INFO] Unknown event: ${eventType}`;
     }
@@ -975,6 +1023,11 @@ const NodesDashboard: React.FC = () => {
                   resource: `nodes/${nodeName}`,
                   namespace: '',
                   user: 'system:cluster-admin',
+                  requestURI: `/api/v1/nodes/${nodeName}`,
+                  userAgent: 'cluster-admin/v1.28.0',
+                  level: 'Metadata',
+                  stage: 'ResponseComplete',
+                  statusCode: 200
                 });
                 addLogEntry(auditEntry, 'audit');
               }
@@ -1026,19 +1079,70 @@ const NodesDashboard: React.FC = () => {
         if (!isMounted) return;
         
         const auditOperations = [
-          { verb: 'LIST', resource: 'nodes', user: 'system:serviceaccount:kube-system:node-controller' },
-          { verb: 'GET', resource: 'nodes/status', user: 'system:serviceaccount:kube-system:kubelet' },
-          { verb: 'LIST', resource: 'pods', user: 'system:serviceaccount:kube-system:kube-scheduler' },
-          { verb: 'UPDATE', resource: 'nodes/status', user: 'system:serviceaccount:kube-system:kubelet' },
-          { verb: 'GET', resource: 'endpoints', user: 'system:serviceaccount:default:default' },
+          { 
+            verb: 'LIST', 
+            resource: 'nodes', 
+            user: 'system:serviceaccount:kube-system:node-controller',
+            requestURI: '/api/v1/nodes',
+            userAgent: 'kube-controller-manager/v1.28.0'
+          },
+          { 
+            verb: 'GET', 
+            resource: 'nodes/worker-node-1', 
+            user: 'system:serviceaccount:kube-system:kubelet',
+            requestURI: '/api/v1/nodes/worker-node-1/status',
+            userAgent: 'kubelet/v1.28.0'
+          },
+          { 
+            verb: 'LIST', 
+            resource: 'pods', 
+            user: 'system:serviceaccount:kube-system:kube-scheduler',
+            requestURI: '/api/v1/pods',
+            userAgent: 'kube-scheduler/v1.28.0'
+          },
+          { 
+            verb: 'UPDATE', 
+            resource: 'nodes/worker-node-1', 
+            user: 'system:serviceaccount:kube-system:kubelet',
+            requestURI: '/api/v1/nodes/worker-node-1/status',
+            userAgent: 'kubelet/v1.28.0'
+          },
+          { 
+            verb: 'GET', 
+            resource: 'endpoints/kubernetes', 
+            user: 'system:serviceaccount:default:default',
+            requestURI: '/api/v1/namespaces/default/endpoints/kubernetes',
+            userAgent: 'kubectl/v1.28.0',
+            namespace: 'default'
+          },
+          { 
+            verb: 'CREATE', 
+            resource: 'events', 
+            user: 'system:serviceaccount:kube-system:event-exporter',
+            requestURI: '/api/v1/namespaces/kube-system/events',
+            userAgent: 'event-exporter/v1.28.0',
+            namespace: 'kube-system'
+          },
+          { 
+            verb: 'PATCH', 
+            resource: 'nodes/worker-node-1', 
+            user: 'system:node:worker-node-1',
+            requestURI: '/api/v1/nodes/worker-node-1',
+            userAgent: 'kubelet/v1.28.0'
+          }
         ];
         
         const randomOp = auditOperations[Math.floor(Math.random() * auditOperations.length)];
         const auditEntry = generateLogEntry('AUDIT_REQUEST', {
           verb: randomOp.verb,
           resource: randomOp.resource,
-          namespace: randomOp.resource.includes('endpoints') ? 'default' : '',
+          namespace: randomOp.namespace || '',
           user: randomOp.user,
+          requestURI: randomOp.requestURI,
+          userAgent: randomOp.userAgent,
+          level: Math.random() < 0.1 ? 'Request' : 'Metadata',
+          stage: Math.random() < 0.8 ? 'ResponseComplete' : 'RequestReceived',
+          statusCode: Math.random() < 0.95 ? 200 : (Math.random() < 0.5 ? 403 : 404)
         });
         addLogEntry(auditEntry, 'audit');
       }, 15000); // Every 15 seconds
@@ -1150,6 +1254,11 @@ const NodesDashboard: React.FC = () => {
                       resource: `pods/${podName}`,
                       namespace: namespace,
                       user: 'system:serviceaccount:default:default',
+                      requestURI: `/api/v1/namespaces/${namespace}/pods/${podName}`,
+                      userAgent: 'kubelet/v1.28.0',
+                      level: 'Metadata',
+                      stage: 'ResponseComplete',
+                      statusCode: 200
                     });
                     addLogEntry(auditEntry, 'audit');
                   }
