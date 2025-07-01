@@ -874,14 +874,13 @@ const NodesDashboard: React.FC = () => {
     loadInitialData();
   }, []); // Remove selectedNode dependency to prevent reloading
 
-  // Simplified watch setup effect (independent of selectedNode)
+  // Node and System watch setup (independent of selectedNode)
   useEffect(() => {
     let nodeWatchSocket: WebSocket | null = null;
-    let podWatchSocket: WebSocket | null = null;
     let eventWatchSocket: WebSocket | null = null;
     let isMounted = true;
 
-    const setupWatches = () => {
+    const setupGlobalWatches = () => {
       try {
         // Watch nodes for overall cluster changes
         const nodeWatchUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${
@@ -922,37 +921,6 @@ const NodesDashboard: React.FC = () => {
           }
         };
 
-        // Watch pods for container-related logs
-        if (selectedNode) {
-          const podWatchUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${
-            window.location.host
-          }/api/kubernetes/api/v1/pods?watch=true&fieldSelector=spec.nodeName=${selectedNode.name}`;
-          podWatchSocket = new WebSocket(podWatchUrl);
-
-          podWatchSocket.onmessage = (event) => {
-            if (!isMounted) return;
-
-            try {
-              const watchEvent = JSON.parse(event.data);
-              if (
-                watchEvent.type === 'ADDED' ||
-                watchEvent.type === 'MODIFIED' ||
-                watchEvent.type === 'DELETED'
-              ) {
-                const podData = watchEvent.object;
-                const logEntry = generateLogEntry(`POD_${watchEvent.type}`, {
-                  name: podData?.metadata?.name || 'unknown',
-                  namespace: podData?.metadata?.namespace || 'default',
-                  status: podData?.status?.phase || 'Unknown',
-                });
-                addLogEntry(logEntry);
-              }
-            } catch (err) {
-              console.log('Pod watch event parsing failed:', err);
-            }
-          };
-        }
-
         // Watch events for system-level logs
         const eventWatchUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${
           window.location.host
@@ -978,13 +946,13 @@ const NodesDashboard: React.FC = () => {
           }
         };
 
-        console.log('Real-time watches setup completed');
+        console.log('Global watches setup completed');
       } catch (err) {
-        console.log('Watch setup failed:', err);
+        console.log('Global watch setup failed:', err);
       }
     };
 
-    setupWatches();
+    setupGlobalWatches();
 
     return () => {
       isMounted = false;
@@ -993,14 +961,77 @@ const NodesDashboard: React.FC = () => {
       if (nodeWatchSocket) {
         (nodeWatchSocket as WebSocket).close();
       }
-      if (podWatchSocket) {
-        (podWatchSocket as WebSocket).close();
-      }
       if (eventWatchSocket) {
         (eventWatchSocket as WebSocket).close();
       }
     };
-  }, [selectedNode]); // Depend on selectedNode for pod watching
+  }, []); // Run once on component mount
+
+  // Pod watch setup (depends on selectedNode to watch correct node's pods)
+  useEffect(() => {
+    let podWatchSocket: WebSocket | null = null;
+    let isMounted = true;
+
+    const setupPodWatch = () => {
+      if (!selectedNode) return;
+
+      try {
+        // Watch pods for the currently selected node
+        const podWatchUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${
+          window.location.host
+        }/api/kubernetes/api/v1/pods?watch=true&fieldSelector=spec.nodeName=${selectedNode.name}`;
+        podWatchSocket = new WebSocket(podWatchUrl);
+
+        podWatchSocket.onmessage = (event) => {
+          if (!isMounted) return;
+
+          try {
+            const watchEvent = JSON.parse(event.data);
+            if (
+              watchEvent.type === 'ADDED' ||
+              watchEvent.type === 'MODIFIED' ||
+              watchEvent.type === 'DELETED'
+            ) {
+              const podData = watchEvent.object;
+              
+              // Add log entry for pod events
+              const logEntry = generateLogEntry(`POD_${watchEvent.type}`, {
+                name: podData?.metadata?.name || 'unknown',
+                namespace: podData?.metadata?.namespace || 'default',
+                status: podData?.status?.phase || 'Unknown',
+              });
+              addLogEntry(logEntry);
+
+              // Refresh the selected node's details when pods are added/deleted
+              // This ensures pod counts update in real-time
+              if (selectedNode && (watchEvent.type === 'ADDED' || watchEvent.type === 'DELETED')) {
+                console.log(`Pod ${watchEvent.type.toLowerCase()} detected for node ${selectedNode.name}, refreshing pod count...`);
+                refreshSelectedNodeDetails(selectedNode.name).catch(console.error);
+              }
+            }
+          } catch (err) {
+            console.log('Pod watch event parsing failed:', err);
+          }
+        };
+
+        console.log(`Pod watch setup completed for node: ${selectedNode.name}`);
+      } catch (err) {
+        console.log('Pod watch setup failed:', err);
+      }
+    };
+
+    setupPodWatch();
+
+    return () => {
+      isMounted = false;
+
+      // Close pod WebSocket connection
+      if (podWatchSocket) {
+        (podWatchSocket as WebSocket).close();
+        console.log(`Pod watch closed for node: ${selectedNode?.name || 'unknown'}`);
+      }
+    };
+  }, [selectedNode]); // Re-run whenever selectedNode changes to watch new node's pods
 
   const getConditionIcon = (condition: NodeCondition) => {
     if (condition.status === 'True') {
