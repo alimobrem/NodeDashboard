@@ -108,6 +108,7 @@ interface NodeDetail {
   role: string;
   version: string;
   age: string;
+  uptime: string;
   zone: string;
   instanceType: string;
   operatingSystem: string;
@@ -624,6 +625,26 @@ const NodesDashboard: React.FC = () => {
     return `${diffInHours}h`;
   };
 
+  // Utility function to calculate uptime based on Ready condition
+  const getUptime = (conditions: any[]): string => {
+    const readyCondition = conditions.find((c: any) => c.type === 'Ready' && c.status === 'True');
+    if (!readyCondition || !readyCondition.lastTransitionTime) {
+      return 'Unknown';
+    }
+    
+    const readySince = new Date(readyCondition.lastTransitionTime);
+    const now = new Date();
+    const diffMs = now.getTime() - readySince.getTime();
+    
+    const days = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+    const hours = Math.floor((diffMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+    const minutes = Math.floor((diffMs % (60 * 60 * 1000)) / (60 * 1000));
+    
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  };
+
   // Optimized function to refresh selected node details only
   const refreshSelectedNodeDetails = async (nodeName: string): Promise<void> => {
     if (!nodeName) return;
@@ -772,6 +793,7 @@ const NodesDashboard: React.FC = () => {
           : 'Worker',
       version: nodeData.status?.nodeInfo?.kubeletVersion || 'unknown',
       age: getAge(nodeData.metadata?.creationTimestamp || new Date().toISOString()),
+      uptime: getUptime(conditions),
       zone: nodeData.metadata?.labels?.['topology.kubernetes.io/zone'] || 'unknown',
       instanceType: nodeData.metadata?.labels?.['node.kubernetes.io/instance-type'] || 'unknown',
       operatingSystem: nodeData.status?.nodeInfo?.osImage || 'unknown',
@@ -1946,6 +1968,15 @@ const NodesDashboard: React.FC = () => {
                                           {node.role}
                                         </Badge>
                                         <span style={{ color: '#6a6e73' }}>{node.zone}</span>
+                                        <span 
+                                          style={{ 
+                                            color: '#8a2be2', 
+                                            fontSize: '0.75rem',
+                                            fontWeight: 600 
+                                          }}
+                                        >
+                                          ⏱ {node.uptime}
+                                        </span>
                                       </div>
                                     </div>
                                   </FlexItem>
@@ -3315,6 +3346,145 @@ const NodesDashboard: React.FC = () => {
                               </Card>
                             </StackItem>
                           </Stack>
+                        </div>
+                      </Tab>
+
+                      <Tab
+                        eventKey="terminal"
+                        title={
+                          <TabTitleText>
+                            <TerminalIcon
+                              style={{
+                                marginRight: 'var(--pf-v5-global--spacer--xs)',
+                                fontSize: '0.875rem',
+                              }}
+                            />
+                            Terminal
+                          </TabTitleText>
+                        }
+                      >
+                        <div style={{ paddingTop: 'var(--pf-v5-global--spacer--md)' }}>
+                          <Card style={{ backgroundColor: '#1a1a1a', border: '1px solid #3c3c3c' }}>
+                            <CardTitle style={{ 
+                              backgroundColor: '#2d2d2d', 
+                              color: '#ffffff',
+                              fontSize: '0.875rem',
+                              padding: 'var(--pf-v5-global--spacer--sm) var(--pf-v5-global--spacer--md)'
+                            }}>
+                              <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsSm' }}>
+                                <FlexItem>
+                                  <TerminalIcon style={{ color: '#00ff00' }} />
+                                </FlexItem>
+                                <FlexItem>
+                                  Terminal - {selectedNode.name}
+                                </FlexItem>
+                                <FlexItem>
+                                  <Badge style={{ backgroundColor: '#00ff00', color: '#000000', fontSize: '0.625rem' }}>
+                                    Connected
+                                  </Badge>
+                                </FlexItem>
+                              </Flex>
+                            </CardTitle>
+                            <CardBody style={{ padding: 0 }}>
+                              <div
+                                style={{
+                                  backgroundColor: '#1a1a1a',
+                                  color: '#00ff00',
+                                  fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
+                                  fontSize: '0.875rem',
+                                  padding: 'var(--pf-v5-global--spacer--md)',
+                                  height: '500px',
+                                  overflowY: 'auto',
+                                  whiteSpace: 'pre-wrap',
+                                }}
+                              >
+                                <div style={{ marginBottom: '8px' }}>
+                                  <span style={{ color: '#ffff00' }}>core@{selectedNode.name}</span>
+                                  <span style={{ color: '#ffffff' }}>:~$ </span>
+                                  <span style={{ color: '#00ff00' }}>Welcome to OpenShift Container Platform</span>
+                                </div>
+                                <div style={{ marginBottom: '8px' }}>
+                                  <span style={{ color: '#ffff00' }}>core@{selectedNode.name}</span>
+                                  <span style={{ color: '#ffffff' }}>:~$ </span>
+                                  <span style={{ color: '#00ff00' }}>uname -a</span>
+                                </div>
+                                <div style={{ marginBottom: '8px', color: '#ffffff' }}>
+                                  Linux {selectedNode.name} 5.14.0-284.30.1.el9_2.x86_64 #{selectedNode.architecture} SMP PREEMPT_DYNAMIC
+                                </div>
+                                <div style={{ marginBottom: '8px' }}>
+                                  <span style={{ color: '#ffff00' }}>core@{selectedNode.name}</span>
+                                  <span style={{ color: '#ffffff' }}>:~$ </span>
+                                  <span style={{ color: '#00ff00' }}>systemctl status kubelet</span>
+                                </div>
+                                <div style={{ marginBottom: '8px', color: '#ffffff' }}>
+                                  ● kubelet.service - Kubernetes Kubelet<br/>
+                                  &nbsp;&nbsp;&nbsp;Loaded: loaded (/etc/systemd/system/kubelet.service; enabled; vendor preset: enabled)<br/>
+                                  &nbsp;&nbsp;&nbsp;Active: <span style={{color: '#00ff00'}}>active (running)</span> since {new Date(Date.now() - Math.random() * 86400000).toLocaleDateString()}<br/>
+                                  &nbsp;&nbsp;&nbsp;Main PID: 1234 (kubelet)<br/>
+                                  &nbsp;&nbsp;&nbsp;Memory: 123.4M<br/>
+                                  &nbsp;&nbsp;&nbsp;CGroup: /system.slice/kubelet.service<br/>
+                                </div>
+                                <div style={{ marginBottom: '8px' }}>
+                                  <span style={{ color: '#ffff00' }}>core@{selectedNode.name}</span>
+                                  <span style={{ color: '#ffffff' }}>:~$ </span>
+                                  <span style={{ color: '#00ff00' }}>crictl ps | head -5</span>
+                                </div>
+                                <div style={{ marginBottom: '8px', color: '#ffffff' }}>
+                                  CONTAINER ID&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;IMAGE&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CREATED&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;STATE&nbsp;&nbsp;&nbsp;&nbsp;NAME<br/>
+                                  {selectedNode.pods?.slice(0, 3).map((pod, index) => (
+                                    <div key={index}>
+                                      {Math.random().toString(36).substring(2, 15)}&nbsp;&nbsp;&nbsp;{pod.namespace}/{pod.name}&nbsp;&nbsp;&nbsp;{pod.age}&nbsp;&nbsp;&nbsp;<span style={{color: pod.status === 'Running' ? '#00ff00' : '#ff0000'}}>{pod.status}</span>&nbsp;&nbsp;&nbsp;{pod.name}
+                                    </div>
+                                  ))}
+                                </div>
+                                <div style={{ marginBottom: '8px' }}>
+                                  <span style={{ color: '#ffff00' }}>core@{selectedNode.name}</span>
+                                  <span style={{ color: '#ffffff' }}>:~$ </span>
+                                  <span style={{ color: '#00ff00' }}>free -h</span>
+                                </div>
+                                <div style={{ marginBottom: '8px', color: '#ffffff' }}>
+                                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;total&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;used&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;free&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;shared&nbsp;&nbsp;buff/cache&nbsp;&nbsp;&nbsp;available<br/>
+                                  Mem:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{formatMemoryForDisplay(selectedNode.allocatableResources.memory)}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{Math.round(selectedNode.metrics.memory.current)}%&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{Math.round(100 - selectedNode.metrics.memory.current)}%&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0B&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.1G&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{Math.round(100 - selectedNode.metrics.memory.current - 10)}%<br/>
+                                  Swap:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0B&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0B&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0B
+                                </div>
+                                <div style={{ marginBottom: '8px' }}>
+                                  <span style={{ color: '#ffff00' }}>core@{selectedNode.name}</span>
+                                  <span style={{ color: '#ffffff' }}>:~$ </span>
+                                  <span style={{ color: '#00ff00' }}>df -h | grep -E "(Filesystem|/var/lib/kubelet)"</span>
+                                </div>
+                                <div style={{ marginBottom: '8px', color: '#ffffff' }}>
+                                  Filesystem&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Size&nbsp;&nbsp;Used&nbsp;&nbsp;Avail&nbsp;Use%&nbsp;Mounted on<br/>
+                                  /dev/nvme0n1p4&nbsp;&nbsp;100G&nbsp;&nbsp;&nbsp;{Math.round(Math.random() * 40 + 20)}G&nbsp;&nbsp;&nbsp;&nbsp;{Math.round(Math.random() * 40 + 40)}G&nbsp;&nbsp;&nbsp;{Math.round(Math.random() * 30 + 30)}%&nbsp;&nbsp;/var/lib/kubelet
+                                </div>
+                                <div>
+                                  <span style={{ color: '#ffff00' }}>core@{selectedNode.name}</span>
+                                  <span style={{ color: '#ffffff' }}>:~$ </span>
+                                  <span 
+                                    style={{ 
+                                      color: '#00ff00',
+                                      animation: 'blink 1s infinite' 
+                                    }}
+                                  >
+                                    |
+                                  </span>
+                                </div>
+                                <style>
+                                  {`
+                                    @keyframes blink {
+                                      0%, 50% { opacity: 1; }
+                                      51%, 100% { opacity: 0; }
+                                    }
+                                  `}
+                                </style>
+                              </div>
+                            </CardBody>
+                          </Card>
+                          <div style={{ marginTop: 'var(--pf-v5-global--spacer--md)' }}>
+                            <Alert variant="info" title="Terminal Access">
+                              This is a read-only terminal simulation showing typical node commands and output. 
+                              For full terminal access, use <code>oc debug node/{selectedNode.name}</code> from your local terminal.
+                            </Alert>
+                          </div>
                         </div>
                       </Tab>
                     </Tabs>
