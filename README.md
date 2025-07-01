@@ -207,8 +207,7 @@ The plugin registers with OpenShift Console as:
     "displayName": "Nodes Dashboard",
     "description": "Real-time node monitoring and management for OpenShift clusters",
     "exposedModules": {
-      "NodesDashboard": "./components/NodesDashboard",
-      "NodesPage": "./components/NodesPage"
+      "NodesDashboard": "./components/NodesDashboard"
     }
   }
 }
@@ -218,8 +217,7 @@ The plugin registers with OpenShift Console as:
 
 ### Core Components
 
-- **NodesDashboard**: Main dashboard with real-time overview cards and interactive node selection
-- **NodesPage**: Container component handling routing, navigation, and state management
+- **NodesDashboard**: Comprehensive dashboard with real-time node monitoring, interactive selection, and live resource tracking
 - **WebSocket Manager**: Handles real-time data streaming and connection management
 - **Alert System**: Live node health monitoring and issue detection
 - **Log Streaming**: Real-time log viewer with WebSocket connectivity

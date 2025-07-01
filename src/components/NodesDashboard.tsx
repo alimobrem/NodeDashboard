@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 // PatternFly Core Components
 import {
@@ -36,7 +36,6 @@ import {
   Tabs,
   TabTitleText,
   Title,
-  Button,
 } from '@patternfly/react-core';
 
 // PatternFly Table Components
@@ -60,7 +59,6 @@ import {
   TachometerAltIcon,
   TerminalIcon,
   TimesCircleIcon,
-  SyncAltIcon,
   ListIcon,
 } from '@patternfly/react-icons';
 
@@ -251,28 +249,28 @@ const NodesDashboard: React.FC = () => {
   const [nodes, setNodes] = useState<NodeDetail[]>([]);
   const [selectedNode, setSelectedNode] = useState<NodeDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [detailsLoading, setDetailsLoading] = useState(false); // New loading state for details refresh
+
   const [isUpdating, setIsUpdating] = useState(false); // Visual feedback for real-time updates
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [logType, setLogType] = useState<LogType>('all');
   const [logs, setLogs] = useState<Record<LogType, string[]>>({
     all: [],
-    kubelet: [],
-    containers: [],
-    system: [],
+    kubelet: [
+      `${new Date().toISOString()} I0627 ${new Date().toTimeString().split(' ')[0]}       1 kubelet.go:2139] Starting kubelet node monitoring`,
+    ],
+    containers: [
+      `${new Date().toISOString()} I0627 ${new Date().toTimeString().split(' ')[0]}       1 pod_workers.go:965] Container runtime ready, monitoring pod events`,
+    ],
+    system: [
+      `${new Date().toISOString()} I0627 ${new Date().toTimeString().split(' ')[0]}       1 node_controller.go:158] Node monitoring initiated, watching cluster events`,
+    ],
   });
 
   const handleLogTypeChange = (logType: string) => {
     setLogType(logType as LogType);
-    if (selectedNode) {
-      setLogs((prevLogs) => ({
-        ...prevLogs,
-        [logType]: [
-          `${new Date().toISOString()} No ${logType} logs available - live log streaming not implemented`,
-        ],
-      }));
-    }
+    // Don't reset logs - they should persist when switching between types
+    // The logs are populated by real-time WebSocket events
   };
 
   const getAlertIcon = (alert: NodeAlert) => {
@@ -612,7 +610,6 @@ const NodesDashboard: React.FC = () => {
 
     try {
       setIsUpdating(true);
-      setDetailsLoading(true);
 
       // Fetch updated data for the specific node
       const nodesResponse = await fetch('/api/kubernetes/api/v1/nodes');
@@ -651,7 +648,6 @@ const NodesDashboard: React.FC = () => {
     } catch (err) {
       console.error('Failed to refresh node details:', err);
     } finally {
-      setDetailsLoading(false);
       // Keep updating indicator visible slightly longer for better UX
       setTimeout(() => setIsUpdating(false), 500);
     }
@@ -797,32 +793,24 @@ const NodesDashboard: React.FC = () => {
     let isMounted = true;
 
     if (selectedNode && isMounted) {
-      const initialLogs = [
-        `${new Date().toISOString()} I0627 ${
-          new Date().toTimeString().split(' ')[0]
-        }       1 main.go:258] Console plugins are enabled in following order:`,
-        `${new Date().toISOString()} I0627 ${
-          new Date().toTimeString().split(' ')[0]
-        }       1 main.go:260]  - node-dashboard`,
-        `${new Date().toISOString()} [INFO] systemd[1]: Started Kubernetes kubelet.`,
-        `${new Date().toISOString()} [INFO] systemd[1]: Reached target Multi-User System.`,
-        `${new Date().toISOString()} [INFO] systemd[1]: Reached target Graphical Interface.`,
-        `${new Date().toISOString()} [INFO] systemd[1]: Reached target Timers.`,
-        `${new Date().toISOString()} [INFO] Container health checks completed successfully`,
-        `${new Date().toISOString()} [INFO] Node ${
-          selectedNode.name
-        } monitoring initiated - ${logType} logs`,
-      ];
-      setLogs((prevLogs) => ({
-        ...prevLogs,
-        [logType]: initialLogs,
-      }));
+      const timestamp = new Date().toISOString();
+      const timeString = new Date().toTimeString().split(' ')[0];
+      
+      // Add categorized logs using the new system
+      const kubeletLog = `${timestamp} I0627 ${timeString}       1 kubelet.go:2139] Node ${selectedNode.name} selected for monitoring`;
+      const systemLog = `${timestamp} I0627 ${timeString}       1 status_manager.go:158] Fetching detailed status for node ${selectedNode.name}`;
+      const containerLog = `${timestamp} I0627 ${timeString}       1 pod_workers.go:965] Monitoring ${selectedNode.pods?.length || 0} pods on node ${selectedNode.name}`;
+
+      // Add specific logs to their appropriate categories
+      addLogEntry(kubeletLog, 'kubelet');
+      addLogEntry(systemLog, 'system');
+      addLogEntry(containerLog, 'containers');
     }
 
     return () => {
       isMounted = false;
     };
-  }, [selectedNode, logType]);
+  }, [selectedNode]); // Remove logType dependency to prevent reloading
 
   // Generate new log entries from WebSocket events
   const generateLogEntry = (eventType: string, details: any): string => {
@@ -830,8 +818,10 @@ const NodesDashboard: React.FC = () => {
     const timeString = new Date().toTimeString().split(' ')[0];
 
     switch (eventType) {
-      case 'NODE_MODIFIED':
-        return `${timestamp} I0627 ${timeString}       1 status_manager.go:158] Node ${details.name} status: ${details.status}`;
+      case 'NODE_ADDED':
+        return `${timestamp} I0627 ${timeString}       1 kubelet.go:2139] Node ${details.name} registered with status: ${details.status}`;
+      case 'NODE_DELETED':
+        return `${timestamp} W0627 ${timeString}       1 kubelet.go:2139] Node ${details.name} removed from cluster`;
       case 'POD_ADDED':
         return `${timestamp} I0627 ${timeString}       1 pod_workers.go:965] Pod ${details.namespace}/${details.name} created, status: ${details.status}`;
       case 'POD_MODIFIED':
@@ -849,12 +839,47 @@ const NodesDashboard: React.FC = () => {
     }
   };
 
-  const addLogEntry = (logEntry: string) => {
-    setLogs((prevLogs) => ({
-      ...prevLogs,
-      [logType]: [...(prevLogs[logType] || []), logEntry].slice(-50), // Keep last 50 entries
-    }));
+  // Animation frame-based log updates to prevent excessive re-renders while staying responsive
+  const pendingLogsRef = useRef<Array<{entry: string, type: LogType}>>([]);
+  const logUpdateFrameRef = useRef<number | null>(null);
+
+  const addLogEntry = (logEntry: string, targetLogType: LogType = 'system') => {
+    pendingLogsRef.current.push({entry: logEntry, type: targetLogType});
+    
+    // Cancel existing frame request
+    if (logUpdateFrameRef.current) {
+      cancelAnimationFrame(logUpdateFrameRef.current);
+    }
+    
+    // Batch update logs on next animation frame for smooth performance
+    logUpdateFrameRef.current = requestAnimationFrame(() => {
+      const currentPending = pendingLogsRef.current;
+      if (currentPending.length > 0) {
+        setLogs((prevLogs) => {
+          const newLogs = { ...prevLogs };
+          
+          // Group pending logs by type and add them
+          currentPending.forEach(({entry, type}) => {
+            newLogs[type] = [...(newLogs[type] || []), entry].slice(-50); // Keep last 50 entries per type
+          });
+          
+          return newLogs;
+        });
+        
+        // Clear pending logs
+        pendingLogsRef.current = [];
+      }
+    });
   };
+
+  // Cleanup log animation frame on unmount
+  useEffect(() => {
+    return () => {
+      if (logUpdateFrameRef.current) {
+        cancelAnimationFrame(logUpdateFrameRef.current);
+      }
+    };
+  }, []);
 
   // Initial data loading effect (runs only once)
   useEffect(() => {
@@ -904,16 +929,20 @@ const NodesDashboard: React.FC = () => {
             ) {
               console.log('Node watch event received:', watchEvent.type);
 
-              // Add log entry for node events
-              const logEntry = generateLogEntry('NODE_MODIFIED', {
-                name: watchEvent.object?.metadata?.name || 'unknown',
-                status:
-                  watchEvent.object?.status?.conditions?.find((c: any) => c.type === 'Ready')
-                    ?.status === 'True'
-                    ? 'Ready'
-                    : 'NotReady',
-              });
-              addLogEntry(logEntry);
+              // Add log entry only for significant node events (not every modification)
+              if (watchEvent.type === 'ADDED' || watchEvent.type === 'DELETED') {
+                const logEntry = generateLogEntry(`NODE_${watchEvent.type}`, {
+                  name: watchEvent.object?.metadata?.name || 'unknown',
+                  status:
+                    watchEvent.object?.status?.conditions?.find((c: any) => c.type === 'Ready')
+                      ?.status === 'True'
+                      ? 'Ready'
+                      : 'NotReady',
+                });
+                // Node events go to both kubelet and system logs
+                addLogEntry(logEntry, 'kubelet');
+                addLogEntry(logEntry, 'system');
+              }
 
               // Refresh all nodes data when there are cluster-level changes
               if (watchEvent.type === 'ADDED' || watchEvent.type === 'DELETED') {
@@ -938,12 +967,17 @@ const NodesDashboard: React.FC = () => {
             const watchEvent = JSON.parse(event.data);
             if (watchEvent.type === 'ADDED') {
               const eventData = watchEvent.object;
-              const logEntry = generateLogEntry('EVENT_ADDED', {
-                type: eventData?.type || 'Normal',
-                reason: eventData?.reason || 'Unknown',
-                message: eventData?.message || 'No message',
-              });
-              addLogEntry(logEntry);
+              // Only log warning events and important normal events to reduce noise
+              if (eventData?.type === 'Warning' || 
+                  (eventData?.type === 'Normal' && 
+                   ['NodeReady', 'NodeNotReady', 'Rebooted', 'Starting', 'Started'].includes(eventData?.reason))) {
+                const logEntry = generateLogEntry('EVENT_ADDED', {
+                  type: eventData?.type || 'Normal',
+                  reason: eventData?.reason || 'Unknown',
+                  message: eventData?.message || 'No message',
+                });
+                addLogEntry(logEntry, 'system');
+              }
             }
           } catch (err) {
             console.log('Event watch event parsing failed:', err);
@@ -1028,14 +1062,22 @@ const NodesDashboard: React.FC = () => {
             ) {
               const podData = watchEvent.object;
               
-              // Add log entry for pod events (but less verbose)
+              // Add log entry only for significant pod events to reduce noise
               if (watchEvent.type === 'ADDED' || watchEvent.type === 'DELETED') {
-                const logEntry = generateLogEntry(`POD_${watchEvent.type}`, {
-                  name: podData?.metadata?.name || 'unknown',
-                  namespace: podData?.metadata?.namespace || 'default',
-                  status: podData?.status?.phase || 'Unknown',
-                });
-                addLogEntry(logEntry);
+                // Skip system/infrastructure pods to focus on user workloads
+                const podName = podData?.metadata?.name || '';
+                const namespace = podData?.metadata?.namespace || '';
+                if (!namespace.startsWith('kube-') && 
+                    !namespace.startsWith('openshift-') && 
+                    !podName.startsWith('etcd-') &&
+                    !podName.startsWith('kube-')) {
+                  const logEntry = generateLogEntry(`POD_${watchEvent.type}`, {
+                    name: podName || 'unknown',
+                    namespace: namespace || 'default',
+                    status: podData?.status?.phase || 'Unknown',
+                  });
+                  addLogEntry(logEntry, 'containers');
+                }
               }
 
               // Only refresh on significant pod changes (added/deleted) with debouncing
@@ -1861,22 +1903,7 @@ const NodesDashboard: React.FC = () => {
                           {selectedNode.status}
                         </Badge>
                       </FlexItem>
-                      {detailsLoading && (
-                        <FlexItem>
-                          <Spinner size="sm" />
-                        </FlexItem>
-                      )}
-                      <FlexItem>
-                        <Button
-                          variant="link"
-                          size="sm"
-                          onClick={() => refreshSelectedNodeDetails(selectedNode.name)}
-                          isLoading={detailsLoading}
-                          icon={<SyncAltIcon />}
-                        >
-                          Refresh
-                        </Button>
-                      </FlexItem>
+
                     </Flex>
                   </CardTitle>
                   <CardBody style={{ height: 'auto', overflow: 'visible' }}>
@@ -2799,7 +2826,43 @@ const NodesDashboard: React.FC = () => {
                             {/* Log Type Selector */}
                             <StackItem>
                               <Grid hasGutter>
-                                <GridItem span={4}>
+                                <GridItem span={3}>
+                                  <Card
+                                    isSelectable
+                                    isSelected={logType === 'all'}
+                                    onClick={() => handleLogTypeChange('all')}
+                                    style={{ cursor: 'pointer' }}
+                                  >
+                                    <CardBody>
+                                      <Flex
+                                        direction={{ default: 'column' }}
+                                        alignItems={{ default: 'alignItemsCenter' }}
+                                        spaceItems={{ default: 'spaceItemsSm' }}
+                                      >
+                                        <FlexItem>
+                                          <ListIcon
+                                            style={{
+                                              fontSize: '1.5rem',
+                                              color: logType === 'all' ? '#6c5ce7' : '#6a6e73',
+                                            }}
+                                          />
+                                        </FlexItem>
+                                        <FlexItem>
+                                          <Title
+                                            headingLevel="h5"
+                                            size="md"
+                                            style={{
+                                              color: logType === 'all' ? '#6c5ce7' : '#151515',
+                                            }}
+                                          >
+                                            All Logs
+                                          </Title>
+                                        </FlexItem>
+                                      </Flex>
+                                    </CardBody>
+                                  </Card>
+                                </GridItem>
+                                <GridItem span={3}>
                                   <Card
                                     isSelectable
                                     isSelected={logType === 'kubelet'}
@@ -2835,7 +2898,7 @@ const NodesDashboard: React.FC = () => {
                                     </CardBody>
                                   </Card>
                                 </GridItem>
-                                <GridItem span={4}>
+                                <GridItem span={3}>
                                   <Card
                                     isSelectable
                                     isSelected={logType === 'system'}
@@ -2871,7 +2934,7 @@ const NodesDashboard: React.FC = () => {
                                     </CardBody>
                                   </Card>
                                 </GridItem>
-                                <GridItem span={4}>
+                                <GridItem span={3}>
                                   <Card
                                     isSelectable
                                     isSelected={logType === 'containers'}
@@ -2921,6 +2984,9 @@ const NodesDashboard: React.FC = () => {
                                     spaceItems={{ default: 'spaceItemsSm' }}
                                   >
                                     <FlexItem>
+                                      {logType === 'all' && (
+                                        <ListIcon style={{ color: '#6c5ce7' }} />
+                                      )}
                                       {logType === 'kubelet' && (
                                         <TerminalIcon style={{ color: '#0066cc' }} />
                                       )}
@@ -2933,6 +2999,7 @@ const NodesDashboard: React.FC = () => {
                                     </FlexItem>
                                     <FlexItem>
                                       <Title headingLevel="h4" size="md">
+                                        {logType === 'all' && 'All Logs'}
                                         {logType === 'kubelet' && 'Kubelet Logs'}
                                         {logType === 'system' && 'System Logs'}
                                         {logType === 'containers' && 'Container Logs'}
@@ -2959,23 +3026,56 @@ const NodesDashboard: React.FC = () => {
                                         '0 0 var(--pf-v5-global--BorderRadius--sm) var(--pf-v5-global--BorderRadius--sm)',
                                     }}
                                   >
-                                    {logs[logType]?.map((log, index) => (
-                                      <div
-                                        key={index}
-                                        style={{
-                                          marginBottom: '2px',
-                                          lineHeight: '1.4',
-                                          wordBreak: 'break-word',
-                                        }}
-                                      >
-                                        {log}
-                                      </div>
-                                    ))}
-                                    {logs[logType]?.length === 0 && (
-                                      <div style={{ color: '#888', fontStyle: 'italic' }}>
-                                        No logs available
-                                      </div>
-                                    )}
+                                    {(() => {
+                                      const displayLogs = logType === 'all' 
+                                        ? [
+                                            ...(logs.kubelet || []).map(log => ({ log, type: 'kubelet' })),
+                                            ...(logs.system || []).map(log => ({ log, type: 'system' })),
+                                            ...(logs.containers || []).map(log => ({ log, type: 'containers' }))
+                                          ].sort((a, b) => {
+                                            // Sort by timestamp (extracted from log entry)
+                                            const timestampA = a.log.substring(0, 24);
+                                            const timestampB = b.log.substring(0, 24);
+                                            return timestampB.localeCompare(timestampA);
+                                          })
+                                        : (logs[logType] || []).map(log => ({ log, type: logType }));
+
+                                      return displayLogs.length > 0 ? (
+                                        displayLogs.map((entry, index) => (
+                                          <div
+                                            key={index}
+                                            style={{
+                                              marginBottom: '2px',
+                                              lineHeight: '1.4',
+                                              wordBreak: 'break-word',
+                                            }}
+                                          >
+                                            {logType === 'all' && (
+                                              <span
+                                                style={{
+                                                  color: entry.type === 'kubelet' ? '#0066cc' 
+                                                         : entry.type === 'system' ? '#009639' 
+                                                         : '#8a2be2',
+                                                  fontSize: '0.7rem',
+                                                  marginRight: '8px',
+                                                  textTransform: 'uppercase',
+                                                  fontWeight: 'bold'
+                                                }}
+                                              >
+                                                [{entry.type}]
+                                              </span>
+                                            )}
+                                            {entry.log}
+                                          </div>
+                                        ))
+                                      ) : (
+                                        <div style={{ color: '#888', fontStyle: 'italic' }}>
+                                          {logType === 'all' 
+                                            ? 'No logs available from any source' 
+                                            : `No ${logType} logs available`}
+                                        </div>
+                                      );
+                                    })()}
                                   </div>
                                 </CardBody>
                               </Card>

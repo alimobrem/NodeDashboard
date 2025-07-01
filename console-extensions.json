@@ -3,34 +3,8 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
-      "path": "/example",
-      "component": { "$codeRef": "ExamplePage" }
-    }
-  },
-  {
-    "type": "console.page/route",
-    "properties": {
-      "exact": true,
-      "path": "/nodes",
-      "component": { "$codeRef": "NodesPage" }
-    }
-  },
-  {
-    "type": "console.page/route",
-    "properties": {
-      "exact": true,
       "path": "/nodes-dashboard",
       "component": { "$codeRef": "NodesDashboard" }
-    }
-  },
-  {
-    "type": "console.navigation/href",
-    "properties": {
-      "id": "plugin-example",
-      "perspective": "admin",
-      "section": "home",
-      "name": "%plugin__node-dashboard~Plugin Example%",
-      "href": "/example"
     }
   },
   {
@@ -41,16 +15,6 @@
       "section": "home",
       "name": "%plugin__node-dashboard~Nodes Dashboard%",
       "href": "/nodes-dashboard"
-    }
-  },
-  {
-    "type": "console.navigation/href",
-    "properties": {
-      "id": "node-overview",
-      "perspective": "admin",
-      "section": "home", 
-      "name": "%plugin__node-dashboard~Node Overview%",
-      "href": "/nodes"
     }
   }
 ]
