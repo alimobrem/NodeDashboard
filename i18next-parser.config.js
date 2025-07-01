@@ -5,12 +5,21 @@ const { CustomJSONLexer } = require('./i18n-scripts/lexers');
 module.exports = {
   sort: true,
   createOldCatalogs: false,
-  keySeparator: false,
+  keySeparator: '~',
   locales: ['en'],
   namespaceSeparator: '~',
   reactNamespace: false,
-  defaultNamespace: 'plugin__console-plugin-template',
+  defaultNamespace: 'plugin__node-dashboard',
   useKeysAsDefaultValue: true,
+  indentation: 2,
+  keepRemoved: false,
+  output: 'locales/$LOCALE/$NAMESPACE.json',
+  input: [
+    'src/**/*.{js,jsx,ts,tsx}',
+    '!src/**/*.spec.{js,jsx,ts,tsx}',
+    '!src/i18n.js',
+    '!**/node_modules/**',
+  ],
 
   // see below for more details
   lexers: {

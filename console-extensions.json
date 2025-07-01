@@ -26,31 +26,31 @@
   {
     "type": "console.navigation/href",
     "properties": {
-      "id": "example",
-      "name": "%plugin__console-plugin-template~Plugin Example%",
-      "href": "/example",
+      "id": "plugin-example",
       "perspective": "admin",
-      "section": "home"
+      "section": "home",
+      "name": "%plugin__node-dashboard~Plugin Example%",
+      "href": "/example"
     }
   },
   {
     "type": "console.navigation/href",
     "properties": {
-      "id": "nodes",
-      "name": "%plugin__console-plugin-template~Nodes Dashboard%",
-      "href": "/nodes",
-      "perspective": "admin",
-      "section": "compute"
+      "id": "nodes-dashboard",
+      "perspective": "admin", 
+      "section": "home",
+      "name": "%plugin__node-dashboard~Nodes Dashboard%",
+      "href": "/nodes-dashboard"
     }
   },
   {
     "type": "console.navigation/href",
     "properties": {
-      "id": "nodes-overview",
-      "name": "%plugin__console-plugin-template~Node Overview%",
-      "href": "/nodes-dashboard",
+      "id": "node-overview",
       "perspective": "admin",
-      "section": "compute"
+      "section": "home", 
+      "name": "%plugin__node-dashboard~Node Overview%",
+      "href": "/nodes"
     }
   }
 ]

@@ -102,7 +102,7 @@ Using the [Remote Containers](https://marketplace.visualstudio.com/items?itemNam
 1. Create `dev.env` file in `.devcontainer` folder:
 
 ```bash
-OC_PLUGIN_NAME=console-plugin-template
+OC_PLUGIN_NAME=node-dashboard
 OC_URL=https://api.example.com:6443
 OC_USER=kubeadmin
 OC_PASS=<password>
@@ -158,7 +158,7 @@ The plugin registers with OpenShift Console as:
 
 ```json
 "consolePlugin": {
-  "name": "console-plugin-template",
+  "name": "node-dashboard",
   "version": "0.0.1", 
   "displayName": "Nodes Dashboard",
   "description": "Comprehensive node monitoring and management for OpenShift clusters",
@@ -187,16 +187,16 @@ The plugin registers with OpenShift Console as:
 
 ## Internationalization (i18n)
 
-The plugin uses the `plugin__console-plugin-template` namespace for translations with [react-i18next](https://react.i18next.com/):
+The plugin uses the `plugin__node-dashboard` namespace for translations with [react-i18next](https://react.i18next.com/):
 
 ```tsx
-const { t } = useTranslation('plugin__console-plugin-template');
+const { t } = useTranslation('plugin__node-dashboard');
 return <h1>{t('Nodes Dashboard')}</h1>;
 ```
 
 Labels in `console-extensions.json` use the format:
 ```json
-"name": "%plugin__console-plugin-template~Nodes Dashboard%"
+      "name": "%plugin__node-dashboard~Nodes Dashboard%"
 ```
 
 ## Contributing

@@ -1,129 +1,158 @@
 import * as React from 'react';
 import { useState, useEffect } from 'react';
+
+// PatternFly Core Components
 import {
-  PageSection,
-  Title,
-  Card,
-  CardTitle,
-  CardBody,
-  Grid,
-  GridItem,
-  Progress,
-  Badge,
-  Bullseye,
-  EmptyState,
-  EmptyStateBody,
-  Spinner,
   Alert,
   AlertVariant,
-  Flex,
-  FlexItem,
-  Tooltip,
-  Stack,
-  StackItem,
+  Badge,
+  Bullseye,
+  Button,
+  EmptyState,
+  EmptyStateBody,
+  PageSection,
+  Spinner,
+  Title,
 } from '@patternfly/react-core';
-import {
-  Table,
-  Thead,
-  Tr,
-  Th,
-  Tbody,
-  Td,
-} from '@patternfly/react-table';
+
+// PatternFly Table Components
+import { Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table';
+
+// PatternFly Icons
 import {
   CheckCircleIcon,
-  TimesCircleIcon,
-  ServerIcon,
-  CpuIcon,
-  MemoryIcon,
-  ClockIcon,
   ContainerNodeIcon,
+  ExclamationTriangleIcon,
+  SearchIcon,
 } from '@patternfly/react-icons';
 
-interface Pod {
+// Local interfaces
+interface NodeDetails {
   name: string;
-  namespace: string;
-  status: 'Running' | 'Pending' | 'Failed' | 'Succeeded' | 'Unknown';
-  restarts: number;
-  age: string;
-}
-
-interface Node {
-  name: string;
-  status: string;
+  status: 'Ready' | 'NotReady' | 'Unknown';
   role: string;
   version: string;
-  cpuUsage: number;
-  memoryUsage: number;
-  podCount: number;
-  cpuCapacity: string;
-  memoryCapacity: string;
   age: string;
-  pods: Pod[];
+  zone: string;
+  instanceType: string;
+  operatingSystem: string;
+  architecture: string;
+  containerRuntime: string;
+  cordoned: boolean;
+  drained: boolean;
+  labels: Record<string, string>;
+  annotations: Record<string, string>;
 }
 
 const NodesPage: React.FC = () => {
-  const [nodes, setNodes] = useState<Node[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [nodes, setNodes] = useState<NodeDetails[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-
-
-
-  const fetchData = async () => {
+  const fetchNodeData = async (): Promise<NodeDetails[]> => {
     try {
-      setLoading(true);
-      
-      // Try to fetch real data
       const response = await fetch('/api/kubernetes/api/v1/nodes');
-      
-      if (response.ok) {
-        const data = await response.json();
-        // Process real node data here
-        const realNodes: Node[] = data.items?.map((item: any) => ({
-          name: item.metadata?.name || 'unknown',
-          status: item.status?.conditions?.find((c: any) => c.type === 'Ready')?.status === 'True' ? 'Ready' : 'NotReady',
-          role: Object.keys(item.metadata?.labels || {}).some(label => label.includes('master') || label.includes('control-plane')) ? 'Master' : 'Worker',
-          version: item.status?.nodeInfo?.kubeletVersion || 'unknown',
-          cpuUsage: Math.floor(Math.random() * 80) + 10,
-          memoryUsage: Math.floor(Math.random() * 85) + 10,
-          podCount: Math.floor(Math.random() * 30) + 10,
-          cpuCapacity: item.status?.capacity?.cpu || '4',
-          memoryCapacity: item.status?.capacity?.memory || '16Gi',
-          age: '1d',
-          pods: []
-        })) || [];
 
-        if (realNodes.length > 0) {
-          setNodes(realNodes);
-        } else {
-          throw new Error('No nodes data received');
-        }
-      } else {
-        throw new Error('Failed to fetch nodes');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: Unable to connect to Kubernetes API`);
       }
-    } catch (err) {
-      console.error('Failed to fetch node data:', err);
-      setNodes([]);
-      setError('Unable to fetch cluster node data - please check your cluster connection');
-    } finally {
-      setLoading(false);
+
+      const data = await response.json();
+
+      return data.items.map((node: any): NodeDetails => {
+        const conditions = node.status?.conditions || [];
+        const readyCondition = conditions.find((c: any) => c.type === 'Ready');
+
+        const nodeInfo = node.status?.nodeInfo || {};
+        const labels = node.metadata?.labels || {};
+
+        // Determine node role
+        const role = labels['node-role.kubernetes.io/control-plane']
+          ? 'Control Plane'
+          : labels['node-role.kubernetes.io/worker']
+          ? 'Worker'
+          : 'Unknown';
+
+        return {
+          name: node.metadata?.name || 'unknown',
+          status: readyCondition?.status === 'True' ? 'Ready' : 'NotReady',
+          role,
+          version: nodeInfo.kubeletVersion || 'unknown',
+          age: node.metadata?.creationTimestamp
+            ? new Date(node.metadata.creationTimestamp).toLocaleDateString()
+            : 'unknown',
+          zone: labels['topology.kubernetes.io/zone'] || 'unknown',
+          instanceType:
+            labels['beta.kubernetes.io/instance-type'] ||
+            labels['node.kubernetes.io/instance-type'] ||
+            'unknown',
+          operatingSystem: nodeInfo.osImage || 'unknown',
+          architecture: nodeInfo.architecture || 'unknown',
+          containerRuntime: nodeInfo.containerRuntimeVersion || 'unknown',
+          cordoned: node.spec?.unschedulable === true,
+          drained: false, // This would require additional API calls to determine
+          labels,
+          annotations: node.metadata?.annotations || {},
+        };
+      });
+    } catch (error) {
+      console.error('Error fetching node data:', error);
+      throw error;
     }
   };
 
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
+    let isMounted = true;
+
+    const loadData = async (): Promise<void> => {
+      if (!isMounted) return;
+
+      setLoading(true);
+      try {
+        const nodeData = await fetchNodeData();
+
+        if (isMounted) {
+          setNodes(nodeData);
+          setError(null);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'Unable to fetch node data');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    // Load data once - removed auto-refresh interval to prevent screen flashing
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const getPodStatusColor = (status: string) => {
+  const getStatusColor = (status: string): string => {
     switch (status) {
-      case 'Running': return '#3e8635';
-      case 'Pending': return '#f0ab00';
-      case 'Failed': return '#c9190b';
-      case 'Succeeded': return '#339af0';
-      default: return '#6a6e73';
+      case 'Ready':
+        return '#3e8635';
+      case 'NotReady':
+        return '#c9190b';
+      default:
+        return '#6a6e73';
+    }
+  };
+
+  const getStatusIcon = (status: string): React.ReactElement => {
+    switch (status) {
+      case 'Ready':
+        return <CheckCircleIcon style={{ color: '#3e8635' }} />;
+      case 'NotReady':
+        return <ExclamationTriangleIcon style={{ color: '#c9190b' }} />;
+      default:
+        return <ExclamationTriangleIcon style={{ color: '#6a6e73' }} />;
     }
   };
 
@@ -134,299 +163,119 @@ const NodesPage: React.FC = () => {
           <EmptyState>
             <Spinner size="xl" />
             <Title headingLevel="h2" size="lg">
-              Loading Nodes...
+              Loading Node Information...
             </Title>
-            <EmptyStateBody>
-              Fetching cluster node information...
-            </EmptyStateBody>
+            <EmptyStateBody>Fetching cluster node data from Kubernetes API...</EmptyStateBody>
           </EmptyState>
         </Bullseye>
       </PageSection>
     );
   }
 
+  if (error) {
+    return (
+      <PageSection>
+        <Alert variant={AlertVariant.danger} title="Unable to Load Node Data">
+          <p>{error}</p>
+          <p>
+            Please check your cluster connection and ensure you have proper permissions to view node
+            information.
+          </p>
+        </Alert>
+      </PageSection>
+    );
+  }
+
+  if (nodes.length === 0) {
+    return (
+      <PageSection>
+        <EmptyState>
+          <SearchIcon style={{ fontSize: '4rem', color: '#6a6e73' }} />
+          <Title headingLevel="h2" size="lg">
+            No Nodes Found
+          </Title>
+          <EmptyStateBody>
+            No cluster nodes are currently available. This may indicate a connection issue or
+            insufficient permissions.
+          </EmptyStateBody>
+          <Button variant="primary" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </EmptyState>
+      </PageSection>
+    );
+  }
+
   return (
     <PageSection>
-      <Stack hasGutter>
-        {/* Header */}
-        <StackItem>
-          <Title headingLevel="h1" size="2xl">
-            <ContainerNodeIcon style={{ marginRight: '0.5rem', color: '#0066cc' }} />
-            Cluster Nodes
-          </Title>
-        </StackItem>
+      <Title
+        headingLevel="h1"
+        size="2xl"
+        style={{ marginBottom: 'var(--pf-v5-global--spacer--md)' }}
+      >
+        <ContainerNodeIcon
+          style={{ marginRight: 'var(--pf-v5-global--spacer--sm)', color: '#0066cc' }}
+        />
+        Cluster Nodes ({nodes.length})
+      </Title>
 
-        {error && (
-          <StackItem>
-            <Alert variant={AlertVariant.warning} title="Connection Notice">
-              {error}
-            </Alert>
-          </StackItem>
-        )}
-
-        {/* Status Cards */}
-        <StackItem>
-          <Grid hasGutter>
-            <GridItem span={3}>
-              <Card>
-                <CardBody>
-                  <Flex direction={{ default: 'column' }} alignItems={{ default: 'alignItemsCenter' }}>
-                    <FlexItem>
-                      <ServerIcon style={{ color: '#0066cc', fontSize: '2rem' }} />
-                    </FlexItem>
-                    <FlexItem>
-                      <Title headingLevel="h3" size="xl" style={{ color: '#0066cc' }}>
-                        {nodes.length}
-                      </Title>
-                    </FlexItem>
-                    <FlexItem>
-                      <span style={{ textAlign: 'center', fontSize: '0.875rem' }}>
-                        Total Nodes
-                      </span>
-                    </FlexItem>
-                  </Flex>
-                </CardBody>
-              </Card>
-            </GridItem>
-            <GridItem span={3}>
-              <Card>
-                <CardBody>
-                  <Flex direction={{ default: 'column' }} alignItems={{ default: 'alignItemsCenter' }}>
-                    <FlexItem>
-                      <CheckCircleIcon style={{ color: '#3e8635', fontSize: '2rem' }} />
-                    </FlexItem>
-                    <FlexItem>
-                      <Title headingLevel="h3" size="xl" style={{ color: '#3e8635' }}>
-                        {nodes.filter(n => n.status === 'Ready').length}
-                      </Title>
-                    </FlexItem>
-                    <FlexItem>
-                      <span style={{ textAlign: 'center', fontSize: '0.875rem' }}>
-                        Ready Nodes
-                      </span>
-                    </FlexItem>
-                  </Flex>
-                </CardBody>
-              </Card>
-            </GridItem>
-            <GridItem span={3}>
-              <Card>
-                <CardBody>
-                  <Flex direction={{ default: 'column' }} alignItems={{ default: 'alignItemsCenter' }}>
-                    <FlexItem>
-                      <TimesCircleIcon style={{ color: '#c9190b', fontSize: '2rem' }} />
-                    </FlexItem>
-                    <FlexItem>
-                      <Title headingLevel="h3" size="xl" style={{ color: '#c9190b' }}>
-                        {nodes.filter(n => n.status !== 'Ready').length}
-                      </Title>
-                    </FlexItem>
-                    <FlexItem>
-                      <span style={{ textAlign: 'center', fontSize: '0.875rem' }}>
-                        Not Ready
-                      </span>
-                    </FlexItem>
-                  </Flex>
-                </CardBody>
-              </Card>
-            </GridItem>
-            <GridItem span={3}>
-              <Card>
-                <CardBody>
-                  <Flex direction={{ default: 'column' }} alignItems={{ default: 'alignItemsCenter' }}>
-                    <FlexItem>
-                      <ContainerNodeIcon style={{ color: '#663399', fontSize: '2rem' }} />
-                    </FlexItem>
-                    <FlexItem>
-                      <Title headingLevel="h3" size="xl" style={{ color: '#663399' }}>
-                        {nodes.reduce((sum, node) => sum + node.podCount, 0)}
-                      </Title>
-                    </FlexItem>
-                    <FlexItem>
-                      <span style={{ textAlign: 'center', fontSize: '0.875rem' }}>
-                        Total Pods
-                      </span>
-                    </FlexItem>
-                  </Flex>
-                </CardBody>
-              </Card>
-            </GridItem>
-          </Grid>
-        </StackItem>
-
-        {/* Visual Node View */}
-        <StackItem>
-          <Card>
-            <CardTitle>
-              Node Topology
-            </CardTitle>
-            <CardBody>
-              <Grid hasGutter>
-                {nodes.map((node) => (
-                  <GridItem key={node.name} span={4}>
-                    <Card style={{ 
-                      border: `2px solid ${node.status === 'Ready' ? '#3e8635' : '#c9190b'}`,
-                      backgroundColor: node.status === 'Ready' ? '#f0f8f0' : '#fdf2f2'
-                    }}>
-                      <CardBody>
-                        <Stack hasGutter>
-                          <StackItem>
-                            <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsSm' }}>
-                              <FlexItem>
-                                <ServerIcon style={{ color: node.status === 'Ready' ? '#3e8635' : '#c9190b' }} />
-                              </FlexItem>
-                              <FlexItem>
-                                <Title headingLevel="h4" size="md">
-                                  {node.name}
-                                </Title>
-                              </FlexItem>
-                            </Flex>
-                          </StackItem>
-                          <StackItem>
-                            <Badge color={node.role === 'Master' ? 'blue' : 'purple'}>
-                              {node.role}
-                            </Badge>
-                            <Badge color={node.status === 'Ready' ? 'green' : 'red'} style={{ marginLeft: '0.5rem' }}>
-                              {node.status}
-                            </Badge>
-                          </StackItem>
-                          <StackItem>
-                            <span style={{ fontSize: '0.875rem' }}>
-                              <CpuIcon style={{ marginRight: '0.25rem' }} />
-                              CPU: {node.cpuUsage}%
-                            </span>
-                            <Progress
-                              value={node.cpuUsage}
-                              size="sm"
-                              variant={node.cpuUsage > 80 ? 'danger' : node.cpuUsage > 60 ? 'warning' : 'success'}
-                              style={{ marginTop: '0.25rem' }}
-                            />
-                          </StackItem>
-                          <StackItem>
-                            <span style={{ fontSize: '0.875rem' }}>
-                              <MemoryIcon style={{ marginRight: '0.25rem' }} />
-                              Memory: {node.memoryUsage}%
-                            </span>
-                            <Progress
-                              value={node.memoryUsage}
-                              size="sm"
-                              variant={node.memoryUsage > 80 ? 'danger' : node.memoryUsage > 60 ? 'warning' : 'success'}
-                              style={{ marginTop: '0.25rem' }}
-                            />
-                          </StackItem>
-                          <StackItem>
-                            <span style={{ fontSize: '0.875rem' }}>
-                              Pods: {node.podCount} | Capacity: {node.cpuCapacity} cores, {node.memoryCapacity}
-                            </span>
-                          </StackItem>
-                          {/* Pod visualization */}
-                          <StackItem>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px', marginTop: '0.5rem' }}>
-                              {node.pods.slice(0, 20).map((pod, podIndex) => (
-                                <Tooltip key={podIndex} content={`${pod.name} (${pod.status})`}>
-                                  <div
-                                    style={{
-                                      width: '10px',
-                                      height: '10px',
-                                      borderRadius: '2px',
-                                      backgroundColor: getPodStatusColor(pod.status),
-                                      cursor: 'pointer'
-                                    }}
-                                  />
-                                </Tooltip>
-                              ))}
-                              {node.pods.length > 20 && (
-                                <span style={{ fontSize: '0.75rem', marginLeft: '0.25rem' }}>
-                                  +{node.pods.length - 20} more
-                                </span>
-                              )}
-                            </div>
-                          </StackItem>
-                        </Stack>
-                      </CardBody>
-                    </Card>
-                  </GridItem>
-                ))}
-              </Grid>
-            </CardBody>
-          </Card>
-        </StackItem>
-
-        {/* Table View */}
-        <StackItem>
-          <Card>
-            <CardTitle>
-              Node Details
-            </CardTitle>
-            <CardBody>
-              <Table aria-label="Nodes table" variant="compact">
-                <Thead>
-                  <Tr>
-                    <Th>Node Name</Th>
-                    <Th>Status</Th>
-                    <Th>Role</Th>
-                    <Th>Version</Th>
-                    <Th>CPU Usage</Th>
-                    <Th>Memory Usage</Th>
-                    <Th>Pods</Th>
-                    <Th>Age</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {nodes.map((node) => (
-                    <Tr key={node.name}>
-                      <Td>
-                        <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsSm' }}>
-                          <FlexItem>
-                            <ServerIcon />
-                          </FlexItem>
-                          <FlexItem>{node.name}</FlexItem>
-                        </Flex>
-                      </Td>
-                      <Td>
-                        <Badge color={node.status === 'Ready' ? 'green' : 'red'}>
-                          {node.status}
-                        </Badge>
-                      </Td>
-                      <Td>
-                        <Badge color={node.role === 'Master' ? 'blue' : 'purple'}>
-                          {node.role}
-                        </Badge>
-                      </Td>
-                      <Td>{node.version}</Td>
-                      <Td>
-                        <Progress
-                          value={node.cpuUsage}
-                          title={`${node.cpuUsage}%`}
-                          size="sm"
-                          variant={node.cpuUsage > 80 ? 'danger' : node.cpuUsage > 60 ? 'warning' : 'success'}
-                        />
-                      </Td>
-                      <Td>
-                        <Progress
-                          value={node.memoryUsage}
-                          title={`${node.memoryUsage}%`}
-                          size="sm"
-                          variant={node.memoryUsage > 80 ? 'danger' : node.memoryUsage > 60 ? 'warning' : 'success'}
-                        />
-                      </Td>
-                      <Td>
-                        <Badge color="grey">
-                          {node.podCount}
-                        </Badge>
-                      </Td>
-                      <Td>
-                        <ClockIcon style={{ marginRight: '0.25rem' }} />
-                        {node.age}
-                      </Td>
-                    </Tr>
-                  ))}
-                </Tbody>
-              </Table>
-            </CardBody>
-          </Card>
-        </StackItem>
-      </Stack>
+      <Table aria-label="Cluster Nodes Table" variant="compact">
+        <Thead>
+          <Tr>
+            <Th>Node Name</Th>
+            <Th>Status</Th>
+            <Th>Role</Th>
+            <Th>Version</Th>
+            <Th>Age</Th>
+            <Th>Zone</Th>
+            <Th>Instance Type</Th>
+            <Th>OS</Th>
+            <Th>Architecture</Th>
+          </Tr>
+        </Thead>
+        <Tbody>
+          {nodes.map((node) => (
+            <Tr key={node.name}>
+              <Td dataLabel="Node Name">
+                <div style={{ fontWeight: 600 }}>{node.name}</div>
+                {node.cordoned && (
+                  <Badge
+                    screenReaderText="cordoned"
+                    style={{ backgroundColor: '#f0ab00', color: '#151515', marginTop: '4px' }}
+                  >
+                    Cordoned
+                  </Badge>
+                )}
+              </Td>
+              <Td dataLabel="Status">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {getStatusIcon(node.status)}
+                  <span style={{ color: getStatusColor(node.status), fontWeight: 600 }}>
+                    {node.status}
+                  </span>
+                </div>
+              </Td>
+              <Td dataLabel="Role">
+                <Badge
+                  screenReaderText={node.role}
+                  style={{
+                    backgroundColor: node.role === 'Control Plane' ? '#0066cc' : '#8a2be2',
+                    color: 'white',
+                  }}
+                >
+                  {node.role}
+                </Badge>
+              </Td>
+              <Td dataLabel="Version">{node.version}</Td>
+              <Td dataLabel="Age">{node.age}</Td>
+              <Td dataLabel="Zone">{node.zone}</Td>
+              <Td dataLabel="Instance Type">{node.instanceType}</Td>
+              <Td dataLabel="OS">{node.operatingSystem}</Td>
+              <Td dataLabel="Architecture">{node.architecture}</Td>
+            </Tr>
+          ))}
+        </Tbody>
+      </Table>
     </PageSection>
   );
 };

@@ -1,6 +1,6 @@
 import { checkErrors } from '../support';
 
-const PLUGIN_TEMPLATE_NAME = 'console-plugin-template';
+const PLUGIN_TEMPLATE_NAME = 'node-dashboard';
 const PLUGIN_TEMPLATE_PULL_SPEC = Cypress.env('PLUGIN_TEMPLATE_PULL_SPEC');
 export const isLocalDevEnvironment = Cypress.config('baseUrl').includes('localhost');
 
