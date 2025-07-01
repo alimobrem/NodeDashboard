@@ -252,6 +252,7 @@ const NodesDashboard: React.FC = () => {
   const [selectedNode, setSelectedNode] = useState<NodeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailsLoading, setDetailsLoading] = useState(false); // New loading state for details refresh
+  const [isUpdating, setIsUpdating] = useState(false); // Visual feedback for real-time updates
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [logType, setLogType] = useState<LogType>('all');
@@ -610,6 +611,7 @@ const NodesDashboard: React.FC = () => {
     if (!nodeName) return;
 
     try {
+      setIsUpdating(true);
       setDetailsLoading(true);
 
       // Fetch updated data for the specific node
@@ -650,6 +652,8 @@ const NodesDashboard: React.FC = () => {
       console.error('Failed to refresh node details:', err);
     } finally {
       setDetailsLoading(false);
+      // Keep updating indicator visible slightly longer for better UX
+      setTimeout(() => setIsUpdating(false), 500);
     }
   };
 
@@ -967,10 +971,33 @@ const NodesDashboard: React.FC = () => {
     };
   }, []); // Run once on component mount
 
-  // Pod watch setup (depends on selectedNode to watch correct node's pods)
+  // Pod watch setup with debouncing to prevent screen flashing
   useEffect(() => {
     let podWatchSocket: WebSocket | null = null;
     let isMounted = true;
+    let refreshTimeout: NodeJS.Timeout | null = null;
+    let lastRefreshTime = 0;
+    const REFRESH_DEBOUNCE_MS = 2000; // Minimum 2 seconds between refreshes
+
+    const debouncedRefresh = (nodeName: string) => {
+      const now = Date.now();
+      if (now - lastRefreshTime < REFRESH_DEBOUNCE_MS) {
+        // Clear existing timeout and set a new one
+        if (refreshTimeout) {
+          clearTimeout(refreshTimeout);
+        }
+        refreshTimeout = setTimeout(() => {
+          if (isMounted) {
+            lastRefreshTime = Date.now();
+            refreshSelectedNodeDetails(nodeName).catch(console.error);
+          }
+        }, REFRESH_DEBOUNCE_MS - (now - lastRefreshTime));
+      } else {
+        // Execute immediately if enough time has passed
+        lastRefreshTime = now;
+        refreshSelectedNodeDetails(nodeName).catch(console.error);
+      }
+    };
 
     const setupPodWatch = () => {
       if (!selectedNode) return;
@@ -980,7 +1007,14 @@ const NodesDashboard: React.FC = () => {
         const podWatchUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${
           window.location.host
         }/api/kubernetes/api/v1/pods?watch=true&fieldSelector=spec.nodeName=${selectedNode.name}`;
+        
         podWatchSocket = new WebSocket(podWatchUrl);
+
+        podWatchSocket.onopen = () => {
+          if (isMounted) {
+            console.log(`Pod watch connected for node: ${selectedNode.name}`);
+          }
+        };
 
         podWatchSocket.onmessage = (event) => {
           if (!isMounted) return;
@@ -994,41 +1028,64 @@ const NodesDashboard: React.FC = () => {
             ) {
               const podData = watchEvent.object;
               
-              // Add log entry for pod events
-              const logEntry = generateLogEntry(`POD_${watchEvent.type}`, {
-                name: podData?.metadata?.name || 'unknown',
-                namespace: podData?.metadata?.namespace || 'default',
-                status: podData?.status?.phase || 'Unknown',
-              });
-              addLogEntry(logEntry);
+              // Add log entry for pod events (but less verbose)
+              if (watchEvent.type === 'ADDED' || watchEvent.type === 'DELETED') {
+                const logEntry = generateLogEntry(`POD_${watchEvent.type}`, {
+                  name: podData?.metadata?.name || 'unknown',
+                  namespace: podData?.metadata?.namespace || 'default',
+                  status: podData?.status?.phase || 'Unknown',
+                });
+                addLogEntry(logEntry);
+              }
 
-              // Refresh the selected node's details when pods are added/deleted
-              // This ensures pod counts update in real-time
+              // Only refresh on significant pod changes (added/deleted) with debouncing
               if (selectedNode && (watchEvent.type === 'ADDED' || watchEvent.type === 'DELETED')) {
-                console.log(`Pod ${watchEvent.type.toLowerCase()} detected for node ${selectedNode.name}, refreshing pod count...`);
-                refreshSelectedNodeDetails(selectedNode.name).catch(console.error);
+                console.log(`Pod ${watchEvent.type.toLowerCase()} detected for node ${selectedNode.name} (debounced refresh)`);
+                debouncedRefresh(selectedNode.name);
               }
             }
           } catch (err) {
-            console.log('Pod watch event parsing failed:', err);
+            // Reduce console noise - only log actual errors
+            if (err instanceof Error && err.message !== 'Unexpected end of JSON input') {
+              console.log('Pod watch event parsing failed:', err);
+            }
           }
         };
 
-        console.log(`Pod watch setup completed for node: ${selectedNode.name}`);
+        podWatchSocket.onerror = (error) => {
+          if (isMounted) {
+            console.log(`Pod watch error for node ${selectedNode.name}:`, error);
+          }
+        };
+
+        podWatchSocket.onclose = (event) => {
+          if (isMounted && event.code !== 1000) {
+            console.log(`Pod watch closed unexpectedly for node ${selectedNode.name}, code: ${event.code}`);
+          }
+        };
+
       } catch (err) {
         console.log('Pod watch setup failed:', err);
       }
     };
 
-    setupPodWatch();
+    // Delay setup slightly to prevent rapid recreation
+    const setupTimeout = setTimeout(setupPodWatch, 100);
 
     return () => {
       isMounted = false;
+      
+      // Clear timeouts
+      if (setupTimeout) {
+        clearTimeout(setupTimeout);
+      }
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+      }
 
       // Close pod WebSocket connection
-      if (podWatchSocket) {
-        (podWatchSocket as WebSocket).close();
-        console.log(`Pod watch closed for node: ${selectedNode?.name || 'unknown'}`);
+      if (podWatchSocket && podWatchSocket.readyState === WebSocket.OPEN) {
+        podWatchSocket.close(1000, 'Component unmounting');
       }
     };
   }, [selectedNode]); // Re-run whenever selectedNode changes to watch new node's pods
@@ -1118,13 +1175,14 @@ const NodesDashboard: React.FC = () => {
                       width: '8px',
                       height: '8px',
                       borderRadius: '50%',
-                      backgroundColor: '#3e8635',
+                      backgroundColor: isUpdating ? '#f0ab00' : '#3e8635',
+                      transition: 'background-color 0.3s ease',
                     }}
                   />
                 </FlexItem>
                 <FlexItem>
                   <span style={{ fontSize: '0.875rem', color: '#6a6e73' }}>
-                    Real-time cluster data via watches
+                    {isUpdating ? 'Updating pod data...' : 'Real-time cluster data via watches'}
                   </span>
                 </FlexItem>
               </Flex>
