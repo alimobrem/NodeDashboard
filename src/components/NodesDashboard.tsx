@@ -842,6 +842,7 @@ const NodesDashboard: React.FC = () => {
   // Animation frame-based log updates to prevent excessive re-renders while staying responsive
   const pendingLogsRef = useRef<Array<{entry: string, type: LogType}>>([]);
   const logUpdateFrameRef = useRef<number | null>(null);
+  const logContainerRef = useRef<HTMLDivElement>(null);
 
   const addLogEntry = (logEntry: string, targetLogType: LogType = 'system') => {
     pendingLogsRef.current.push({entry: logEntry, type: targetLogType});
@@ -860,7 +861,7 @@ const NodesDashboard: React.FC = () => {
           
           // Group pending logs by type and add them
           currentPending.forEach(({entry, type}) => {
-            newLogs[type] = [...(newLogs[type] || []), entry].slice(-50); // Keep last 50 entries per type
+            newLogs[type] = [...(newLogs[type] || []), entry].slice(-300); // Keep last 300 entries per type
           });
           
           return newLogs;
@@ -880,6 +881,21 @@ const NodesDashboard: React.FC = () => {
       }
     };
   }, []);
+
+  // Auto-scroll to bottom when logs change
+  useEffect(() => {
+    if (logContainerRef.current) {
+      const container = logContainerRef.current;
+      // Only auto-scroll if user is already near the bottom (within 100px)
+      const isNearBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 100;
+      
+      if (isNearBottom) {
+        setTimeout(() => {
+          container.scrollTop = container.scrollHeight;
+        }, 50); // Small delay to ensure DOM has updated
+      }
+    }
+  }, [logs, logType]);
 
   // Initial data loading effect (runs only once)
   useEffect(() => {
@@ -3016,6 +3032,7 @@ const NodesDashboard: React.FC = () => {
                                 </CardTitle>
                                 <CardBody style={{ padding: 0 }}>
                                   <div
+                                    ref={logContainerRef}
                                     style={{
                                       backgroundColor: '#1a1a1a',
                                       color: '#ffffff',
@@ -3024,6 +3041,10 @@ const NodesDashboard: React.FC = () => {
                                       padding: 'var(--pf-v5-global--spacer--md)',
                                       borderRadius:
                                         '0 0 var(--pf-v5-global--BorderRadius--sm) var(--pf-v5-global--BorderRadius--sm)',
+                                      height: '500px',
+                                      maxHeight: '500px',
+                                      overflowY: 'auto',
+                                      overflowX: 'hidden',
                                     }}
                                   >
                                     {(() => {
