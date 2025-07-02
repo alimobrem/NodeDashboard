@@ -255,7 +255,7 @@ const NodeTerminal: React.FC<NodeTerminalProps> = ({ selectedNode }) => {
   const [terminalHistory, setTerminalHistory] = useState<string[]>([
     `Welcome to ${selectedNode.name} debug terminal`,
     `Node: ${selectedNode.name} | Status: ${selectedNode.status} | Uptime: ${selectedNode.uptime}`,
-    ''
+    '',
   ]);
   const [currentInput, setCurrentInput] = useState('');
   const [isConnected, setIsConnected] = useState(false);
@@ -280,10 +280,11 @@ const NodeTerminal: React.FC<NodeTerminalProps> = ({ selectedNode }) => {
   useEffect(() => {
     const connectTimeout = setTimeout(() => {
       setIsConnected(true);
-      setTerminalHistory(prev => [...prev, 
+      setTerminalHistory((prev) => [
+        ...prev,
         `Connecting to ${selectedNode.name}...`,
         `Connection established via OpenShift debug pod`,
-        `sh-4.4# `
+        `sh-4.4# `,
       ]);
     }, 1000);
 
@@ -295,12 +296,12 @@ const NodeTerminal: React.FC<NodeTerminalProps> = ({ selectedNode }) => {
     if (!trimmedCommand) return;
 
     // Add command to history
-    setTerminalHistory(prev => [...prev, `sh-4.4# ${trimmedCommand}`]);
+    setTerminalHistory((prev) => [...prev, `sh-4.4# ${trimmedCommand}`]);
 
     try {
       // Simulate command execution with realistic responses
       let output = '';
-      
+
       switch (trimmedCommand.toLowerCase()) {
         case 'help':
           output = `Available commands:
@@ -332,20 +333,29 @@ root        1234  2.1  1.2 1986420 98336 ?       Ssl  Jan01  45:23 /usr/bin/kube
 root        5678  0.5  0.8  743092 65536 ?       Ssl  Jan01  12:34 /usr/bin/crio`;
           break;
 
-        case 'free -h':
+        case 'free -h': {
           const totalMem = formatMemoryForDisplay(selectedNode.allocatableResources.memory);
           const usedPercent = selectedNode.metrics.memory.current;
           output = `               total        used        free      shared  buff/cache   available
-Mem:           ${totalMem}      ${Math.round(usedPercent)}%      ${Math.round(100-usedPercent)}%        0B        2.1G      ${Math.round(100-usedPercent-10)}%
+Mem:           ${totalMem}      ${Math.round(usedPercent)}%      ${Math.round(
+            100 - usedPercent,
+          )}%        0B        2.1G      ${Math.round(100 - usedPercent - 10)}%
 Swap:             0B          0B          0B`;
           break;
+        }
 
         case 'df -h':
           output = `Filesystem      Size  Used Avail Use% Mounted on
-/dev/nvme0n1p4  100G   ${Math.round(Math.random() * 40 + 20)}G   ${Math.round(Math.random() * 40 + 40)}G  ${Math.round(Math.random() * 30 + 30)}% /
+/dev/nvme0n1p4  100G   ${Math.round(Math.random() * 40 + 20)}G   ${Math.round(
+            Math.random() * 40 + 40,
+          )}G  ${Math.round(Math.random() * 30 + 30)}% /
 /dev/nvme0n1p3  1.0G  200M  824M  20% /boot
 /dev/nvme0n1p2  200M   12M  188M   6% /boot/efi
-tmpfs           ${Math.round(parseInt(selectedNode.allocatableResources.memory.replace('Ki', '')) / 1024 / 1024)}G     0  ${Math.round(parseInt(selectedNode.allocatableResources.memory.replace('Ki', '')) / 1024 / 1024)}G   0% /dev/shm`;
+tmpfs           ${Math.round(
+            parseInt(selectedNode.allocatableResources.memory.replace('Ki', '')) / 1024 / 1024,
+          )}G     0  ${Math.round(
+            parseInt(selectedNode.allocatableResources.memory.replace('Ki', '')) / 1024 / 1024,
+          )}G   0% /dev/shm`;
           break;
 
         case 'ls /':
@@ -356,7 +366,9 @@ boot  etc  lib   media  opt  root  sbin  sys  usr`;
         case 'systemctl status kubelet':
           output = `● kubelet.service - Kubernetes Kubelet
      Loaded: loaded (/etc/systemd/system/kubelet.service; enabled; vendor preset: enabled)
-     Active: active (running) since ${new Date(Date.now() - Math.random() * 86400000).toLocaleDateString()}
+     Active: active (running) since ${new Date(
+       Date.now() - Math.random() * 86400000,
+     ).toLocaleDateString()}
        Docs: https://kubernetes.io/docs/
    Main PID: 1234 (kubelet)
       Tasks: 23 (limit: 49152)
@@ -368,27 +380,54 @@ boot  etc  lib   media  opt  root  sbin  sys  usr`;
 
         case 'crictl ps':
           output = `CONTAINER ID   IMAGE                                                              CREATED        STATE    NAME
-${selectedNode.pods?.slice(0, 5).map(pod => 
-  `${Math.random().toString(36).substring(2, 15)}   ${pod.namespace}/${pod.name}:latest   ${pod.age} ago   ${pod.status === 'Running' ? 'Running' : 'Exited'}   ${pod.name}`
-).join('\n') || 'No containers found'}`;
+${
+  selectedNode.pods
+    ?.slice(0, 5)
+    .map(
+      (pod) =>
+        `${Math.random().toString(36).substring(2, 15)}   ${pod.namespace}/${pod.name}:latest   ${
+          pod.age
+        } ago   ${pod.status === 'Running' ? 'Running' : 'Exited'}   ${pod.name}`,
+    )
+    .join('\n') || 'No containers found'
+}`;
           break;
 
         case 'journalctl -u kubelet --no-pager -n 20':
-          output = `-- Logs begin at ${new Date(Date.now() - 86400000).toISOString()}, end at ${new Date().toISOString()} --
-${new Date().toISOString()} ${selectedNode.name} kubelet[1234]: I0101 12:34:56.789012    1234 kubelet.go:2139] Starting kubelet
-${new Date().toISOString()} ${selectedNode.name} kubelet[1234]: I0101 12:34:57.123456    1234 server.go:198] Starting to listen on 0.0.0.0:10250
-${new Date().toISOString()} ${selectedNode.name} kubelet[1234]: I0101 12:34:58.234567    1234 server.go:207] Starting to listen on 127.0.0.1:10248
-${new Date().toISOString()} ${selectedNode.name} kubelet[1234]: I0101 12:35:00.345678    1234 kubelet_node_status.go:78] Attempting to register node ${selectedNode.name}
-${new Date().toISOString()} ${selectedNode.name} kubelet[1234]: I0101 12:35:01.456789    1234 kubelet_node_status.go:81] Successfully registered node ${selectedNode.name}`;
+          output = `-- Logs begin at ${new Date(
+            Date.now() - 86400000,
+          ).toISOString()}, end at ${new Date().toISOString()} --
+${new Date().toISOString()} ${
+            selectedNode.name
+          } kubelet[1234]: I0101 12:34:56.789012    1234 kubelet.go:2139] Starting kubelet
+${new Date().toISOString()} ${
+            selectedNode.name
+          } kubelet[1234]: I0101 12:34:57.123456    1234 server.go:198] Starting to listen on 0.0.0.0:10250
+${new Date().toISOString()} ${
+            selectedNode.name
+          } kubelet[1234]: I0101 12:34:58.234567    1234 server.go:207] Starting to listen on 127.0.0.1:10248
+${new Date().toISOString()} ${
+            selectedNode.name
+          } kubelet[1234]: I0101 12:35:00.345678    1234 kubelet_node_status.go:78] Attempting to register node ${
+            selectedNode.name
+          }
+${new Date().toISOString()} ${
+            selectedNode.name
+          } kubelet[1234]: I0101 12:35:01.456789    1234 kubelet_node_status.go:81] Successfully registered node ${
+            selectedNode.name
+          }`;
           break;
 
-        case 'cat /proc/cpuinfo | grep processor | wc -l':
+        case 'cat /proc/cpuinfo | grep processor | wc -l': {
           const cpuInfo = formatCPU(selectedNode.allocatableResources.cpu);
           output = `${cpuInfo.value}`;
           break;
+        }
 
         case 'uptime':
-          output = ` 12:34:56 up ${selectedNode.uptime}, 1 user, load average: ${(Math.random() * 2).toFixed(2)}, ${(Math.random() * 2).toFixed(2)}, ${(Math.random() * 2).toFixed(2)}`;
+          output = ` 12:34:56 up ${selectedNode.uptime}, 1 user, load average: ${(
+            Math.random() * 2
+          ).toFixed(2)}, ${(Math.random() * 2).toFixed(2)}, ${(Math.random() * 2).toFixed(2)}`;
           break;
 
         case 'whoami':
@@ -404,13 +443,13 @@ ${new Date().toISOString()} ${selectedNode.name} kubelet[1234]: I0101 12:35:01.4
             `Welcome to ${selectedNode.name} debug terminal`,
             `Node: ${selectedNode.name} | Status: ${selectedNode.status} | Uptime: ${selectedNode.uptime}`,
             '',
-            `sh-4.4# `
+            `sh-4.4# `,
           ]);
           return;
 
         case 'exit':
           setIsConnected(false);
-          setTerminalHistory(prev => [...prev, 'Connection closed.']);
+          setTerminalHistory((prev) => [...prev, 'Connection closed.']);
           return;
 
         default:
@@ -424,16 +463,15 @@ ${new Date().toISOString()} ${selectedNode.name} kubelet[1234]: I0101 12:35:01.4
 
       // Add output to history
       if (output) {
-        setTerminalHistory(prev => [...prev, output, '']);
+        setTerminalHistory((prev) => [...prev, output, '']);
       }
 
       // Add new prompt
       if (isConnected) {
-        setTerminalHistory(prev => [...prev, 'sh-4.4# ']);
+        setTerminalHistory((prev) => [...prev, 'sh-4.4# ']);
       }
-
     } catch (error) {
-      setTerminalHistory(prev => [...prev, `Error executing command: ${error}`, 'sh-4.4# ']);
+      setTerminalHistory((prev) => [...prev, `Error executing command: ${error}`, 'sh-4.4# ']);
     }
   };
 
@@ -453,25 +491,30 @@ ${new Date().toISOString()} ${selectedNode.name} kubelet[1234]: I0101 12:35:01.4
   return (
     <div style={{ paddingTop: 'var(--pf-v5-global--spacer--md)' }}>
       <Card style={{ backgroundColor: '#1a1a1a', border: '1px solid #3c3c3c' }}>
-        <CardTitle style={{ 
-          backgroundColor: '#2d2d2d', 
-          color: '#ffffff',
-          fontSize: '0.875rem',
-          padding: 'var(--pf-v5-global--spacer--sm) var(--pf-v5-global--spacer--md)'
-        }}>
-          <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsSm' }}>
+        <CardTitle
+          style={{
+            backgroundColor: '#2d2d2d',
+            color: '#ffffff',
+            fontSize: '0.875rem',
+            padding: 'var(--pf-v5-global--spacer--sm) var(--pf-v5-global--spacer--md)',
+          }}
+        >
+          <Flex
+            alignItems={{ default: 'alignItemsCenter' }}
+            spaceItems={{ default: 'spaceItemsSm' }}
+          >
             <FlexItem>
               <TerminalIcon style={{ color: isConnected ? '#00ff00' : '#ffff00' }} />
             </FlexItem>
+            <FlexItem>Terminal - {selectedNode.name}</FlexItem>
             <FlexItem>
-              Terminal - {selectedNode.name}
-            </FlexItem>
-            <FlexItem>
-              <Badge style={{ 
-                backgroundColor: isConnected ? '#00ff00' : '#ffff00', 
-                color: '#000000', 
-                fontSize: '0.625rem' 
-              }}>
+              <Badge
+                style={{
+                  backgroundColor: isConnected ? '#00ff00' : '#ffff00',
+                  color: '#000000',
+                  fontSize: '0.625rem',
+                }}
+              >
                 {isConnected ? 'Connected' : 'Connecting...'}
               </Badge>
             </FlexItem>
@@ -525,9 +568,16 @@ ${new Date().toISOString()} ${selectedNode.name} kubelet[1234]: I0101 12:35:01.4
       </Card>
       <div style={{ marginTop: 'var(--pf-v5-global--spacer--md)' }}>
         <Alert variant="success" title="Interactive Terminal">
-          <p>This is a functional terminal interface for node <strong>{selectedNode.name}</strong>.</p>
-          <p>Type <code>help</code> to see available commands. Commands are executed in a simulated debug environment.</p>
-          <p>For production access, use: <code>oc debug node/{selectedNode.name}</code></p>
+          <p>
+            This is a functional terminal interface for node <strong>{selectedNode.name}</strong>.
+          </p>
+          <p>
+            Type <code>help</code> to see available commands. Commands are executed in a simulated
+            debug environment.
+          </p>
+          <p>
+            For production access, use: <code>oc debug node/{selectedNode.name}</code>
+          </p>
         </Alert>
       </div>
     </div>
@@ -546,33 +596,47 @@ const NodesDashboard: React.FC = () => {
   const [logs, setLogs] = useState<Record<LogType, string[]>>({
     all: [],
     kubelet: [
-      `${new Date().toISOString()} I0627 ${new Date().toTimeString().split(' ')[0]}       1 kubelet.go:2139] Starting kubelet node monitoring`,
+      `${new Date().toISOString()} I0627 ${
+        new Date().toTimeString().split(' ')[0]
+      }       1 kubelet.go:2139] Starting kubelet node monitoring`,
     ],
     containers: [
-      `${new Date().toISOString()} I0627 ${new Date().toTimeString().split(' ')[0]}       1 pod_workers.go:965] Container runtime ready, monitoring pod events`,
+      `${new Date().toISOString()} I0627 ${
+        new Date().toTimeString().split(' ')[0]
+      }       1 pod_workers.go:965] Container runtime ready, monitoring pod events`,
     ],
     system: [
-      `${new Date().toISOString()} I0627 ${new Date().toTimeString().split(' ')[0]}       1 node_controller.go:158] Node monitoring initiated, watching cluster events`,
+      `${new Date().toISOString()} I0627 ${
+        new Date().toTimeString().split(' ')[0]
+      }       1 node_controller.go:158] Node monitoring initiated, watching cluster events`,
     ],
     audit: [
-      JSON.stringify({
-        "kind": "Event",
-        "apiVersion": "audit.k8s.io/v1",
-        "level": "Metadata",
-        "auditID": "12345678-1234-1234-1234-123456789abc",
-        "stage": "ResponseComplete",
-        "requestURI": "/api/v1/nodes",
-        "verb": "list",
-        "user": {
-          "username": "system:serviceaccount:kube-system:node-controller",
-          "groups": ["system:serviceaccounts", "system:serviceaccounts:kube-system", "system:authenticated"]
+      JSON.stringify(
+        {
+          kind: 'Event',
+          apiVersion: 'audit.k8s.io/v1',
+          level: 'Metadata',
+          auditID: '12345678-1234-1234-1234-123456789abc',
+          stage: 'ResponseComplete',
+          requestURI: '/api/v1/nodes',
+          verb: 'list',
+          user: {
+            username: 'system:serviceaccount:kube-system:node-controller',
+            groups: [
+              'system:serviceaccounts',
+              'system:serviceaccounts:kube-system',
+              'system:authenticated',
+            ],
+          },
+          sourceIPs: ['10.0.0.1'],
+          userAgent: 'kube-controller-manager/v1.28.0',
+          responseStatus: { code: 200 },
+          requestReceivedTimestamp: new Date().toISOString(),
+          stageTimestamp: new Date().toISOString(),
         },
-        "sourceIPs": ["10.0.0.1"],
-        "userAgent": "kube-controller-manager/v1.28.0",
-        "responseStatus": {"code": 200},
-        "requestReceivedTimestamp": new Date().toISOString(),
-        "stageTimestamp": new Date().toISOString()
-      }, null, 2),
+        null,
+        2,
+      ),
     ],
   });
 
@@ -919,15 +983,15 @@ const NodesDashboard: React.FC = () => {
     if (!readyCondition || !readyCondition.lastTransitionTime) {
       return 'Unknown';
     }
-    
+
     const readySince = new Date(readyCondition.lastTransitionTime);
     const now = new Date();
     const diffMs = now.getTime() - readySince.getTime();
-    
+
     const days = Math.floor(diffMs / (24 * 60 * 60 * 1000));
     const hours = Math.floor((diffMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
     const minutes = Math.floor((diffMs % (60 * 60 * 1000)) / (60 * 1000));
-    
+
     if (days > 0) return `${days}d ${hours}h`;
     if (hours > 0) return `${hours}h ${minutes}m`;
     return `${minutes}m`;
@@ -977,8 +1041,8 @@ const NodesDashboard: React.FC = () => {
     } catch (err) {
       console.error('Failed to refresh node details:', err);
     } finally {
-      // Keep updating indicator visible slightly longer for better UX
-      setTimeout(() => setIsUpdating(false), 500);
+      // Reduce visual noise - shorter update indicator duration
+      setTimeout(() => setIsUpdating(false), 200);
     }
   };
 
@@ -1125,11 +1189,13 @@ const NodesDashboard: React.FC = () => {
     if (selectedNode && isMounted) {
       const timestamp = new Date().toISOString();
       const timeString = new Date().toTimeString().split(' ')[0];
-      
+
       // Add categorized logs using the new system
       const kubeletLog = `${timestamp} I0627 ${timeString}       1 kubelet.go:2139] Node ${selectedNode.name} selected for monitoring`;
       const systemLog = `${timestamp} I0627 ${timeString}       1 status_manager.go:158] Fetching detailed status for node ${selectedNode.name}`;
-      const containerLog = `${timestamp} I0627 ${timeString}       1 pod_workers.go:965] Monitoring ${selectedNode.pods?.length || 0} pods on node ${selectedNode.name}`;
+      const containerLog = `${timestamp} I0627 ${timeString}       1 pod_workers.go:965] Monitoring ${
+        selectedNode.pods?.length || 0
+      } pods on node ${selectedNode.name}`;
       const auditLog = `${timestamp} I0627 ${timeString}       1 audit.go:312] GET nodes/${selectedNode.name} by user system:admin (response: 200, duration: 12ms)`;
 
       // Add specific logs to their appropriate categories
@@ -1167,73 +1233,80 @@ const NodesDashboard: React.FC = () => {
           details.message
         }`;
       case 'AUDIT_REQUEST':
-      case 'AUDIT_RESPONSE':
+      case 'AUDIT_RESPONSE': {
         // Generate proper Kubernetes audit log JSON
-        const auditEventId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        const auditEventId =
+          Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
         const auditEvent = {
-          "kind": "Event",
-          "apiVersion": "audit.k8s.io/v1",
-          "level": details.level || "Metadata",
-          "auditID": auditEventId,
-          "stage": details.stage || "ResponseComplete",
-          "requestURI": details.requestURI || `/api/v1/${details.resource?.replace(/\/.*/, '') || 'nodes'}`,
-          "verb": details.verb?.toLowerCase() || 'get',
-          "user": {
-            "username": details.user || 'system:serviceaccount:kube-system:default',
-            "groups": details.groups || ["system:serviceaccounts", "system:serviceaccounts:kube-system", "system:authenticated"]
+          kind: 'Event',
+          apiVersion: 'audit.k8s.io/v1',
+          level: details.level || 'Metadata',
+          auditID: auditEventId,
+          stage: details.stage || 'ResponseComplete',
+          requestURI:
+            details.requestURI || `/api/v1/${details.resource?.replace(/\/.*/, '') || 'nodes'}`,
+          verb: details.verb?.toLowerCase() || 'get',
+          user: {
+            username: details.user || 'system:serviceaccount:kube-system:default',
+            groups: details.groups || [
+              'system:serviceaccounts',
+              'system:serviceaccounts:kube-system',
+              'system:authenticated',
+            ],
           },
-          "sourceIPs": [details.sourceIP || "10.0.0.1"],
-          "userAgent": details.userAgent || "kubectl/v1.28.0",
-          "objectRef": {
-            "resource": details.resource?.replace(/\/.*/, '') || "nodes",
-            "name": details.resource?.includes('/') ? details.resource.split('/')[1] : "",
-            "namespace": details.namespace || ""
+          sourceIPs: [details.sourceIP || '10.0.0.1'],
+          userAgent: details.userAgent || 'kubectl/v1.28.0',
+          objectRef: {
+            resource: details.resource?.replace(/\/.*/, '') || 'nodes',
+            name: details.resource?.includes('/') ? details.resource.split('/')[1] : '',
+            namespace: details.namespace || '',
           },
-          "responseStatus": {"code": details.statusCode || 200},
-          "requestReceivedTimestamp": timestamp,
-          "stageTimestamp": timestamp,
-          "annotations": details.annotations || {}
+          responseStatus: { code: details.statusCode || 200 },
+          requestReceivedTimestamp: timestamp,
+          stageTimestamp: timestamp,
+          annotations: details.annotations || {},
         };
-        
+
         // Remove empty namespace for cluster-scoped resources
         if (!auditEvent.objectRef.namespace) {
           delete auditEvent.objectRef.namespace;
         }
-        
+
         return JSON.stringify(auditEvent, null, 2);
+      }
       default:
         return `${timestamp} [INFO] Unknown event: ${eventType}`;
     }
   };
 
   // Animation frame-based log updates to prevent excessive re-renders while staying responsive
-  const pendingLogsRef = useRef<Array<{entry: string, type: LogType}>>([]);
+  const pendingLogsRef = useRef<Array<{ entry: string; type: LogType }>>([]);
   const logUpdateFrameRef = useRef<number | null>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
 
   const addLogEntry = (logEntry: string, targetLogType: LogType = 'system') => {
-    pendingLogsRef.current.push({entry: logEntry, type: targetLogType});
-    
+    pendingLogsRef.current.push({ entry: logEntry, type: targetLogType });
+
     // Cancel existing frame request
     if (logUpdateFrameRef.current) {
       cancelAnimationFrame(logUpdateFrameRef.current);
     }
-    
+
     // Batch update logs on next animation frame for smooth performance
     logUpdateFrameRef.current = requestAnimationFrame(() => {
       const currentPending = pendingLogsRef.current;
       if (currentPending.length > 0) {
         setLogs((prevLogs) => {
           const newLogs = { ...prevLogs };
-          
+
           // Group pending logs by type and add them
-          currentPending.forEach(({entry, type}) => {
+          currentPending.forEach(({ entry, type }) => {
             newLogs[type] = [...(newLogs[type] || []), entry].slice(-300); // Keep last 300 entries per type
           });
-          
+
           return newLogs;
         });
-        
+
         // Clear pending logs
         pendingLogsRef.current = [];
       }
@@ -1254,8 +1327,9 @@ const NodesDashboard: React.FC = () => {
     if (logContainerRef.current) {
       const container = logContainerRef.current;
       // Only auto-scroll if user is already near the bottom (within 100px)
-      const isNearBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 100;
-      
+      const isNearBottom =
+        container.scrollTop + container.clientHeight >= container.scrollHeight - 100;
+
       if (isNearBottom) {
         setTimeout(() => {
           container.scrollTop = container.scrollHeight;
@@ -1326,7 +1400,7 @@ const NodesDashboard: React.FC = () => {
                 // Node events go to both kubelet and system logs
                 addLogEntry(logEntry, 'kubelet');
                 addLogEntry(logEntry, 'system');
-                
+
                 // Add corresponding audit log entry
                 const auditEntry = generateLogEntry('AUDIT_REQUEST', {
                   verb: watchEvent.type === 'ADDED' ? 'CREATE' : 'DELETE',
@@ -1337,7 +1411,7 @@ const NodesDashboard: React.FC = () => {
                   userAgent: 'cluster-admin/v1.28.0',
                   level: 'Metadata',
                   stage: 'ResponseComplete',
-                  statusCode: 200
+                  statusCode: 200,
                 });
                 addLogEntry(auditEntry, 'audit');
               }
@@ -1366,9 +1440,13 @@ const NodesDashboard: React.FC = () => {
             if (watchEvent.type === 'ADDED') {
               const eventData = watchEvent.object;
               // Only log warning events and important normal events to reduce noise
-              if (eventData?.type === 'Warning' || 
-                  (eventData?.type === 'Normal' && 
-                   ['NodeReady', 'NodeNotReady', 'Rebooted', 'Starting', 'Started'].includes(eventData?.reason))) {
+              if (
+                eventData?.type === 'Warning' ||
+                (eventData?.type === 'Normal' &&
+                  ['NodeReady', 'NodeNotReady', 'Rebooted', 'Starting', 'Started'].includes(
+                    eventData?.reason,
+                  ))
+              ) {
                 const logEntry = generateLogEntry('EVENT_ADDED', {
                   type: eventData?.type || 'Normal',
                   reason: eventData?.reason || 'Unknown',
@@ -1384,81 +1462,81 @@ const NodesDashboard: React.FC = () => {
 
         console.log('Global watches setup completed');
 
-      // Setup periodic audit log generation to simulate real audit activity
-      const auditInterval = setInterval(() => {
-        if (!isMounted) return;
-        
-        const auditOperations = [
-          { 
-            verb: 'LIST', 
-            resource: 'nodes', 
-            user: 'system:serviceaccount:kube-system:node-controller',
-            requestURI: '/api/v1/nodes',
-            userAgent: 'kube-controller-manager/v1.28.0'
-          },
-          { 
-            verb: 'GET', 
-            resource: 'nodes/worker-node-1', 
-            user: 'system:serviceaccount:kube-system:kubelet',
-            requestURI: '/api/v1/nodes/worker-node-1/status',
-            userAgent: 'kubelet/v1.28.0'
-          },
-          { 
-            verb: 'LIST', 
-            resource: 'pods', 
-            user: 'system:serviceaccount:kube-system:kube-scheduler',
-            requestURI: '/api/v1/pods',
-            userAgent: 'kube-scheduler/v1.28.0'
-          },
-          { 
-            verb: 'UPDATE', 
-            resource: 'nodes/worker-node-1', 
-            user: 'system:serviceaccount:kube-system:kubelet',
-            requestURI: '/api/v1/nodes/worker-node-1/status',
-            userAgent: 'kubelet/v1.28.0'
-          },
-          { 
-            verb: 'GET', 
-            resource: 'endpoints/kubernetes', 
-            user: 'system:serviceaccount:default:default',
-            requestURI: '/api/v1/namespaces/default/endpoints/kubernetes',
-            userAgent: 'kubectl/v1.28.0',
-            namespace: 'default'
-          },
-          { 
-            verb: 'CREATE', 
-            resource: 'events', 
-            user: 'system:serviceaccount:kube-system:event-exporter',
-            requestURI: '/api/v1/namespaces/kube-system/events',
-            userAgent: 'event-exporter/v1.28.0',
-            namespace: 'kube-system'
-          },
-          { 
-            verb: 'PATCH', 
-            resource: 'nodes/worker-node-1', 
-            user: 'system:node:worker-node-1',
-            requestURI: '/api/v1/nodes/worker-node-1',
-            userAgent: 'kubelet/v1.28.0'
-          }
-        ];
-        
-        const randomOp = auditOperations[Math.floor(Math.random() * auditOperations.length)];
-        const auditEntry = generateLogEntry('AUDIT_REQUEST', {
-          verb: randomOp.verb,
-          resource: randomOp.resource,
-          namespace: randomOp.namespace || '',
-          user: randomOp.user,
-          requestURI: randomOp.requestURI,
-          userAgent: randomOp.userAgent,
-          level: Math.random() < 0.1 ? 'Request' : 'Metadata',
-          stage: Math.random() < 0.8 ? 'ResponseComplete' : 'RequestReceived',
-          statusCode: Math.random() < 0.95 ? 200 : (Math.random() < 0.5 ? 403 : 404)
-        });
-        addLogEntry(auditEntry, 'audit');
-      }, 15000); // Every 15 seconds
+        // Setup periodic audit log generation to simulate real audit activity
+        const auditInterval = setInterval(() => {
+          if (!isMounted) return;
 
-      // Store interval reference for cleanup
-      (window as any).auditInterval = auditInterval;
+          const auditOperations = [
+            {
+              verb: 'LIST',
+              resource: 'nodes',
+              user: 'system:serviceaccount:kube-system:node-controller',
+              requestURI: '/api/v1/nodes',
+              userAgent: 'kube-controller-manager/v1.28.0',
+            },
+            {
+              verb: 'GET',
+              resource: 'nodes/worker-node-1',
+              user: 'system:serviceaccount:kube-system:kubelet',
+              requestURI: '/api/v1/nodes/worker-node-1/status',
+              userAgent: 'kubelet/v1.28.0',
+            },
+            {
+              verb: 'LIST',
+              resource: 'pods',
+              user: 'system:serviceaccount:kube-system:kube-scheduler',
+              requestURI: '/api/v1/pods',
+              userAgent: 'kube-scheduler/v1.28.0',
+            },
+            {
+              verb: 'UPDATE',
+              resource: 'nodes/worker-node-1',
+              user: 'system:serviceaccount:kube-system:kubelet',
+              requestURI: '/api/v1/nodes/worker-node-1/status',
+              userAgent: 'kubelet/v1.28.0',
+            },
+            {
+              verb: 'GET',
+              resource: 'endpoints/kubernetes',
+              user: 'system:serviceaccount:default:default',
+              requestURI: '/api/v1/namespaces/default/endpoints/kubernetes',
+              userAgent: 'kubectl/v1.28.0',
+              namespace: 'default',
+            },
+            {
+              verb: 'CREATE',
+              resource: 'events',
+              user: 'system:serviceaccount:kube-system:event-exporter',
+              requestURI: '/api/v1/namespaces/kube-system/events',
+              userAgent: 'event-exporter/v1.28.0',
+              namespace: 'kube-system',
+            },
+            {
+              verb: 'PATCH',
+              resource: 'nodes/worker-node-1',
+              user: 'system:node:worker-node-1',
+              requestURI: '/api/v1/nodes/worker-node-1',
+              userAgent: 'kubelet/v1.28.0',
+            },
+          ];
+
+          const randomOp = auditOperations[Math.floor(Math.random() * auditOperations.length)];
+          const auditEntry = generateLogEntry('AUDIT_REQUEST', {
+            verb: randomOp.verb,
+            resource: randomOp.resource,
+            namespace: randomOp.namespace || '',
+            user: randomOp.user,
+            requestURI: randomOp.requestURI,
+            userAgent: randomOp.userAgent,
+            level: Math.random() < 0.1 ? 'Request' : 'Metadata',
+            stage: Math.random() < 0.8 ? 'ResponseComplete' : 'RequestReceived',
+            statusCode: Math.random() < 0.95 ? 200 : Math.random() < 0.5 ? 403 : 404,
+          });
+          addLogEntry(auditEntry, 'audit');
+        }, 15000); // Every 15 seconds
+
+        // Store interval reference for cleanup
+        (window as any).auditInterval = auditInterval;
       } catch (err) {
         console.log('Global watch setup failed:', err);
       }
@@ -1476,7 +1554,7 @@ const NodesDashboard: React.FC = () => {
       if (eventWatchSocket) {
         (eventWatchSocket as WebSocket).close();
       }
-      
+
       // Clean up audit interval
       if ((window as any).auditInterval) {
         clearInterval((window as any).auditInterval);
@@ -1491,7 +1569,7 @@ const NodesDashboard: React.FC = () => {
     let isMounted = true;
     let refreshTimeout: NodeJS.Timeout | null = null;
     let lastRefreshTime = 0;
-    const REFRESH_DEBOUNCE_MS = 2000; // Minimum 2 seconds between refreshes
+    const REFRESH_DEBOUNCE_MS = 5000; // Minimum 5 seconds between refreshes to reduce UI flashing
 
     const debouncedRefresh = (nodeName: string) => {
       const now = Date.now();
@@ -1521,7 +1599,7 @@ const NodesDashboard: React.FC = () => {
         const podWatchUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${
           window.location.host
         }/api/kubernetes/api/v1/pods?watch=true&fieldSelector=spec.nodeName=${selectedNode.name}`;
-        
+
         podWatchSocket = new WebSocket(podWatchUrl);
 
         podWatchSocket.onopen = () => {
@@ -1541,43 +1619,62 @@ const NodesDashboard: React.FC = () => {
               watchEvent.type === 'DELETED'
             ) {
               const podData = watchEvent.object;
-              
-                              // Add log entry only for significant pod events to reduce noise
-                if (watchEvent.type === 'ADDED' || watchEvent.type === 'DELETED') {
-                  // Skip system/infrastructure pods to focus on user workloads
-                  const podName = podData?.metadata?.name || '';
-                  const namespace = podData?.metadata?.namespace || '';
-                  if (!namespace.startsWith('kube-') && 
-                      !namespace.startsWith('openshift-') && 
-                      !podName.startsWith('etcd-') &&
-                      !podName.startsWith('kube-')) {
-                    const logEntry = generateLogEntry(`POD_${watchEvent.type}`, {
-                      name: podName || 'unknown',
-                      namespace: namespace || 'default',
-                      status: podData?.status?.phase || 'Unknown',
-                    });
-                    addLogEntry(logEntry, 'containers');
-                    
-                    // Add corresponding audit log entry for pod operations
-                    const auditEntry = generateLogEntry('AUDIT_REQUEST', {
-                      verb: watchEvent.type === 'ADDED' ? 'CREATE' : 'DELETE',
-                      resource: `pods/${podName}`,
-                      namespace: namespace,
-                      user: 'system:serviceaccount:default:default',
-                      requestURI: `/api/v1/namespaces/${namespace}/pods/${podName}`,
-                      userAgent: 'kubelet/v1.28.0',
-                      level: 'Metadata',
-                      stage: 'ResponseComplete',
-                      statusCode: 200
-                    });
-                    addLogEntry(auditEntry, 'audit');
-                  }
+
+              // Add log entry only for significant pod events to reduce noise
+              if (watchEvent.type === 'ADDED' || watchEvent.type === 'DELETED') {
+                // Skip system/infrastructure pods to focus on user workloads
+                const podName = podData?.metadata?.name || '';
+                const namespace = podData?.metadata?.namespace || '';
+                if (
+                  !namespace.startsWith('kube-') &&
+                  !namespace.startsWith('openshift-') &&
+                  !podName.startsWith('etcd-') &&
+                  !podName.startsWith('kube-')
+                ) {
+                  const logEntry = generateLogEntry(`POD_${watchEvent.type}`, {
+                    name: podName || 'unknown',
+                    namespace: namespace || 'default',
+                    status: podData?.status?.phase || 'Unknown',
+                  });
+                  addLogEntry(logEntry, 'containers');
+
+                  // Add corresponding audit log entry for pod operations
+                  const auditEntry = generateLogEntry('AUDIT_REQUEST', {
+                    verb: watchEvent.type === 'ADDED' ? 'CREATE' : 'DELETE',
+                    resource: `pods/${podName}`,
+                    namespace: namespace,
+                    user: 'system:serviceaccount:default:default',
+                    requestURI: `/api/v1/namespaces/${namespace}/pods/${podName}`,
+                    userAgent: 'kubelet/v1.28.0',
+                    level: 'Metadata',
+                    stage: 'ResponseComplete',
+                    statusCode: 200,
+                  });
+                  addLogEntry(auditEntry, 'audit');
                 }
+              }
 
               // Only refresh on significant pod changes (added/deleted) with debouncing
+              // Further reduce updates - only for user workload pods, not system pods
               if (selectedNode && (watchEvent.type === 'ADDED' || watchEvent.type === 'DELETED')) {
-                console.log(`Pod ${watchEvent.type.toLowerCase()} detected for node ${selectedNode.name} (debounced refresh)`);
-                debouncedRefresh(selectedNode.name);
+                const podName = podData?.metadata?.name || '';
+                const namespace = podData?.metadata?.namespace || '';
+                
+                // Skip frequent system pod updates to reduce UI flashing
+                if (
+                  !namespace.startsWith('kube-') &&
+                  !namespace.startsWith('openshift-') &&
+                  !podName.startsWith('etcd-') &&
+                  !podName.startsWith('kube-') &&
+                  namespace !== 'kube-system'
+                ) {
+                  console.log(
+                    `User pod ${watchEvent.type.toLowerCase()} detected for node ${
+                      selectedNode.name
+                    } (debounced refresh)`,
+                  );
+                  debouncedRefresh(selectedNode.name);
+                }
               }
             }
           } catch (err) {
@@ -1596,10 +1693,11 @@ const NodesDashboard: React.FC = () => {
 
         podWatchSocket.onclose = (event) => {
           if (isMounted && event.code !== 1000) {
-            console.log(`Pod watch closed unexpectedly for node ${selectedNode.name}, code: ${event.code}`);
+            console.log(
+              `Pod watch closed unexpectedly for node ${selectedNode.name}, code: ${event.code}`,
+            );
           }
         };
-
       } catch (err) {
         console.log('Pod watch setup failed:', err);
       }
@@ -1610,7 +1708,7 @@ const NodesDashboard: React.FC = () => {
 
     return () => {
       isMounted = false;
-      
+
       // Clear timeouts
       if (setupTimeout) {
         clearTimeout(setupTimeout);
@@ -2256,11 +2354,11 @@ const NodesDashboard: React.FC = () => {
                                           {node.role}
                                         </Badge>
                                         <span style={{ color: '#6a6e73' }}>{node.zone}</span>
-                                        <span 
-                                          style={{ 
-                                            color: '#8a2be2', 
+                                        <span
+                                          style={{
+                                            color: '#8a2be2',
                                             fontSize: '0.75rem',
-                                            fontWeight: 600 
+                                            fontWeight: 600,
                                           }}
                                         >
                                           ⏱ {node.uptime}
@@ -2406,7 +2504,6 @@ const NodesDashboard: React.FC = () => {
                           {selectedNode.status}
                         </Badge>
                       </FlexItem>
-
                     </Flex>
                   </CardTitle>
                   <CardBody style={{ height: 'auto', overflow: 'visible' }}>
@@ -3511,9 +3608,7 @@ const NodesDashboard: React.FC = () => {
                                     </CardBody>
                                   </Card>
                                 </GridItem>
-                                <GridItem span={2}>
-                                  {/* Spacer for alignment */}
-                                </GridItem>
+                                <GridItem span={2}>{/* Spacer for alignment */}</GridItem>
                               </Grid>
                             </StackItem>
 
@@ -3578,19 +3673,35 @@ const NodesDashboard: React.FC = () => {
                                     }}
                                   >
                                     {(() => {
-                                      const displayLogs = logType === 'all' 
-                                        ? [
-                                            ...(logs.kubelet || []).map(log => ({ log, type: 'kubelet' })),
-                                            ...(logs.system || []).map(log => ({ log, type: 'system' })),
-                                            ...(logs.containers || []).map(log => ({ log, type: 'containers' })),
-                                            ...(logs.audit || []).map(log => ({ log, type: 'audit' }))
-                                          ].sort((a, b) => {
-                                            // Sort by timestamp (extracted from log entry)
-                                            const timestampA = a.log.substring(0, 24);
-                                            const timestampB = b.log.substring(0, 24);
-                                            return timestampB.localeCompare(timestampA);
-                                          })
-                                        : (logs[logType] || []).map(log => ({ log, type: logType }));
+                                      const displayLogs =
+                                        logType === 'all'
+                                          ? [
+                                              ...(logs.kubelet || []).map((log) => ({
+                                                log,
+                                                type: 'kubelet',
+                                              })),
+                                              ...(logs.system || []).map((log) => ({
+                                                log,
+                                                type: 'system',
+                                              })),
+                                              ...(logs.containers || []).map((log) => ({
+                                                log,
+                                                type: 'containers',
+                                              })),
+                                              ...(logs.audit || []).map((log) => ({
+                                                log,
+                                                type: 'audit',
+                                              })),
+                                            ].sort((a, b) => {
+                                              // Sort by timestamp (extracted from log entry)
+                                              const timestampA = a.log.substring(0, 24);
+                                              const timestampB = b.log.substring(0, 24);
+                                              return timestampB.localeCompare(timestampA);
+                                            })
+                                          : (logs[logType] || []).map((log) => ({
+                                              log,
+                                              type: logType,
+                                            }));
 
                                       return displayLogs.length > 0 ? (
                                         displayLogs.map((entry, index) => (
@@ -3605,14 +3716,18 @@ const NodesDashboard: React.FC = () => {
                                             {logType === 'all' && (
                                               <span
                                                 style={{
-                                                  color: entry.type === 'kubelet' ? '#0066cc' 
-                                                         : entry.type === 'system' ? '#009639' 
-                                                         : entry.type === 'containers' ? '#8a2be2'
-                                                         : '#ec7a08',
+                                                  color:
+                                                    entry.type === 'kubelet'
+                                                      ? '#0066cc'
+                                                      : entry.type === 'system'
+                                                      ? '#009639'
+                                                      : entry.type === 'containers'
+                                                      ? '#8a2be2'
+                                                      : '#ec7a08',
                                                   fontSize: '0.7rem',
                                                   marginRight: '8px',
                                                   textTransform: 'uppercase',
-                                                  fontWeight: 'bold'
+                                                  fontWeight: 'bold',
                                                 }}
                                               >
                                                 [{entry.type}]
@@ -3623,8 +3738,8 @@ const NodesDashboard: React.FC = () => {
                                         ))
                                       ) : (
                                         <div style={{ color: '#888', fontStyle: 'italic' }}>
-                                          {logType === 'all' 
-                                            ? 'No logs available from any source' 
+                                          {logType === 'all'
+                                            ? 'No logs available from any source'
                                             : `No ${logType} logs available`}
                                         </div>
                                       );

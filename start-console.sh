@@ -7,7 +7,7 @@ CONSOLE_PORT=${CONSOLE_PORT:=9000}
 CONSOLE_IMAGE_PLATFORM=${CONSOLE_IMAGE_PLATFORM:="linux/amd64"}
 
 # Plugin metadata is declared in package.json
-PLUGIN_NAME=${npm_package_consolePlugin_name}
+PLUGIN_NAME="${npm_package_consolePlugin_name:-node-dashboard}"
 
 echo "Starting local OpenShift console..."
 
@@ -45,7 +45,9 @@ if [ -x "$(command -v podman)" ]; then
         BRIDGE_PLUGINS="${PLUGIN_NAME}=http://localhost:9001"
         podman run --pull always --platform $CONSOLE_IMAGE_PLATFORM --rm --network=host --env-file <(set | grep BRIDGE) $CONSOLE_IMAGE
     else
+        # Use port mapping with special networking configuration for macOS
         BRIDGE_PLUGINS="${PLUGIN_NAME}=http://host.containers.internal:9001"
+        podman run --pull always --platform $CONSOLE_IMAGE_PLATFORM --rm --add-host host.containers.internal:host-gateway -p "$CONSOLE_PORT":9000 --env-file <(set | grep BRIDGE) $CONSOLE_IMAGE 2>/dev/null || \
         podman run --pull always --platform $CONSOLE_IMAGE_PLATFORM --rm -p "$CONSOLE_PORT":9000 --env-file <(set | grep BRIDGE) $CONSOLE_IMAGE
     fi
 else

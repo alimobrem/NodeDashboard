@@ -62,6 +62,7 @@ const config: Configuration = {
   devServer: {
     static: './dist',
     port: 9001,
+    host: '0.0.0.0', // Bind to all network interfaces
     // Allow Bridge running in a container to connect to the plugin dev server.
     allowedHosts: 'all',
     headers: {
