@@ -74,6 +74,18 @@ interface NodeMetrics {
   };
 }
 
+// Visual pod component props
+interface NodePodVisualizationProps {
+  node: NodeDetail;
+  onClick?: (node: NodeDetail) => void;
+  isSelected?: boolean;
+}
+
+interface PodVisualizationProps {
+  pod: PodResource;
+  onClick?: (pod: PodResource) => void;
+}
+
 interface NodeCondition {
   type: string;
   status: string;
@@ -223,6 +235,264 @@ const MiniLineChart: React.FC<MiniChartProps> = ({ data, color, width = 200, hei
         <span>Now</span>
       </div>
     </div>
+  );
+};
+
+// Pod visualization component
+const PodVisualization: React.FC<PodVisualizationProps> = ({ pod, onClick }) => {
+  const getPodStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'running':
+        return '#3e8635';
+      case 'pending':
+        return '#f0ab00';
+      case 'failed':
+      case 'error':
+        return '#c9190b';
+      case 'succeeded':
+        return '#009639';
+      case 'unknown':
+        return '#6a6e73';
+      default:
+        return '#6a6e73';
+    }
+  };
+
+  const getPodStatusIcon = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'running':
+        return '●';
+      case 'pending':
+        return '◐';
+      case 'failed':
+      case 'error':
+        return '✕';
+      case 'succeeded':
+        return '✓';
+      case 'unknown':
+        return '?';
+      default:
+        return '?';
+    }
+  };
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        width: '24px',
+        height: '24px',
+        borderRadius: '4px',
+        backgroundColor: getPodStatusColor(pod.status),
+        color: 'white',
+        fontSize: '12px',
+        alignItems: 'center',
+        justifyContent: 'center',
+        margin: '2px',
+        cursor: onClick ? 'pointer' : 'default',
+        position: 'relative',
+        transition: 'all 0.2s ease-in-out',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+      }}
+      onClick={() => onClick?.(pod)}
+      title={`${pod.name} (${pod.namespace})\nStatus: ${pod.status}\nRestarts: ${pod.restarts}\nContainers: ${pod.readyContainers}/${pod.containers}`}
+    >
+      {getPodStatusIcon(pod.status)}
+      {pod.restarts > 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '-4px',
+            right: '-4px',
+            width: '12px',
+            height: '12px',
+            borderRadius: '50%',
+            backgroundColor: '#f0ab00',
+            fontSize: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontWeight: 'bold',
+          }}
+        >
+          {pod.restarts > 9 ? '9+' : pod.restarts}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Node with pods visualization component
+const NodePodVisualization: React.FC<NodePodVisualizationProps> = ({
+  node,
+  onClick,
+  isSelected,
+}) => {
+  const getNodeHealthColor = (node: NodeDetail) => {
+    if (node.status !== 'Ready') return '#c9190b';
+    if (node.cordoned || node.drained) return '#f0ab00';
+
+    const cpuUsage = node.metrics?.cpu?.current || 0;
+    const memoryUsage = node.metrics?.memory?.current || 0;
+
+    if (cpuUsage > 90 || memoryUsage > 90) return '#c9190b';
+    if (cpuUsage > 75 || memoryUsage > 75) return '#f0ab00';
+
+    return '#3e8635';
+  };
+
+  const getNodeHealthIcon = (node: NodeDetail) => {
+    if (node.status !== 'Ready') return '✕';
+    if (node.cordoned || node.drained) return '◐';
+
+    const cpuUsage = node.metrics?.cpu?.current || 0;
+    const memoryUsage = node.metrics?.memory?.current || 0;
+
+    if (cpuUsage > 90 || memoryUsage > 90) return '⚠';
+    if (cpuUsage > 75 || memoryUsage > 75) return '◐';
+
+    return '✓';
+  };
+
+  const getPodStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'running':
+        return '#3e8635';
+      case 'pending':
+        return '#f0ab00';
+      case 'failed':
+      case 'error':
+        return '#c9190b';
+      case 'succeeded':
+        return '#009639';
+      case 'unknown':
+        return '#6a6e73';
+      default:
+        return '#6a6e73';
+    }
+  };
+
+  const podsByStatus = node.pods.reduce((acc, pod) => {
+    const status = pod.status.toLowerCase();
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  return (
+    <Card
+      style={{
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'all 0.2s ease-in-out',
+        border: isSelected ? '2px solid #0066cc' : '1px solid #d2d2d2',
+        backgroundColor: isSelected ? '#f0f8ff' : 'white',
+      }}
+      onClick={() => onClick?.(node)}
+    >
+      <CardBody style={{ padding: '16px' }}>
+        <div style={{ marginBottom: '12px' }}>
+          <Flex
+            alignItems={{ default: 'alignItemsCenter' }}
+            spaceItems={{ default: 'spaceItemsSm' }}
+          >
+            <FlexItem>
+              <div
+                style={{
+                  width: '16px',
+                  height: '16px',
+                  borderRadius: '50%',
+                  backgroundColor: getNodeHealthColor(node),
+                  color: 'white',
+                  fontSize: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 'bold',
+                }}
+              >
+                {getNodeHealthIcon(node)}
+              </div>
+            </FlexItem>
+            <FlexItem>
+              <div style={{ fontWeight: 600, fontSize: '14px' }}>{node.name}</div>
+            </FlexItem>
+            <FlexItem>
+              <Badge
+                style={{
+                  backgroundColor: node.role === 'Control Plane' ? '#0066cc' : '#009639',
+                  color: 'white',
+                  fontSize: '10px',
+                  padding: '2px 6px',
+                }}
+              >
+                {node.role}
+              </Badge>
+            </FlexItem>
+          </Flex>
+        </div>
+
+        <div style={{ marginBottom: '12px' }}>
+          <div style={{ fontSize: '12px', color: '#6a6e73', marginBottom: '4px' }}>
+            Pods: {node.pods.length}/{node.allocatableResources.pods} | CPU:{' '}
+            {Math.round(node.metrics?.cpu?.current || 0)}% | Memory:{' '}
+            {Math.round(node.metrics?.memory?.current || 0)}%
+          </div>
+
+          {/* Pod status summary */}
+          <div style={{ fontSize: '11px', color: '#6a6e73', marginBottom: '8px' }}>
+            {Object.entries(podsByStatus).map(([status, count]) => (
+              <span key={status} style={{ marginRight: '8px' }}>
+                <span style={{ color: getPodStatusColor(status) }}>●</span> {status}: {count}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Pod grid visualization */}
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '2px',
+            maxHeight: '120px',
+            overflowY: 'auto',
+            padding: '4px',
+            backgroundColor: '#f8f9fa',
+            borderRadius: '4px',
+            border: '1px solid #e9ecef',
+          }}
+        >
+          {node.pods.slice(0, 40).map((pod, index) => (
+            <PodVisualization
+              key={`${pod.name}-${index}`}
+              pod={pod}
+              onClick={(clickedPod) => {
+                console.log('Pod clicked:', clickedPod.name);
+              }}
+            />
+          ))}
+          {node.pods.length > 40 && (
+            <div
+              style={{
+                display: 'flex',
+                width: '24px',
+                height: '24px',
+                borderRadius: '4px',
+                backgroundColor: '#6a6e73',
+                color: 'white',
+                fontSize: '10px',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '2px',
+              }}
+              title={`${node.pods.length - 40} more pods...`}
+            >
+              +{node.pods.length - 40}
+            </div>
+          )}
+        </div>
+      </CardBody>
+    </Card>
   );
 };
 
@@ -1659,7 +1929,7 @@ const NodesDashboard: React.FC = () => {
               if (selectedNode && (watchEvent.type === 'ADDED' || watchEvent.type === 'DELETED')) {
                 const podName = podData?.metadata?.name || '';
                 const namespace = podData?.metadata?.namespace || '';
-                
+
                 // Skip frequent system pod updates to reduce UI flashing
                 if (
                   !namespace.startsWith('kube-') &&
@@ -2273,6 +2543,41 @@ const NodesDashboard: React.FC = () => {
               </Card>
             </GridItem>
           </Grid>
+        </StackItem>
+
+        {/* Visual Node-Pod Overview */}
+        <StackItem>
+          <Card>
+            <CardTitle>
+              <Flex
+                alignItems={{ default: 'alignItemsCenter' }}
+                spaceItems={{ default: 'spaceItemsSm' }}
+              >
+                <FlexItem>
+                  <ClusterIcon />
+                </FlexItem>
+                <FlexItem>Node-Pod Visualization</FlexItem>
+                <FlexItem>
+                  <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>
+                    Visual health status of nodes and their pods
+                  </div>
+                </FlexItem>
+              </Flex>
+            </CardTitle>
+            <CardBody style={{ padding: '16px' }}>
+              <Grid hasGutter>
+                {nodes.map((node) => (
+                  <GridItem key={node.name} span={6} xl={4}>
+                    <NodePodVisualization
+                      node={node}
+                      onClick={handleNodeSelection}
+                      isSelected={selectedNode?.name === node.name}
+                    />
+                  </GridItem>
+                ))}
+              </Grid>
+            </CardBody>
+          </Card>
         </StackItem>
 
         {/* Main Dashboard Grid */}
@@ -3143,6 +3448,118 @@ const NodesDashboard: React.FC = () => {
                         }
                       >
                         <div style={{ paddingTop: 'var(--pf-v5-global--spacer--md)' }}>
+                          {/* Pod Visual Overview */}
+                          <div style={{ marginBottom: '24px' }}>
+                            <Title headingLevel="h3" size="lg" style={{ marginBottom: '12px' }}>
+                              Pod Health Overview
+                            </Title>
+                            <Card
+                              style={{ backgroundColor: '#f8f9fa', border: '1px solid #e9ecef' }}
+                            >
+                              <CardBody style={{ padding: '16px' }}>
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
+                                    gap: '3px',
+                                    marginBottom: '12px',
+                                  }}
+                                >
+                                  {selectedNode.pods.map((pod, index) => (
+                                    <PodVisualization
+                                      key={`${pod.name}-${index}`}
+                                      pod={pod}
+                                      onClick={(clickedPod) => {
+                                        console.log('Pod clicked:', clickedPod.name);
+                                      }}
+                                    />
+                                  ))}
+                                </div>
+
+                                {/* Status Legend */}
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    gap: '16px',
+                                    fontSize: '12px',
+                                    borderTop: '1px solid #dee2e6',
+                                    paddingTop: '12px',
+                                  }}
+                                >
+                                  <div
+                                    style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                  >
+                                    <div
+                                      style={{
+                                        width: '12px',
+                                        height: '12px',
+                                        borderRadius: '2px',
+                                        backgroundColor: '#3e8635',
+                                      }}
+                                    ></div>
+                                    <span>Running</span>
+                                  </div>
+                                  <div
+                                    style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                  >
+                                    <div
+                                      style={{
+                                        width: '12px',
+                                        height: '12px',
+                                        borderRadius: '2px',
+                                        backgroundColor: '#f0ab00',
+                                      }}
+                                    ></div>
+                                    <span>Pending</span>
+                                  </div>
+                                  <div
+                                    style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                  >
+                                    <div
+                                      style={{
+                                        width: '12px',
+                                        height: '12px',
+                                        borderRadius: '2px',
+                                        backgroundColor: '#c9190b',
+                                      }}
+                                    ></div>
+                                    <span>Failed</span>
+                                  </div>
+                                  <div
+                                    style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                  >
+                                    <div
+                                      style={{
+                                        width: '12px',
+                                        height: '12px',
+                                        borderRadius: '2px',
+                                        backgroundColor: '#009639',
+                                      }}
+                                    ></div>
+                                    <span>Succeeded</span>
+                                  </div>
+                                  <div
+                                    style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                  >
+                                    <div
+                                      style={{
+                                        width: '12px',
+                                        height: '12px',
+                                        borderRadius: '50%',
+                                        backgroundColor: '#f0ab00',
+                                      }}
+                                    ></div>
+                                    <span>Restart Count</span>
+                                  </div>
+                                </div>
+                              </CardBody>
+                            </Card>
+                          </div>
+
+                          {/* Pod Details Table */}
+                          <Title headingLevel="h3" size="lg" style={{ marginBottom: '12px' }}>
+                            Pod Details
+                          </Title>
                           <Table aria-label="Node pods table">
                             <Thead>
                               <Tr>

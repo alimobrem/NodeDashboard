@@ -2,8 +2,6 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import NodesDashboard from '../NodesDashboard';
 import { createMockNodes, createLargeMockNodeDataset } from '../../__mocks__/k8s-mocks';
 
-
-
 // Mock i18next
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -49,33 +47,35 @@ const createMockFetchResponse = (data: any) => ({
 });
 
 // Helper function to setup fetch mocks for successful data loading
-const setupSuccessfulFetchMocks = (nodeCount: number = 3) => {
+const setupSuccessfulFetchMocks = (nodeCount = 3) => {
   const mockNodes = createMockNodes(nodeCount);
-  const mockNodeData = mockNodes.map(node => ({
-    metadata: { 
+  const mockNodeData = mockNodes.map((node) => ({
+    metadata: {
       name: node.metadata?.name,
       labels: node.metadata?.labels || {},
-      creationTimestamp: new Date(Date.now() - Math.random() * 86400000 * 30).toISOString()
+      creationTimestamp: new Date(Date.now() - Math.random() * 86400000 * 30).toISOString(),
     },
-    status: { 
-      conditions: [{ 
-        type: 'Ready', 
-        status: 'True',
-        lastTransitionTime: new Date(Date.now() - Math.random() * 86400000).toISOString()
-      }],
+    status: {
+      conditions: [
+        {
+          type: 'Ready',
+          status: 'True',
+          lastTransitionTime: new Date(Date.now() - Math.random() * 86400000).toISOString(),
+        },
+      ],
       nodeInfo: {
         kubeletVersion: 'v1.28.0',
         operatingSystem: 'linux',
         architecture: 'amd64',
-        containerRuntimeVersion: 'containerd://1.6.21'
+        containerRuntimeVersion: 'containerd://1.6.21',
       },
       allocatable: {
         cpu: '4',
         memory: '16Gi',
-        pods: '110'
-      }
+        pods: '110',
+      },
     },
-    spec: {}
+    spec: {},
   }));
 
   global.fetch = jest.fn().mockImplementation((url: string) => {
@@ -93,7 +93,6 @@ const setupSuccessfulFetchMocks = (nodeCount: number = 3) => {
 };
 
 describe('NodesDashboard', () => {
-
   beforeEach(() => {
     jest.clearAllMocks();
 
@@ -155,7 +154,7 @@ describe('NodesDashboard', () => {
     it('should render the component title', async () => {
       setupSuccessfulFetchMocks();
       render(<NodesDashboard />);
-      
+
       // Wait for the component to load and render the main dashboard
       await waitFor(() => {
         expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
@@ -168,10 +167,10 @@ describe('NodesDashboard', () => {
       expect(screen.getByTestId('spinner')).toBeInTheDocument();
     });
 
-    it('should render error state when there is an error', async () => {      
+    it('should render error state when there is an error', async () => {
       // Mock fetch to fail
       global.fetch = jest.fn().mockRejectedValue(new Error('Failed to load nodes'));
-      
+
       render(<NodesDashboard />);
 
       // Should render dashboard even with error (component is resilient)
@@ -203,7 +202,7 @@ describe('NodesDashboard', () => {
       await waitFor(() => {
         expect(screen.getAllByText('worker-node-1')[0]).toBeInTheDocument();
       });
-      
+
       expect(screen.getAllByText('worker-node-2')[0]).toBeInTheDocument();
       expect(screen.getAllByText('worker-node-3')[0]).toBeInTheDocument();
     });
@@ -233,7 +232,7 @@ describe('NodesDashboard', () => {
       await waitFor(() => {
         expect(screen.getAllByText('worker-node-1')[0]).toBeInTheDocument();
       });
-      
+
       // Component should have rendered resource information in some form
       expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
     });
@@ -278,7 +277,9 @@ describe('NodesDashboard', () => {
         expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
       });
 
-      expect(screen.getByText('Comprehensive cluster node monitoring and management')).toBeInTheDocument();
+      expect(
+        screen.getByText('Comprehensive cluster node monitoring and management'),
+      ).toBeInTheDocument();
     });
 
     it('should display node cards', async () => {
@@ -357,7 +358,9 @@ describe('NodesDashboard', () => {
       });
 
       // Component should render successfully regardless of screen size
-      expect(screen.getByText('Comprehensive cluster node monitoring and management')).toBeInTheDocument();
+      expect(
+        screen.getByText('Comprehensive cluster node monitoring and management'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -431,7 +434,7 @@ describe('NodesDashboard', () => {
 
     it('should handle large datasets efficiently', async () => {
       setupSuccessfulFetchMocks(200);
-      
+
       const renderTime = await measurePerformance('Rendering dashboard with large dataset', () => {
         render(<NodesDashboard />);
       });
