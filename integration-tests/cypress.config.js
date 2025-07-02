@@ -3,7 +3,7 @@ const { defineConfig } = require('cypress');
 module.exports = defineConfig({
   viewportWidth: 1920,
   viewportHeight: 1080,
-  screenshotsFolder: './screenshots',
+  screenshotsFolder: './cypress-screenshots',
   videosFolder: './videos',
   video: true,
   reporter: '../../node_modules/cypress-multi-reporters',

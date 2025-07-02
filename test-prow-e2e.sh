@@ -3,21 +3,7 @@
 set -exuo pipefail
 
 ARTIFACT_DIR=${ARTIFACT_DIR:=/tmp/artifacts}
-SCREENSHOTS_DIR=integration-tests/screenshots
 INSTALLER_DIR=${INSTALLER_DIR:=${ARTIFACT_DIR}/installer}
-
-function copyArtifacts {
-  if [ -d "$ARTIFACT_DIR" ] && [ -d "$SCREENSHOTS_DIR" ]; then
-    if [[ -z "$(ls -A -- "$SCREENSHOTS_DIR")" ]]; then
-      echo "No artifacts were copied."
-    else
-      echo "Copying artifacts from $(pwd)..."
-      cp -r "$SCREENSHOTS_DIR" "${ARTIFACT_DIR}/screenshots"
-    fi
-  fi
-}
-
-trap copyArtifacts EXIT
 
 
 # don't log kubeadmin-password

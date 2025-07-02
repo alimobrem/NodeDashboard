@@ -3,4 +3,5 @@
 **/.DS_Store
 .devcontainer/dev.env
 integration-tests/videos
-integration-tests/screenshots
+integration-tests/reports
+integration-tests/cypress-screenshots

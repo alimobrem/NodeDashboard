@@ -56,37 +56,7 @@ A comprehensive OpenShift Console dynamic plugin for real-time monitoring and ma
 - **Metrics API**: Resource usage data with proper unit conversion
 - **Custom Resource Definitions**: Extended metadata and configuration
 
-## 📸 Screenshots
 
-### Console Navigation
-The plugin adds a "Nodes Dashboard" section to your OpenShift Console navigation:
-
-![Console Navigation](docs/screenshots/console-navigation.png)
-
-### Real-Time Dashboard Overview
-Live dashboard showing cluster-wide node statistics with real-time updates:
-
-![Nodes Dashboard Overview](docs/screenshots/nodes-dashboard-overview.png)
-
-### Interactive Node Selection
-Click-to-select nodes with instant detail updates:
-
-![Node Selection](docs/screenshots/node-selection.png)
-
-### Live Node Details
-Comprehensive node view with real-time resource monitoring:
-
-![Node Details Overview](docs/screenshots/node-details-overview.png)
-
-### Live Log Streaming
-Real-time log viewer with WebSocket connectivity:
-
-![Node Logs](docs/screenshots/node-logs.png)
-
-### Real-Time Alert Monitoring
-Live health alerts and status monitoring with instant updates:
-
-![Node Alerts](docs/screenshots/node-alerts.png)
 
 ## 🚀 Getting Started
 
@@ -154,6 +124,8 @@ OC_PASS=<password>
 - **ESLint Integration**: Code quality and style enforcement
 - **Prettier Formatting**: Automatic code formatting
 - **Source Maps**: Easy debugging in browser dev tools
+
+
 
 ## 🐳 Docker Image
 
