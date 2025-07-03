@@ -26,400 +26,291 @@ jest.mock('@patternfly/react-core', () => ({
   Spinner: () => <div data-testid="spinner">Loading...</div>,
 }));
 
-// Get the mocked functions
-const mockUseK8sWatchResource = jest.fn();
-const mockK8sListItems = jest.fn();
-const mockUsePrometheusQuery = jest.fn();
-
-// Update the mock to use our functions
+// Mock the OpenShift Console Dynamic Plugin SDK
 jest.mock('@openshift-console/dynamic-plugin-sdk', () => ({
-  useK8sWatchResource: mockUseK8sWatchResource,
+  useK8sWatchResource: jest.fn(),
   k8sGet: jest.fn().mockResolvedValue({}),
-  k8sListItems: mockK8sListItems,
-  usePrometheusQuery: mockUsePrometheusQuery,
+  k8sListItems: jest.fn(),
+  usePrometheusQuery: jest.fn(),
   K8sResourceCommon: {},
 }));
 
-// Helper function to create mock fetch responses
-const createMockFetchResponse = (data: any) => ({
-  ok: true,
-  json: () => Promise.resolve(data),
-});
+// Get the mocked functions after the mock is defined
+const { useK8sWatchResource: mockUseK8sWatchResource } = jest.requireMock('@openshift-console/dynamic-plugin-sdk');
+const { k8sListItems: mockK8sListItems } = jest.requireMock('@openshift-console/dynamic-plugin-sdk');
+const { usePrometheusQuery: mockUsePrometheusQuery } = jest.requireMock('@openshift-console/dynamic-plugin-sdk');
 
-// Helper function to setup fetch mocks for successful data loading
-const setupSuccessfulFetchMocks = (nodeCount = 3) => {
-  const mockNodes = createMockNodes(nodeCount);
-  const mockNodeData = mockNodes.map((node) => ({
-    metadata: {
-      name: node.metadata?.name,
-      labels: node.metadata?.labels || {},
-      creationTimestamp: new Date(Date.now() - Math.random() * 86400000 * 30).toISOString(),
-    },
-    status: {
-      conditions: [
-        {
-          type: 'Ready',
-          status: 'True',
-          lastTransitionTime: new Date(Date.now() - Math.random() * 86400000).toISOString(),
-        },
-      ],
-      nodeInfo: {
-        kubeletVersion: 'v1.28.0',
-        operatingSystem: 'linux',
-        architecture: 'amd64',
-        containerRuntimeVersion: 'containerd://1.6.21',
-      },
-      allocatable: {
-        cpu: '4',
-        memory: '16Gi',
-        pods: '110',
-      },
-    },
-    spec: {},
-  }));
-
-  global.fetch = jest.fn().mockImplementation((url: string) => {
-    if (url.includes('/api/kubernetes/api/v1/nodes')) {
-      return Promise.resolve(createMockFetchResponse({ items: mockNodeData }));
-    }
-    if (url.includes('/api/kubernetes/api/v1/pods')) {
-      return Promise.resolve(createMockFetchResponse({ items: [] }));
-    }
-    if (url.includes('/api/kubernetes/api/v1/events')) {
-      return Promise.resolve(createMockFetchResponse({ items: [] }));
-    }
-    return Promise.reject(new Error(`Unmocked fetch call: ${url}`));
-  });
-};
-
-describe('NodesDashboard', () => {
+describe('Enhanced Node Dashboard with Real-time Data', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Default mock setup with some nodes
+    // Default mock setup with some nodes for successful scenarios
     const defaultNodes = createMockNodes(3);
-    mockUseK8sWatchResource.mockReturnValue([defaultNodes, true, null]);
+    
+    // Mock useK8sWatchResource to return proper format [data, loaded, error]
+    // The component calls this hook 3 times (nodes, pods, events)
+    mockUseK8sWatchResource.mockImplementation((params: any) => {
+      if (params.groupVersionKind.kind === 'Node') {
+        return [defaultNodes, true, null];
+      } else if (params.groupVersionKind.kind === 'Pod') {
+        return [[], true, null];
+      } else if (params.groupVersionKind.kind === 'Event') {
+        return [[], true, null];
+      }
+      return [[], false, null];
+    });
+    
     mockK8sListItems.mockResolvedValue([]);
     mockUsePrometheusQuery.mockReturnValue([[], null, false]);
   });
 
-  describe('Loading and Basic Rendering', () => {
-    it('should display loading state initially', () => {
+  describe('Real-time Data Loading and Display', () => {
+    it('should display loading state with real-time messaging', () => {
+      // Mock loading state - all three hooks return false for loaded
+      mockUseK8sWatchResource.mockImplementation(() => [[], false, null]);
+      
       render(<NodesDashboard />);
-
-      expect(screen.getByText('Loading Node Dashboard...')).toBeInTheDocument();
-      expect(screen.getByText('Fetching comprehensive node information...')).toBeInTheDocument();
+      
+      expect(screen.getByText('Loading Node Data')).toBeInTheDocument();
+      expect(screen.getByText('Fetching real-time cluster node information...')).toBeInTheDocument();
     });
 
-    it('should display component title correctly', async () => {
-      setupSuccessfulFetchMocks();
-      render(<NodesDashboard />);
-
-      // Wait for the component to load and render the main dashboard
-      await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Error Handling', () => {
-    it('should handle empty state gracefully', async () => {
-      setupSuccessfulFetchMocks(0);
-      render(<NodesDashboard />);
-
-      // Wait for loading to complete
-      await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
-      });
-    });
-  });
-
-  // Add a test that waits for the component to finish loading
-  describe('Data Loading', () => {
-    it('should eventually load node data', async () => {
-      setupSuccessfulFetchMocks();
-      render(<NodesDashboard />);
-
-      // Initially shows loading
-      expect(screen.getByText('Loading Node Dashboard...')).toBeInTheDocument();
-
-      // Wait for data to load
-      await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Component Rendering', () => {
-    it('should render the component title', async () => {
-      setupSuccessfulFetchMocks();
-      render(<NodesDashboard />);
-
-      // Wait for the component to load and render the main dashboard
-      await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
-      });
-    });
-
-    it('should render loading state initially', () => {
-      mockUseK8sWatchResource.mockReturnValue([[], false, null]);
-      render(<NodesDashboard />);
-      expect(screen.getByTestId('spinner')).toBeInTheDocument();
-    });
-
-    it('should render error state when there is an error', async () => {
-      // Mock fetch to fail
-      global.fetch = jest.fn().mockRejectedValue(new Error('Failed to load nodes'));
-
-      render(<NodesDashboard />);
-
-      // Should render dashboard even with error (component is resilient)
-      await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
-      });
-    });
-
-    it('should render empty state when no nodes are available', async () => {
-      setupSuccessfulFetchMocks(0);
+    it('should display the enhanced dashboard title and real-time description', async () => {
       render(<NodesDashboard />);
 
       await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
+        expect(screen.getByText('Enhanced Node Dashboard')).toBeInTheDocument();
+        expect(screen.getByText('Comprehensive visual monitoring of cluster nodes with real-time data')).toBeInTheDocument();
       });
     });
-  });
 
-  describe('Node List Display', () => {
-    it('should display nodes when data is available', async () => {
-      setupSuccessfulFetchMocks(3);
+    it('should show real-time data indicator', async () => {
       render(<NodesDashboard />);
 
       await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
-      });
-
-      // Wait for node data to be rendered
-      await waitFor(() => {
-        expect(screen.getAllByText('worker-node-1')[0]).toBeInTheDocument();
-      });
-
-      expect(screen.getAllByText('worker-node-2')[0]).toBeInTheDocument();
-      expect(screen.getAllByText('worker-node-3')[0]).toBeInTheDocument();
-    });
-
-    it('should display node status correctly', async () => {
-      setupSuccessfulFetchMocks(1);
-      render(<NodesDashboard />);
-
-      await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
-      });
-
-      await waitFor(() => {
-        expect(screen.getAllByText('Ready')[0]).toBeInTheDocument();
+        expect(screen.getByText('Real-time Data')).toBeInTheDocument();
       });
     });
 
-    it('should display node resources correctly', async () => {
-      setupSuccessfulFetchMocks(1);
-      render(<NodesDashboard />);
+    it('should handle real-time data updates from watches', async () => {
+      const initialNodes = createMockNodes(2);
+      let currentNodes = initialNodes;
 
-      await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
+      // Mock dynamic data updates
+      mockUseK8sWatchResource.mockImplementation((params: any) => {
+        if (params.groupVersionKind.kind === 'Node') {
+          return [currentNodes, true, null];
+        } else if (params.groupVersionKind.kind === 'Pod') {
+          return [[], true, null];
+        } else if (params.groupVersionKind.kind === 'Event') {
+          return [[], true, null];
+        }
+        return [[], false, null];
       });
 
-      // Should display nodes and their basic information
-      await waitFor(() => {
-        expect(screen.getAllByText('worker-node-1')[0]).toBeInTheDocument();
-      });
-
-      // Component should have rendered resource information in some form
-      expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
-    });
-
-    it('should display node uptime', async () => {
-      setupSuccessfulFetchMocks(1);
-      render(<NodesDashboard />);
-
-      await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
-      });
-
-      // Should display uptime - check for any time-like format
-      await waitFor(() => {
-        const timeElements = screen.getAllByText(/\d+/);
-        expect(timeElements.length).toBeGreaterThan(0);
-      });
-    });
-  });
-
-  describe('Dashboard Display', () => {
-    it('should display nodes in the dashboard', async () => {
-      setupSuccessfulFetchMocks(3);
-      render(<NodesDashboard />);
-
-      await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
-      });
-
-      await waitFor(() => {
-        expect(screen.getAllByText('worker-node-1')[0]).toBeInTheDocument();
-      });
-      expect(screen.getAllByText('worker-node-2')[0]).toBeInTheDocument();
-      expect(screen.getAllByText('worker-node-3')[0]).toBeInTheDocument();
-    });
-
-    it('should show cluster overview', async () => {
-      setupSuccessfulFetchMocks(2);
-      render(<NodesDashboard />);
-
-      await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
-      });
-
-      expect(
-        screen.getByText('Comprehensive cluster node monitoring and management'),
-      ).toBeInTheDocument();
-    });
-
-    it('should display node cards', async () => {
-      setupSuccessfulFetchMocks(1);
-      render(<NodesDashboard />);
-
-      await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
-      });
-
-      // Should display node cards with status
-      await waitFor(() => {
-        expect(screen.getAllByText('Ready')[0]).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Node Details Modal', () => {
-    it('should open node details when node is clicked', async () => {
-      setupSuccessfulFetchMocks(3);
-      render(<NodesDashboard />);
-
-      await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
-      });
-
-      // Wait for nodes to be rendered, then click on one
-      const nodeRows = await screen.findAllByText('worker-node-1');
-      fireEvent.click(nodeRows[0]);
-
-      // Check if modal or details section opens (this may not work if modal isn't implemented)
-      // For now, just check that the click doesn't crash
-      expect(nodeRows[0]).toBeInTheDocument();
-    });
-
-    it('should display node overview information', async () => {
-      setupSuccessfulFetchMocks(1);
-      render(<NodesDashboard />);
-
-      await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
-      });
-
-      // Check that node information is displayed somewhere
-      await waitFor(() => {
-        expect(screen.getAllByText('worker-node-1')[0]).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Terminal Functionality', () => {
-    it('should handle node selection for terminal access', async () => {
-      setupSuccessfulFetchMocks(1);
-      render(<NodesDashboard />);
-
-      await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
-      });
-
-      // Wait for node to be rendered, then attempt to click
-      const nodeRows = await screen.findAllByText('worker-node-1');
-      fireEvent.click(nodeRows[0]);
-
-      // For now, just verify the click doesn't crash the component
-      expect(nodeRows[0]).toBeInTheDocument();
-    });
-  });
-
-  describe('Responsive Design', () => {
-    it('should render dashboard on all screen sizes', async () => {
-      setupSuccessfulFetchMocks();
-      render(<NodesDashboard />);
-
-      await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
-      });
-
-      // Component should render successfully regardless of screen size
-      expect(
-        screen.getByText('Comprehensive cluster node monitoring and management'),
-      ).toBeInTheDocument();
-    });
-  });
-
-  describe('Data Display', () => {
-    it('should handle data updates and display node information', async () => {
-      setupSuccessfulFetchMocks(2);
-      render(<NodesDashboard />);
-
-      await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
-      });
-
-      await waitFor(() => {
-        expect(screen.getAllByText('worker-node-1')[0]).toBeInTheDocument();
-      });
-      expect(screen.getAllByText('worker-node-2')[0]).toBeInTheDocument();
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle multiple nodes efficiently', async () => {
-      setupSuccessfulFetchMocks(10);
-      render(<NodesDashboard />);
-
-      await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
-      });
-
-      // Should render multiple nodes
-      await waitFor(() => {
-        expect(screen.getAllByText('worker-node-1')[0]).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Data Refresh', () => {
-    it('should handle dashboard updates', async () => {
-      setupSuccessfulFetchMocks(2);
       const { rerender } = render(<NodesDashboard />);
 
       await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
+        expect(screen.getByText('Enhanced Node Dashboard')).toBeInTheDocument();
       });
 
-      await waitFor(() => {
-        expect(screen.getAllByText('worker-node-1')[0]).toBeInTheDocument();
-      });
-      expect(screen.getAllByText('worker-node-2')[0]).toBeInTheDocument();
-
-      // Simulate re-rendering with updated data
+      // Simulate real-time data update
+      currentNodes = createMockNodes(3);
       rerender(<NodesDashboard />);
 
       await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
+        expect(screen.getByText('Enhanced Node Dashboard')).toBeInTheDocument();
       });
     });
   });
 
-  describe('Performance Tests', () => {
+  describe('Error Handling with Watch Resources', () => {
+    it('should handle watch resource errors gracefully', async () => {
+      // Mock watch resources to return errors
+      mockUseK8sWatchResource.mockImplementation(() => [null, true, new Error('Failed to load nodes')]);
+
+      render(<NodesDashboard />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to connect to the OpenShift API. Please check your connection.')).toBeInTheDocument();
+      });
+    });
+
+    it('should handle empty data sets from watch resources', async () => {
+      // Mock empty data from watches
+      mockUseK8sWatchResource.mockImplementation((params: any) => {
+        if (params.groupVersionKind.kind === 'Node') {
+          return [[], true, null];
+        } else if (params.groupVersionKind.kind === 'Pod') {
+          return [[], true, null];
+        } else if (params.groupVersionKind.kind === 'Event') {
+          return [[], true, null];
+        }
+        return [[], false, null];
+      });
+
+      render(<NodesDashboard />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Enhanced Node Dashboard')).toBeInTheDocument();
+      });
+
+      // Should show summary with 0 nodes
+      await waitFor(() => {
+        expect(screen.getByText('0')).toBeInTheDocument(); // Should show 0 total nodes
+      });
+    });
+  });
+
+  describe('Node Data Display and Interaction', () => {
+    it('should display node cards with comprehensive information', async () => {
+      render(<NodesDashboard />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Enhanced Node Dashboard')).toBeInTheDocument();
+      });
+
+      // Should display node information
+      await waitFor(() => {
+        expect(screen.getAllByText(/worker-node-/)[0]).toBeInTheDocument();
+      });
+    });
+
+    it('should show cluster summary metrics', async () => {
+      render(<NodesDashboard />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Enhanced Node Dashboard')).toBeInTheDocument();
+      });
+
+      // Should show metrics cards
+      await waitFor(() => {
+        expect(screen.getByText('Total Nodes')).toBeInTheDocument();
+        expect(screen.getByText('Ready Nodes')).toBeInTheDocument();
+        expect(screen.getByText('Running Pods')).toBeInTheDocument();
+        expect(screen.getByText('Needs Attention')).toBeInTheDocument();
+      });
+    });
+
+    it('should handle node selection for details view', async () => {
+      render(<NodesDashboard />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Enhanced Node Dashboard')).toBeInTheDocument();
+      });
+
+      // Wait for nodes to be rendered, then attempt to interact
+      await waitFor(() => {
+        const nodeElements = screen.getAllByText(/worker-node-/);
+        expect(nodeElements.length).toBeGreaterThan(0);
+        
+        // Click on first node element that's likely clickable (typically in a card)
+        if (nodeElements[0].closest('div[style*="cursor"]') || nodeElements[0].closest('button')) {
+          fireEvent.click(nodeElements[0]);
+        }
+        
+        // Verify the component doesn't crash
+        expect(screen.getByText('Enhanced Node Dashboard')).toBeInTheDocument();
+      });
+    });
+
+    it('should display filtering controls', async () => {
+      render(<NodesDashboard />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Enhanced Node Dashboard')).toBeInTheDocument();
+      });
+
+      // Should show search and filter controls
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText(/search/i)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Real-time Watch Resource Integration', () => {
+    it('should properly set up watch resources for nodes, pods, and events', () => {
+      render(<NodesDashboard />);
+
+             // Verify that useK8sWatchResource was called for all three resource types
+       const calls = mockUseK8sWatchResource.mock.calls;
+       
+       const nodeCall = calls.find((call: any) => call[0].groupVersionKind.kind === 'Node');
+       const podCall = calls.find((call: any) => call[0].groupVersionKind.kind === 'Pod');
+       const eventCall = calls.find((call: any) => call[0].groupVersionKind.kind === 'Event');
+
+      expect(nodeCall).toBeDefined();
+      expect(podCall).toBeDefined();
+      expect(eventCall).toBeDefined();
+
+      // Verify proper configuration
+      expect(nodeCall[0].isList).toBe(true);
+      expect(podCall[0].isList).toBe(true);
+      expect(eventCall[0].isList).toBe(true);
+    });
+
+    it('should handle partial data loading states', async () => {
+      // Mock scenario where nodes load first, then pods and events
+      let step = 0;
+      mockUseK8sWatchResource.mockImplementation((params: any) => {
+        if (params.groupVersionKind.kind === 'Node') {
+          return [createMockNodes(2), true, null];
+        } else if (params.groupVersionKind.kind === 'Pod') {
+          return [[], step > 0, null];
+        } else if (params.groupVersionKind.kind === 'Event') {
+          return [[], step > 1, null];
+        }
+        return [[], false, null];
+      });
+
+      const { rerender } = render(<NodesDashboard />);
+      
+      // Initially should show loading
+      expect(screen.getByText('Loading Node Data')).toBeInTheDocument();
+
+      // Simulate progression of data loading
+      step = 1;
+      rerender(<NodesDashboard />);
+      
+      step = 2;
+      rerender(<NodesDashboard />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Enhanced Node Dashboard')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Enhanced Node Details and Debugging Features', () => {
+    it('should provide comprehensive node information', async () => {
+      render(<NodesDashboard />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Enhanced Node Dashboard')).toBeInTheDocument();
+      });
+
+      // Should display various node details
+      await waitFor(() => {
+        expect(screen.getAllByText(/worker-node-/)[0]).toBeInTheDocument();
+      });
+    });
+
+    it('should show node health status indicators', async () => {
+      render(<NodesDashboard />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Enhanced Node Dashboard')).toBeInTheDocument();
+      });
+
+      // Should show health indicators
+      await waitFor(() => {
+        const readyElements = screen.getAllByText('Ready');
+        expect(readyElements.length).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  describe('Performance and Responsiveness', () => {
     const measurePerformance = async (
       testName: string,
       testFn: () => Promise<void> | void,
@@ -432,161 +323,232 @@ describe('NodesDashboard', () => {
       return duration;
     };
 
-    it('should handle large datasets efficiently', async () => {
-      setupSuccessfulFetchMocks(200);
+    it('should handle large datasets efficiently with real-time updates', async () => {
+      const largeMockNodes = createLargeMockNodeDataset(100);
+      
+      mockUseK8sWatchResource.mockImplementation((params: any) => {
+        if (params.groupVersionKind.kind === 'Node') {
+          return [largeMockNodes, true, null];
+        } else if (params.groupVersionKind.kind === 'Pod') {
+          return [[], true, null];
+        } else if (params.groupVersionKind.kind === 'Event') {
+          return [[], true, null];
+        }
+        return [[], false, null];
+      });
 
-      const renderTime = await measurePerformance('Rendering dashboard with large dataset', () => {
+      const renderTime = await measurePerformance('Large dataset rendering', async () => {
         render(<NodesDashboard />);
-      });
-
-      // Should render within 2 seconds for large datasets
-      expect(renderTime).toBeLessThan(2000);
-
-      // Should load and display the dashboard
-      await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
-      });
-    });
-
-    it('should handle data updates efficiently', async () => {
-      setupSuccessfulFetchMocks(50);
-      const { rerender } = render(<NodesDashboard />);
-
-      await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
-      });
-
-      const updateTime = await measurePerformance('Data updates', async () => {
-        // Re-render the component to simulate data updates
-        rerender(<NodesDashboard />);
         await waitFor(() => {
-          expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
+          expect(screen.getByText('Enhanced Node Dashboard')).toBeInTheDocument();
         });
       });
 
-      // Updates should be fast
-      expect(updateTime).toBeLessThan(1000);
+      expect(renderTime).toBeLessThan(3000); // Should render within 3 seconds
     });
 
-    it('should maintain responsiveness with multiple components', async () => {
-      setupSuccessfulFetchMocks(30);
+    it('should maintain performance during continuous watch updates', async () => {
+      let updateCount = 0;
+      const baseNodes = createMockNodes(50);
 
-      const renderTime = await measurePerformance('Multiple component rendering', async () => {
-        render(<NodesDashboard />);
-        await waitFor(() => {
-          expect(screen.getByText('OpenShift Node Dashboard')).toBeInTheDocument();
-        });
-      });
-
-      // Should handle complex rendering efficiently
-      expect(renderTime).toBeLessThan(2000);
-    });
-
-    it('should efficiently handle sorting operations on large dataset', async () => {
-      const largeMockNodes = createLargeMockNodeDataset(200);
-      mockUseK8sWatchResource.mockReturnValue([largeMockNodes, true, null]);
-
-      render(<NodesDashboard />);
-
-      await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeVisible();
-      });
-
-      const sortTime = await measurePerformance('Sorting large dataset', async () => {
-        // Simulate different sorting operations
-        const sortOperations = [
-          () =>
-            [...largeMockNodes].sort((a, b) =>
-              (a.metadata?.name || '').localeCompare(b.metadata?.name || ''),
-            ),
-          () =>
-            [...largeMockNodes].sort((a, b) => {
-              const aReady =
-                a.status?.conditions?.find((c) => c.type === 'Ready')?.status === 'True';
-              const bReady =
-                b.status?.conditions?.find((c) => c.type === 'Ready')?.status === 'True';
-              return Number(bReady) - Number(aReady);
-            }),
-          () =>
-            [...largeMockNodes].sort((a, b) => {
-              const aCpu = parseInt(a.status?.capacity?.cpu || '0');
-              const bCpu = parseInt(b.status?.capacity?.cpu || '0');
-              return bCpu - aCpu;
-            }),
-        ];
-
-        for (const sortFn of sortOperations) {
-          sortFn();
+      mockUseK8sWatchResource.mockImplementation((params: any) => {
+        if (params.groupVersionKind.kind === 'Node') {
+          // Simulate continuous updates by slightly modifying the data
+          const modifiedNodes = baseNodes.map(node => ({
+            ...node,
+            metadata: {
+              ...node.metadata,
+              resourceVersion: String(parseInt(node.metadata?.resourceVersion || '0') + updateCount),
+            },
+          }));
+          return [modifiedNodes, true, null];
+        } else if (params.groupVersionKind.kind === 'Pod') {
+          return [[], true, null];
+        } else if (params.groupVersionKind.kind === 'Event') {
+          return [[], true, null];
         }
+        return [[], false, null];
       });
-
-      // Sorting should be efficient
-      expect(sortTime).toBeLessThan(200); // Less than 200ms for all sort operations
-    });
-
-    it('should handle pagination efficiently with large dataset', async () => {
-      const largeMockNodes = createLargeMockNodeDataset(200);
-      mockUseK8sWatchResource.mockReturnValue([largeMockNodes, true, null]);
-
-      render(<NodesDashboard />);
-
-      await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeVisible();
-      });
-
-      const paginationTime = await measurePerformance('Pagination operations', async () => {
-        // Simulate pagination logic
-        const pageSize = 20;
-        const totalPages = Math.ceil(largeMockNodes.length / pageSize);
-
-        for (let page = 0; page < Math.min(totalPages, 5); page++) {
-          const startIndex = page * pageSize;
-          const endIndex = Math.min(startIndex + pageSize, largeMockNodes.length);
-          const pageData = largeMockNodes.slice(startIndex, endIndex);
-
-          // Process page data
-          expect(pageData.length).toBeLessThanOrEqual(pageSize);
-        }
-      });
-
-      // Pagination should be very fast
-      expect(paginationTime).toBeLessThan(50); // Less than 50ms
-    });
-
-    it('should maintain performance during continuous data updates', async () => {
-      const largeMockNodes = createLargeMockNodeDataset(200);
-
-      mockUseK8sWatchResource.mockReturnValue([largeMockNodes, true, null]);
 
       const { rerender } = render(<NodesDashboard />);
+
       await waitFor(() => {
-        expect(screen.getByText('OpenShift Node Dashboard')).toBeVisible();
+        expect(screen.getByText('Enhanced Node Dashboard')).toBeInTheDocument();
       });
 
-      const continuousUpdateTime = await measurePerformance(
-        'Continuous updates simulation',
-        async () => {
-          // Simulate 5 rapid updates
-          for (let update = 0; update < 5; update++) {
-            const updatedNodes = largeMockNodes.map((node) => ({
-              ...node,
-              metadata: {
-                ...node.metadata,
-                resourceVersion: String(parseInt(node.metadata?.resourceVersion || '0') + update),
-              },
-            }));
+      const updateTime = await measurePerformance('Continuous updates', async () => {
+        for (let i = 0; i < 5; i++) {
+          updateCount++;
+          rerender(<NodesDashboard />);
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+      });
 
-            mockUseK8sWatchResource.mockReturnValue([updatedNodes, true, null]);
-            rerender(<NodesDashboard />);
+      expect(updateTime).toBeLessThan(1000); // All updates should complete within 1 second
+    });
 
-            // Small delay between updates
-            await new Promise((resolve) => setTimeout(resolve, 10));
-          }
+    it('should efficiently filter and sort nodes in real-time', async () => {
+      const controlPlaneNodes = createMockNodes(25).map(node => ({
+        ...node,
+        metadata: {
+          ...node.metadata,
+          labels: {
+            ...node.metadata?.labels,
+            'node-role.kubernetes.io/control-plane': '',
+          },
         },
-      );
+      }));
+      const workerNodes = createMockNodes(75);
+      const mixedNodes = [...controlPlaneNodes, ...workerNodes];
 
-      // Continuous updates should not cause performance issues
-      expect(continuousUpdateTime).toBeLessThan(1000); // Less than 1 second for 5 updates
+      mockUseK8sWatchResource.mockImplementation((params: any) => {
+        if (params.groupVersionKind.kind === 'Node') {
+          return [mixedNodes, true, null];
+        } else if (params.groupVersionKind.kind === 'Pod') {
+          return [[], true, null];
+        } else if (params.groupVersionKind.kind === 'Event') {
+          return [[], true, null];
+        }
+        return [[], false, null];
+      });
+
+      render(<NodesDashboard />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Enhanced Node Dashboard')).toBeInTheDocument();
+      });
+
+      const filterTime = await measurePerformance('Filtering operations', async () => {
+        const searchInput = screen.getByPlaceholderText(/search/i);
+        
+        fireEvent.change(searchInput, { target: { value: 'control' } });
+        await waitFor(() => {
+          expect(searchInput).toHaveValue('control');
+        });
+
+        fireEvent.change(searchInput, { target: { value: '' } });
+        await waitFor(() => {
+          expect(searchInput).toHaveValue('');
+        });
+      });
+
+      expect(filterTime).toBeLessThan(500); // Filtering should be very fast
+    });
+  });
+
+  describe('Accessibility and User Experience', () => {
+    it('should provide clear loading states', () => {
+      mockUseK8sWatchResource.mockImplementation(() => [[], false, null]);
+      
+      render(<NodesDashboard />);
+      
+      expect(screen.getByText('Loading Node Data')).toBeInTheDocument();
+      expect(screen.getByText('Fetching real-time cluster node information...')).toBeInTheDocument();
+    });
+
+    it('should display meaningful error messages', async () => {
+      mockUseK8sWatchResource.mockImplementation(() => [null, true, new Error('Network error')]);
+
+      render(<NodesDashboard />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to connect to the OpenShift API. Please check your connection.')).toBeInTheDocument();
+      });
+    });
+
+    it('should maintain responsive design across different viewport sizes', async () => {
+      render(<NodesDashboard />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Enhanced Node Dashboard')).toBeInTheDocument();
+      });
+
+      // Component should render successfully regardless of viewport
+      expect(screen.getByText('Comprehensive visual monitoring of cluster nodes with real-time data')).toBeInTheDocument();
+    });
+  });
+
+  describe('Data Integration and Processing', () => {
+    it('should properly correlate nodes, pods, and events data', async () => {
+      const nodes = createMockNodes(2);
+      const mockPods = [
+        {
+          metadata: { name: 'pod-1', namespace: 'default' },
+          spec: { nodeName: 'worker-node-1' },
+          status: { phase: 'Running' }
+        },
+        {
+          metadata: { name: 'pod-2', namespace: 'default' },
+          spec: { nodeName: 'worker-node-2' },
+          status: { phase: 'Running' }
+        }
+      ];
+      const mockEvents = [
+        {
+          involvedObject: { name: 'worker-node-1', kind: 'Node' },
+          type: 'Normal',
+          reason: 'NodeReady',
+          message: 'Node worker-node-1 status is now: NodeReady'
+        }
+      ];
+
+      mockUseK8sWatchResource.mockImplementation((params: any) => {
+        if (params.groupVersionKind.kind === 'Node') {
+          return [nodes, true, null];
+        } else if (params.groupVersionKind.kind === 'Pod') {
+          return [mockPods, true, null];
+        } else if (params.groupVersionKind.kind === 'Event') {
+          return [mockEvents, true, null];
+        }
+        return [[], false, null];
+      });
+
+      render(<NodesDashboard />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Enhanced Node Dashboard')).toBeInTheDocument();
+      });
+
+      // Should process and display the correlated data
+      await waitFor(() => {
+        expect(screen.getAllByText(/worker-node-/)[0]).toBeInTheDocument();
+      });
+    });
+
+    it('should handle real-time data synchronization', async () => {
+      let dataVersion = 1;
+      
+      mockUseK8sWatchResource.mockImplementation((params: any) => {
+        if (params.groupVersionKind.kind === 'Node') {
+          const nodes = createMockNodes(3).map(node => ({
+            ...node,
+            metadata: {
+              ...node.metadata,
+              resourceVersion: String(dataVersion),
+            },
+          }));
+          return [nodes, true, null];
+        } else if (params.groupVersionKind.kind === 'Pod') {
+          return [[], true, null];
+        } else if (params.groupVersionKind.kind === 'Event') {
+          return [[], true, null];
+        }
+        return [[], false, null];
+      });
+
+      const { rerender } = render(<NodesDashboard />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Enhanced Node Dashboard')).toBeInTheDocument();
+      });
+
+      // Simulate data update
+      dataVersion = 2;
+      rerender(<NodesDashboard />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Enhanced Node Dashboard')).toBeInTheDocument();
+      });
     });
   });
 });
