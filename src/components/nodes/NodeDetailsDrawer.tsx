@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Title,
   Tabs,
@@ -57,8 +57,38 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
   onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<string>('overview');
+  const [drawerWidth, setDrawerWidth] = useState<number>(600);
+  const [isResizing, setIsResizing] = useState<boolean>(false);
 
   if (!node || !isOpen) return null;
+
+  // Resize handlers
+  const handleResize = React.useCallback((e: MouseEvent) => {
+    if (!isResizing) return;
+    const newWidth = window.innerWidth - e.clientX;
+    setDrawerWidth(Math.max(400, Math.min(1200, newWidth)));
+  }, [isResizing]);
+
+  const handleResizeEnd = React.useCallback(() => {
+    setIsResizing(false);
+    document.removeEventListener('mousemove', handleResize);
+    document.removeEventListener('mouseup', handleResizeEnd);
+  }, [handleResize]);
+
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    document.addEventListener('mousemove', handleResize);
+    document.addEventListener('mouseup', handleResizeEnd);
+  };
+
+  // Cleanup resize listeners on unmount
+  useEffect(() => {
+    return () => {
+      document.removeEventListener('mousemove', handleResize);
+      document.removeEventListener('mouseup', handleResizeEnd);
+    };
+  }, [handleResize, handleResizeEnd]);
 
   const formatMemoryForDisplay = (memoryValue: string): string => {
     if (memoryValue.endsWith('Ki')) {
@@ -161,20 +191,32 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
     top: mastheadHeight,
     right: 0,
     bottom: 0,
-    width: '600px',
+    width: `${drawerWidth}px`,
     backgroundColor: '#fff',
     boxShadow: '-2px 0 10px rgba(0, 0, 0, 0.1)',
     zIndex: 1001,
     transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
-    transition: 'transform 0.3s ease-in-out',
+    transition: isResizing ? 'none' : 'transform 0.3s ease-in-out',
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
   };
 
+  const resizeHandleStyles: React.CSSProperties = {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: '4px',
+    backgroundColor: isResizing ? '#0066cc' : 'transparent',
+    cursor: 'col-resize',
+    zIndex: 1002,
+    transition: 'background-color 0.2s ease',
+  };
+
   const headerStyles: React.CSSProperties = {
     borderBottom: '1px solid #e8e8e8',
-    padding: '16px 24px',
+    padding: '20px 32px',
     backgroundColor: '#f8f9fa',
     flexShrink: 0,
   };
@@ -182,13 +224,15 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
   const contentStyles: React.CSSProperties = {
     flex: 1,
     overflow: 'auto',
-    padding: '0 24px 24px 24px',
+    padding: '0 32px 32px 32px',
   };
 
   const tabContentStyles: React.CSSProperties = {
-    padding: '16px 0',
+    padding: '24px 0',
     minHeight: '200px',
   };
+
+
 
   const getPodStatusColor = (status: string) => {
     switch (status) {
@@ -216,6 +260,22 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
       
       {/* Side Drawer */}
       <div style={drawerStyles}>
+        {/* Resize Handle */}
+        <div
+          style={resizeHandleStyles}
+          onMouseDown={handleResizeStart}
+          onMouseEnter={(e) => {
+            if (!isResizing) {
+              (e.target as HTMLElement).style.backgroundColor = '#0066cc40';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isResizing) {
+              (e.target as HTMLElement).style.backgroundColor = 'transparent';
+            }
+          }}
+        />
+        
         <div style={headerStyles}>
           <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }}>
             <FlexItem>
@@ -223,7 +283,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
                 <ServerIcon style={{ marginRight: '8px', color: '#0066cc' }} />
                 {node.name}
               </Title>
-              <div style={{ marginTop: '4px', fontSize: '0.875rem', color: '#6a6e73' }}>
+              <div style={{ marginTop: '8px', fontSize: '0.875rem', color: '#6a6e73' }}>
                 {node.role} • {node.zone} • {node.instanceType}
               </div>
             </FlexItem>
