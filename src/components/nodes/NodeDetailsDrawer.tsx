@@ -45,19 +45,16 @@ interface NodeDetailsDrawerProps {
   node: NodeDetail | null;
   isOpen: boolean;
   onClose: () => void;
-  onHeightChange?: (height: number) => void;
 }
 
 const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ 
   node, 
   isOpen, 
-  onClose, 
-  onHeightChange 
+  onClose 
 }) => {
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [drawerHeight, setDrawerHeight] = useState<number>(window.innerHeight * 0.75); // 75% of viewport
   const [isResizing, setIsResizing] = useState<boolean>(false);
-  const [isHoveringHandle, setIsHoveringHandle] = useState<boolean>(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
 
@@ -76,8 +73,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
     
     const constrainedHeight = Math.min(Math.max(newHeight, minHeight), maxHeight);
     setDrawerHeight(constrainedHeight);
-    onHeightChange?.(constrainedHeight);
-  }, [isResizing, onHeightChange]);
+  }, [isResizing]);
 
   const handleMouseUp = useCallback(() => {
     setIsResizing(false);
@@ -214,10 +210,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
     transition: 'background-color 0.2s ease',
   };
 
-  const resizeHandleHoverStyles: React.CSSProperties = {
-    ...resizeHandleStyles,
-    backgroundColor: '#e0e0e0',
-  };
+
 
   const contentStyles: React.CSSProperties = {
     flex: 1,
@@ -768,15 +761,13 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
       {/* Resize Handle */}
       <div 
         ref={resizeHandleRef}
-        style={isHoveringHandle ? resizeHandleHoverStyles : resizeHandleStyles}
+        style={resizeHandleStyles}
         onMouseDown={handleMouseDown}
-        onMouseEnter={() => setIsHoveringHandle(true)}
-        onMouseLeave={() => setIsHoveringHandle(false)}
       >
         <div style={{
           width: '48px',
           height: '3px',
-          backgroundColor: isHoveringHandle ? '#666' : '#999',
+          backgroundColor: '#999',
           borderRadius: '2px',
           transition: 'all 0.2s ease',
           position: 'relative',
@@ -793,21 +784,21 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
             <div style={{
               width: '3px',
               height: '3px',
-              backgroundColor: isHoveringHandle ? '#666' : '#bbb',
+              backgroundColor: '#bbb',
               borderRadius: '50%',
               transition: 'background-color 0.2s ease',
             }} />
             <div style={{
               width: '3px',
               height: '3px',
-              backgroundColor: isHoveringHandle ? '#666' : '#bbb',
+              backgroundColor: '#bbb',
               borderRadius: '50%',
               transition: 'background-color 0.2s ease',
             }} />
             <div style={{
               width: '3px',
               height: '3px',
-              backgroundColor: isHoveringHandle ? '#666' : '#bbb',
+              backgroundColor: '#bbb',
               borderRadius: '50%',
               transition: 'background-color 0.2s ease',
             }} />
