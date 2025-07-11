@@ -58,6 +58,8 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
 
   // Resize handlers with proper cleanup
   useEffect(() => {
+    if (!isResizing) return;
+
     const handleResize = (e: MouseEvent) => {
       const newWidth = window.innerWidth - e.clientX;
       setDrawerWidth(Math.max(400, Math.min(1200, newWidth)));
@@ -65,14 +67,10 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
 
     const handleResizeEnd = () => {
       setIsResizing(false);
-      document.removeEventListener('mousemove', handleResize);
-      document.removeEventListener('mouseup', handleResizeEnd);
     };
 
-    if (isResizing) {
-      document.addEventListener('mousemove', handleResize);
-      document.addEventListener('mouseup', handleResizeEnd);
-    }
+    document.addEventListener('mousemove', handleResize);
+    document.addEventListener('mouseup', handleResizeEnd);
 
     return () => {
       document.removeEventListener('mousemove', handleResize);
