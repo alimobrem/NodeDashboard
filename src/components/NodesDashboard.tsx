@@ -1781,18 +1781,15 @@ This view shows the same Kubernetes component logs available in the built-in Ope
             </Grid>
           </StackItem>
 
-          {/* Inline Node Details */}
-          {isDrawerOpen && (
-            <StackItem>
-              <NodeDetailsDrawer
-                node={selectedNode}
-                isOpen={isDrawerOpen}
-                onClose={handleDrawerClose}
-              />
-            </StackItem>
-          )}
         </Stack>
       </PageSection>
+
+      {/* Side Drawer - Fixed Position */}
+      <NodeDetailsDrawer
+        node={selectedNode}
+        isOpen={isDrawerOpen}
+        onClose={handleDrawerClose}
+      />
     </>
   );
 };

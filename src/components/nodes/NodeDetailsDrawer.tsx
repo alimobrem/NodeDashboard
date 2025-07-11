@@ -139,23 +139,46 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
     return 'debug';
   };
 
-  // Inline drawer styles - simple card styling
+  // Side drawer styles - slides in from the right
+  const overlayStyles: React.CSSProperties = {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 1000,
+    opacity: isOpen ? 1 : 0,
+    visibility: isOpen ? 'visible' : 'hidden',
+    transition: 'opacity 0.3s ease, visibility 0.3s ease',
+  };
+
   const drawerStyles: React.CSSProperties = {
+    position: 'fixed',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: '600px',
     backgroundColor: '#fff',
-    border: '1px solid #d2d2d2',
-    borderRadius: '8px',
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-    marginTop: '24px',
+    boxShadow: '-2px 0 10px rgba(0, 0, 0, 0.1)',
+    zIndex: 1001,
+    transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
+    transition: 'transform 0.3s ease-in-out',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
   };
 
   const headerStyles: React.CSSProperties = {
     borderBottom: '1px solid #e8e8e8',
     padding: '16px 24px',
     backgroundColor: '#f8f9fa',
-    borderRadius: '8px 8px 0 0',
+    flexShrink: 0,
   };
 
   const contentStyles: React.CSSProperties = {
+    flex: 1,
+    overflow: 'auto',
     padding: '0 24px 24px 24px',
   };
 
@@ -184,25 +207,30 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
 
 
   return (
-    <div style={drawerStyles}>
-      <div style={headerStyles}>
-        <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }}>
-          <FlexItem>
-            <Title headingLevel="h2" size="lg">
-              <ServerIcon style={{ marginRight: '8px', color: '#0066cc' }} />
-              {node.name}
-            </Title>
-            <div style={{ marginTop: '4px', fontSize: '0.875rem', color: '#6a6e73' }}>
-              {node.role} • {node.zone} • {node.instanceType}
-            </div>
-          </FlexItem>
-          <FlexItem>
-            <Button variant="plain" onClick={onClose}>
-              <TimesIcon />
-            </Button>
-          </FlexItem>
-        </Flex>
-      </div>
+    <>
+      {/* Overlay */}
+      <div style={overlayStyles} onClick={onClose} />
+      
+      {/* Side Drawer */}
+      <div style={drawerStyles}>
+        <div style={headerStyles}>
+          <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }}>
+            <FlexItem>
+              <Title headingLevel="h2" size="lg">
+                <ServerIcon style={{ marginRight: '8px', color: '#0066cc' }} />
+                {node.name}
+              </Title>
+              <div style={{ marginTop: '4px', fontSize: '0.875rem', color: '#6a6e73' }}>
+                {node.role} • {node.zone} • {node.instanceType}
+              </div>
+            </FlexItem>
+            <FlexItem>
+              <Button variant="plain" onClick={onClose}>
+                <TimesIcon />
+              </Button>
+            </FlexItem>
+          </Flex>
+        </div>
 
       <div style={contentStyles}>
         <Tabs activeKey={activeTab} onSelect={(_event, tabIndex) => setActiveTab(tabIndex as string)}>
@@ -691,6 +719,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
         </Tabs>
       </div>
     </div>
+    </>
   );
 };
 
