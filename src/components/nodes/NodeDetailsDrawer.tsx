@@ -57,6 +57,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [drawerHeight, setDrawerHeight] = useState<number>(window.innerHeight * 0.75); // 75% of viewport
   const [isResizing, setIsResizing] = useState<boolean>(false);
+  const [isHoveringHandle, setIsHoveringHandle] = useState<boolean>(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
 
@@ -180,16 +181,19 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
     return 'debug';
   };
 
-  // Custom top drawer styles
+  // Calculate sticky header height to position drawer below it
+  const stickyHeaderHeight = 240; // Should match the height calculation in NodesDashboard
+
+  // Custom drawer styles - positioned below sticky header
   const drawerStyles: React.CSSProperties = {
     position: 'fixed',
-    top: 0,
+    top: `${stickyHeaderHeight}px`,
     left: 0,
     right: 0,
     height: `${drawerHeight}px`,
     backgroundColor: '#fff',
     boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
-    zIndex: 1000,
+    zIndex: 998, // Below sticky header (999) but above content
     display: isOpen ? 'flex' : 'none',
     flexDirection: 'column',
     transition: isResizing ? 'none' : 'height 0.3s ease-in-out',
@@ -200,13 +204,19 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
     bottom: 0,
     left: 0,
     right: 0,
-    height: '8px',
-    backgroundColor: '#e8e8e8',
+    height: '12px',
+    backgroundColor: '#f1f1f1',
     cursor: 'ns-resize',
     borderTop: '1px solid #d2d2d2',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    transition: 'background-color 0.2s ease',
+  };
+
+  const resizeHandleHoverStyles: React.CSSProperties = {
+    ...resizeHandleStyles,
+    backgroundColor: '#e0e0e0',
   };
 
   const contentStyles: React.CSSProperties = {
@@ -758,15 +768,51 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
       {/* Resize Handle */}
       <div 
         ref={resizeHandleRef}
-        style={resizeHandleStyles}
+        style={isHoveringHandle ? resizeHandleHoverStyles : resizeHandleStyles}
         onMouseDown={handleMouseDown}
+        onMouseEnter={() => setIsHoveringHandle(true)}
+        onMouseLeave={() => setIsHoveringHandle(false)}
       >
         <div style={{
-          width: '40px',
-          height: '4px',
-          backgroundColor: '#999',
+          width: '48px',
+          height: '3px',
+          backgroundColor: isHoveringHandle ? '#666' : '#999',
           borderRadius: '2px',
-        }} />
+          transition: 'all 0.2s ease',
+          position: 'relative',
+        }}>
+          {/* Drag dots indicator */}
+          <div style={{
+            position: 'absolute',
+            top: '-2px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            gap: '3px',
+          }}>
+            <div style={{
+              width: '3px',
+              height: '3px',
+              backgroundColor: isHoveringHandle ? '#666' : '#bbb',
+              borderRadius: '50%',
+              transition: 'background-color 0.2s ease',
+            }} />
+            <div style={{
+              width: '3px',
+              height: '3px',
+              backgroundColor: isHoveringHandle ? '#666' : '#bbb',
+              borderRadius: '50%',
+              transition: 'background-color 0.2s ease',
+            }} />
+            <div style={{
+              width: '3px',
+              height: '3px',
+              backgroundColor: isHoveringHandle ? '#666' : '#bbb',
+              borderRadius: '50%',
+              transition: 'background-color 0.2s ease',
+            }} />
+          </div>
+        </div>
       </div>
     </div>
   );

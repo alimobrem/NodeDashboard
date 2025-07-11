@@ -738,7 +738,7 @@ const NodesDashboard: React.FC = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [drawerHeight, setDrawerHeight] = useState<number>(window.innerHeight * 0.75);
+
 
   // Add CSS animation for pulse effect
   const pulseAnimation = `
@@ -1482,9 +1482,7 @@ This view shows the same Kubernetes component logs available in the built-in Ope
     setSelectedNode(null);
   };
 
-  const handleDrawerHeightChange = (height: number) => {
-    setDrawerHeight(height);
-  };
+
 
   // Loading state
   if (loading) {
@@ -1516,125 +1514,146 @@ This view shows the same Kubernetes component logs available in the built-in Ope
     );
   }
 
+  // Calculate sticky header height (header + cards + spacing)
+  const stickyHeaderHeight = 240; // Approximate height for header (80px) + cards (120px) + spacing (40px)
+
   return (
-    <PageSection 
-      style={{ 
-        marginTop: isDrawerOpen ? `${drawerHeight}px` : '0',
-        transition: 'margin-top 0.3s ease-in-out',
-        minHeight: `calc(100vh - ${isDrawerOpen ? drawerHeight : 0}px)`,
-      }}
-    >
-      <Stack hasGutter>
-        {/* Header */}
-        <StackItem>
-          <Flex
-            justifyContent={{ default: 'justifyContentSpaceBetween' }}
-            alignItems={{ default: 'alignItemsCenter' }}
-          >
-            <FlexItem>
-              <Title headingLevel="h1" size="2xl">
-                <MonitoringIcon
-                  style={{ marginRight: 'var(--pf-v5-global--spacer--sm)', color: '#0066cc' }}
-                />
-                Enhanced Node Dashboard
-              </Title>
-              <span style={{ color: '#6a6e73' }}>
-                Comprehensive visual monitoring of cluster nodes with real-time data
-              </span>
-            </FlexItem>
-            <FlexItem>
-              <Flex alignItems={{ default: 'alignItemsCenter' }}>
+    <>
+      {/* Sticky Header Section */}
+      <div 
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 999,
+          backgroundColor: '#f8f9fa',
+          borderBottom: '1px solid #d2d2d2',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        }}
+      >
+        <PageSection style={{ paddingBottom: '16px' }}>
+          <Stack hasGutter>
+            {/* Header */}
+            <StackItem>
+              <Flex
+                justifyContent={{ default: 'justifyContentSpaceBetween' }}
+                alignItems={{ default: 'alignItemsCenter' }}
+              >
                 <FlexItem>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '8px 16px',
-                      backgroundColor: '#f0f8ff',
-                      borderRadius: '4px',
-                      border: '1px solid #bee1f4',
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: '8px',
-                        height: '8px',
-                        backgroundColor: '#3e8635',
-                        borderRadius: '50%',
-                        marginRight: '8px',
-                        animation: 'pulse 2s infinite',
-                      }}
+                  <Title headingLevel="h1" size="2xl">
+                    <MonitoringIcon
+                      style={{ marginRight: 'var(--pf-v5-global--spacer--sm)', color: '#0066cc' }}
                     />
-                    <span style={{ fontSize: '0.875rem', color: '#0066cc', fontWeight: 'bold' }}>
-                      Real-time Data
-                    </span>
-                  </div>
+                    Enhanced Node Dashboard
+                  </Title>
+                  <span style={{ color: '#6a6e73' }}>
+                    Comprehensive visual monitoring of cluster nodes with real-time data
+                  </span>
+                </FlexItem>
+                <FlexItem>
+                  <Flex alignItems={{ default: 'alignItemsCenter' }}>
+                    <FlexItem>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '8px 16px',
+                          backgroundColor: '#f0f8ff',
+                          borderRadius: '4px',
+                          border: '1px solid #bee1f4',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '8px',
+                            height: '8px',
+                            backgroundColor: '#3e8635',
+                            borderRadius: '50%',
+                            marginRight: '8px',
+                            animation: 'pulse 2s infinite',
+                          }}
+                        />
+                        <span style={{ fontSize: '0.875rem', color: '#0066cc', fontWeight: 'bold' }}>
+                          Real-time Data
+                        </span>
+                      </div>
+                    </FlexItem>
+                  </Flex>
                 </FlexItem>
               </Flex>
-            </FlexItem>
-          </Flex>
-        </StackItem>
+            </StackItem>
 
-        {/* Summary Metrics */}
-        <StackItem>
-          <Grid hasGutter>
-            <GridItem span={3}>
-              <Card style={{ minHeight: '120px' }}>
-                <CardBody style={{ textAlign: 'center', padding: '16px' }}>
-                  <div style={{ marginBottom: '8px' }}>
-                    <ServerIcon style={{ color: '#0066cc', fontSize: '2rem' }} />
-                  </div>
-                  <Title headingLevel="h2" size="xl" style={{ color: '#0066cc' }}>
-                    {nodes.length}
-                  </Title>
-                  <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>Total Nodes</div>
-                </CardBody>
-              </Card>
-            </GridItem>
+            {/* Summary Metrics Cards */}
+            <StackItem>
+              <Grid hasGutter>
+                <GridItem span={3}>
+                  <Card style={{ minHeight: '120px' }}>
+                    <CardBody style={{ textAlign: 'center', padding: '16px' }}>
+                      <div style={{ marginBottom: '8px' }}>
+                        <ServerIcon style={{ color: '#0066cc', fontSize: '2rem' }} />
+                      </div>
+                      <Title headingLevel="h2" size="xl" style={{ color: '#0066cc' }}>
+                        {nodes.length}
+                      </Title>
+                      <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>Total Nodes</div>
+                    </CardBody>
+                  </Card>
+                </GridItem>
 
-            <GridItem span={3}>
-              <Card style={{ minHeight: '120px' }}>
-                <CardBody style={{ textAlign: 'center', padding: '16px' }}>
-                  <div style={{ marginBottom: '8px' }}>
-                    <CheckCircleIcon style={{ color: '#3e8635', fontSize: '2rem' }} />
-                  </div>
-                  <Title headingLevel="h2" size="xl" style={{ color: '#3e8635' }}>
-                    {nodes.filter((n) => n.status === 'Ready').length}
-                  </Title>
-                  <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>Ready Nodes</div>
-                </CardBody>
-              </Card>
-            </GridItem>
+                <GridItem span={3}>
+                  <Card style={{ minHeight: '120px' }}>
+                    <CardBody style={{ textAlign: 'center', padding: '16px' }}>
+                      <div style={{ marginBottom: '8px' }}>
+                        <CheckCircleIcon style={{ color: '#3e8635', fontSize: '2rem' }} />
+                      </div>
+                      <Title headingLevel="h2" size="xl" style={{ color: '#3e8635' }}>
+                        {nodes.filter((n) => n.status === 'Ready').length}
+                      </Title>
+                      <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>Ready Nodes</div>
+                    </CardBody>
+                  </Card>
+                </GridItem>
 
-            <GridItem span={3}>
-              <Card style={{ minHeight: '120px' }}>
-                <CardBody style={{ textAlign: 'center', padding: '16px' }}>
-                  <div style={{ marginBottom: '8px' }}>
-                    <CubesIcon style={{ color: '#009639', fontSize: '2rem' }} />
-                  </div>
-                  <Title headingLevel="h2" size="xl" style={{ color: '#009639' }}>
-                    {nodes.reduce((sum, node) => sum + node.pods.length, 0)}
-                  </Title>
-                  <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>Running Pods</div>
-                </CardBody>
-              </Card>
-            </GridItem>
+                <GridItem span={3}>
+                  <Card style={{ minHeight: '120px' }}>
+                    <CardBody style={{ textAlign: 'center', padding: '16px' }}>
+                      <div style={{ marginBottom: '8px' }}>
+                        <CubesIcon style={{ color: '#009639', fontSize: '2rem' }} />
+                      </div>
+                      <Title headingLevel="h2" size="xl" style={{ color: '#009639' }}>
+                        {nodes.reduce((sum, node) => sum + node.pods.length, 0)}
+                      </Title>
+                      <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>Running Pods</div>
+                    </CardBody>
+                  </Card>
+                </GridItem>
 
-            <GridItem span={3}>
-              <Card style={{ minHeight: '120px' }}>
-                <CardBody style={{ textAlign: 'center', padding: '16px' }}>
-                  <div style={{ marginBottom: '8px' }}>
-                    <ExclamationTriangleIcon style={{ color: '#f0ab00', fontSize: '2rem' }} />
-                  </div>
-                  <Title headingLevel="h2" size="xl" style={{ color: '#f0ab00' }}>
-                    {nodes.filter((n) => n.cordoned || n.drained || n.status === 'NotReady').length}
-                  </Title>
-                  <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>Needs Attention</div>
-                </CardBody>
-              </Card>
-            </GridItem>
-          </Grid>
-        </StackItem>
+                <GridItem span={3}>
+                  <Card style={{ minHeight: '120px' }}>
+                    <CardBody style={{ textAlign: 'center', padding: '16px' }}>
+                      <div style={{ marginBottom: '8px' }}>
+                        <ExclamationTriangleIcon style={{ color: '#f0ab00', fontSize: '2rem' }} />
+                      </div>
+                      <Title headingLevel="h2" size="xl" style={{ color: '#f0ab00' }}>
+                        {nodes.filter((n) => n.cordoned || n.drained || n.status === 'NotReady').length}
+                      </Title>
+                      <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>Needs Attention</div>
+                    </CardBody>
+                  </Card>
+                </GridItem>
+              </Grid>
+            </StackItem>
+          </Stack>
+        </PageSection>
+      </div>
+
+      {/* Main Content Section */}
+      <PageSection 
+        style={{ 
+          paddingTop: '24px',
+          minHeight: `calc(100vh - ${stickyHeaderHeight}px)`,
+        }}
+      >
+        <Stack hasGutter>
 
         {/* Simplified Filtering Controls */}
         <StackItem>
@@ -1741,13 +1760,13 @@ This view shows the same Kubernetes component logs available in the built-in Ope
         <NodeDetailsDrawer 
           node={selectedNode} 
           isOpen={isDrawerOpen} 
-          onClose={handleDrawerClose} 
-          onHeightChange={handleDrawerHeightChange}
+          onClose={handleDrawerClose}
         />
 
         {/* Removed inline panel - now using drawer */}
       </Stack>
     </PageSection>
+    </>
   );
 };
 
