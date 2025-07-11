@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import { K8sResourceKind } from '@openshift-console/dynamic-plugin-sdk';
 import { NodeAddress } from '../types/kubernetes';
+import { NodeDetailsDrawer } from './nodes';
+import type { NodeDebugData, KubernetesEvent, KubernetesPod, LogSource } from '../types';
 
 // PatternFly Core Components
 import {
@@ -12,10 +14,6 @@ import {
   Card,
   CardBody,
   CardTitle,
-  DescriptionList,
-  DescriptionListTerm,
-  DescriptionListGroup,
-  DescriptionListDescription,
   EmptyState,
   EmptyStateBody,
   Flex,
@@ -23,14 +21,9 @@ import {
   Grid,
   GridItem,
   PageSection,
-  Progress,
-  ProgressSize,
   Spinner,
   Stack,
   StackItem,
-  Tab,
-  Tabs,
-  TabTitleText,
   Title,
   Toolbar,
   ToolbarContent,
@@ -42,8 +35,8 @@ import {
   MenuToggleElement,
 } from '@patternfly/react-core';
 
-// PatternFly Table Components
-import { Table, Thead, Tbody, Tr, Th, Td } from '@patternfly/react-table';
+// PatternFly Table Components (unused - moved to drawer)
+// import { Table, Thead, Tbody, Tr, Th, Td } from '@patternfly/react-table';
 
 // PatternFly Icons
 import {
@@ -58,9 +51,6 @@ import {
   CubesIcon,
   FilterIcon,
   BellIcon,
-  TagIcon,
-  ListIcon,
-  ChartLineIcon,
 } from '@patternfly/react-icons';
 
 // Interfaces
@@ -745,8 +735,10 @@ const generateNodeStatusLog = (nodeData: K8sResourceKind): string => {
 const NodesDashboard: React.FC = () => {
   const [nodes, setNodes] = useState<NodeDetail[]>([]);
   const [selectedNode, setSelectedNode] = useState<NodeDetail | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [drawerHeight, setDrawerHeight] = useState<number>(window.innerHeight * 0.75);
 
   // Add CSS animation for pulse effect
   const pulseAnimation = `
@@ -772,7 +764,6 @@ const NodesDashboard: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState<'all' | 'control' | 'worker'>('all');
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>('overview');
 
   // Watch-based data fetching using Kubernetes watches
   const nodesWatch = useK8sWatchResource({
@@ -808,9 +799,9 @@ const NodesDashboard: React.FC = () => {
   const [watchedEvents, eventsLoaded, eventsError] = eventsWatch || [null, false, null];
 
   // Fetch additional debugging data for a specific node
-  const fetchNodeDebugData = React.useCallback(async (nodeName: string) => {
+  const fetchNodeDebugData = React.useCallback(async (nodeName: string): Promise<NodeDebugData> => {
     // Return mock debug data for testing
-    const debugData: any = {
+    const debugData: NodeDebugData = {
       alerts: [],
       logs: [],
       systemInfo: {
@@ -835,13 +826,13 @@ const NodesDashboard: React.FC = () => {
       if (nodeEventsResponse.ok) {
         const nodeEventsData = await nodeEventsResponse.json();
         debugData.alerts = nodeEventsData.items
-          .filter((event: any) => event.type === 'Warning')
+          .filter((event: KubernetesEvent) => event.type === 'Warning')
           .slice(0, 10)
-          .map((event: any) => ({
-            severity: event.type === 'Warning' ? 'warning' : 'info',
+          .map((event: KubernetesEvent) => ({
+            severity: event.type === 'Warning' ? ('warning' as const) : ('info' as const),
             message: event.message,
             reason: event.reason,
-            timestamp: event.firstTimestamp || event.eventTime,
+            timestamp: event.firstTimestamp || event.eventTime || new Date().toISOString(),
             count: event.count || 1,
             source: event.source?.component || 'unknown',
           }));
@@ -871,16 +862,18 @@ const NodesDashboard: React.FC = () => {
         if (consoleLogResponse.ok) {
           const consoleLogData = await consoleLogResponse.json();
           if (consoleLogData && consoleLogData.logs) {
-            Object.entries(consoleLogData.logs).forEach(([source, logContent]: [string, any]) => {
-              if (logContent && typeof logContent === 'string' && logContent.trim().length > 20) {
-                debugData.logs.push({
-                  component: `${source} (console-api)`,
-                  content: logContent,
-                  timestamp: new Date().toISOString(),
-                  level: 'info',
-                });
-              }
-            });
+            Object.entries(consoleLogData.logs).forEach(
+              ([source, logContent]: [string, unknown]) => {
+                if (logContent && typeof logContent === 'string' && logContent.trim().length > 20) {
+                  debugData.logs.push({
+                    component: `${source} (console-api)`,
+                    content: logContent,
+                    timestamp: new Date().toISOString(),
+                    level: 'info',
+                  });
+                }
+              },
+            );
           }
         }
       } catch (consoleErr) {
@@ -888,7 +881,7 @@ const NodesDashboard: React.FC = () => {
       }
 
       // Method 2: Kubernetes Component Logs (same as built-in console)
-      const logSources = [
+      const logSources: LogSource[] = [
         {
           path: 'kube-apiserver',
           name: 'Kubernetes API Server',
@@ -1001,7 +994,7 @@ const NodesDashboard: React.FC = () => {
               if (podsData.items && podsData.items.length > 0) {
                 const podList = podsData.items
                   .slice(0, 3)
-                  .map((pod: any) => `• ${pod.metadata.name} (${pod.status.phase})`)
+                  .map((pod: KubernetesPod) => `• ${pod.metadata.name} (${pod.status.phase})`)
                   .join('\n');
 
                 debugData.logs.push({
@@ -1071,7 +1064,7 @@ This view shows the same Kubernetes component logs available in the built-in Ope
       console.log(
         `🎯 Log fetch completed for ${nodeName}. Found ${debugData.logs.length} log sources.`,
       );
-      debugData.logs.forEach((log: any, index: number) => {
+      debugData.logs.forEach((log, index: number) => {
         console.log(`📋 Log ${index + 1}: ${log.component} (${log.content.length} chars)`);
       });
 
@@ -1103,7 +1096,7 @@ This view shows the same Kubernetes component logs available in the built-in Ope
     nodePods: K8sResourceKind[],
     nodeEvents: K8sResourceKind[],
     nodeMetrics?: K8sResourceKind,
-    debugData?: any,
+    debugData?: NodeDebugData,
   ): NodeDetail => {
     const name = nodeData.metadata?.name || 'Unknown';
     const labels = nodeData.metadata?.labels || {};
@@ -1214,7 +1207,7 @@ This view shows the same Kubernetes component logs available in the built-in Ope
       const memoryTotalKi = parseFloat(allocatable.memory.replace('Ki', ''));
 
       // Parse real metrics from Kubernetes metrics API - handle generic K8sResourceKind
-      const usage = (realMetrics as any).usage || {};
+      const usage = (realMetrics as Record<string, any>).usage || {};
       const cpuUsageNanocores = parseFloat(usage.cpu?.replace('n', '') || '0');
       const memoryUsageKi = parseFloat(usage.memory?.replace('Ki', '') || '0');
 
@@ -1249,32 +1242,40 @@ This view shows the same Kubernetes component logs available in the built-in Ope
       : calculateNodeMetrics(nodePods, allocatable);
 
     // Process pods
-    const pods: PodResource[] = nodePods.map((pod: K8sResourceKind) => ({
-      name: pod.metadata?.name || 'Unknown',
-      namespace: pod.metadata?.namespace || 'Unknown',
-      status: (pod.status as any)?.phase || 'Unknown',
-      cpuUsage: Math.random() * 100, // Simplified
-      memoryUsage: Math.random() * 100, // Simplified
-      restarts:
-        (pod.status as any)?.containerStatuses?.reduce(
-          (sum: number, container: any) => sum + (container.restartCount || 0),
-          0,
-        ) || 0,
-      age: getAge(pod.metadata?.creationTimestamp || new Date().toISOString()),
-      containers: (pod.spec as any)?.containers?.length || 0,
-      readyContainers:
-        (pod.status as any)?.containerStatuses?.filter((c: any) => c.ready).length || 0,
-    }));
+    const pods: PodResource[] = nodePods.map((pod: K8sResourceKind) => {
+      const podStatus = pod.status as Record<string, any>;
+      const podSpec = pod.spec as Record<string, any>;
+
+      return {
+        name: pod.metadata?.name || 'Unknown',
+        namespace: pod.metadata?.namespace || 'Unknown',
+        status: podStatus?.phase || 'Unknown',
+        cpuUsage: Math.random() * 100, // Simplified
+        memoryUsage: Math.random() * 100, // Simplified
+        restarts:
+          podStatus?.containerStatuses?.reduce(
+            (sum: number, container: Record<string, any>) => sum + (container.restartCount || 0),
+            0,
+          ) || 0,
+        age: getAge(pod.metadata?.creationTimestamp || new Date().toISOString()),
+        containers: podSpec?.containers?.length || 0,
+        readyContainers:
+          podStatus?.containerStatuses?.filter((c: Record<string, any>) => c.ready).length || 0,
+      };
+    });
 
     // Process events
-    const events: NodeEvent[] = nodeEvents.slice(0, 10).map((event: K8sResourceKind) => ({
-      type: (event as any).type === 'Warning' ? 'Warning' : 'Normal',
-      reason: (event as any).reason || 'Unknown',
-      message: (event as any).message || '',
-      timestamp:
-        (event as any).firstTimestamp || (event as any).eventTime || new Date().toISOString(),
-      count: (event as any).count || 1,
-    }));
+    const events: NodeEvent[] = nodeEvents.slice(0, 10).map((event: K8sResourceKind) => {
+      const eventData = event as Record<string, any>;
+
+      return {
+        type: eventData.type === 'Warning' ? ('Warning' as const) : ('Normal' as const),
+        reason: eventData.reason || 'Unknown',
+        message: eventData.message || '',
+        timestamp: eventData.firstTimestamp || eventData.eventTime || new Date().toISOString(),
+        count: eventData.count || 1,
+      };
+    });
 
     // Extract network information
     const networkInfo = {
@@ -1289,7 +1290,7 @@ This view shows the same Kubernetes component logs available in the built-in Ope
     };
 
     // Extract taints
-    const taints = (nodeData.spec?.taints || []).map((taint: any) => ({
+    const taints = (nodeData.spec?.taints || []).map((taint: NodeTaint) => ({
       key: taint.key,
       value: taint.value,
       effect: taint.effect,
@@ -1397,11 +1398,13 @@ This view shows the same Kubernetes component logs available in the built-in Ope
           const nodePods = podsArray.filter(
             (pod: K8sResourceKind) => pod.spec?.nodeName === nodeData.metadata?.name,
           );
-          const nodeEvents = eventsArray.filter(
-            (event: K8sResourceKind) =>
-              (event as any).involvedObject?.name === nodeData.metadata?.name &&
-              (event as any).involvedObject?.kind === 'Node',
-          );
+          const nodeEvents = eventsArray.filter((event: K8sResourceKind) => {
+            const eventData = event as Record<string, any>;
+            return (
+              eventData.involvedObject?.name === nodeData.metadata?.name &&
+              eventData.involvedObject?.kind === 'Node'
+            );
+          });
 
           // Fetch additional debugging data for this node
           const debugData = await fetchNodeDebugData(nodeData.metadata?.name || '');
@@ -1470,7 +1473,17 @@ This view shows the same Kubernetes component logs available in the built-in Ope
   }, [nodes, searchTerm, statusFilter, roleFilter]);
 
   const handleNodeSelection = (node: NodeDetail) => {
-    setSelectedNode(selectedNode?.name === node.name ? null : node);
+    setSelectedNode(node);
+    setIsDrawerOpen(true);
+  };
+
+  const handleDrawerClose = () => {
+    setIsDrawerOpen(false);
+    setSelectedNode(null);
+  };
+
+  const handleDrawerHeightChange = (height: number) => {
+    setDrawerHeight(height);
   };
 
   // Loading state
@@ -1504,7 +1517,13 @@ This view shows the same Kubernetes component logs available in the built-in Ope
   }
 
   return (
-    <PageSection>
+    <PageSection 
+      style={{ 
+        marginTop: isDrawerOpen ? `${drawerHeight}px` : '0',
+        transition: 'margin-top 0.3s ease-in-out',
+        minHeight: `calc(100vh - ${isDrawerOpen ? drawerHeight : 0}px)`,
+      }}
+    >
       <Stack hasGutter>
         {/* Header */}
         <StackItem>
@@ -1718,1370 +1737,15 @@ This view shows the same Kubernetes component logs available in the built-in Ope
           </Grid>
         </StackItem>
 
-        {/* Enhanced Node Details Panel */}
-        {selectedNode && (
-          <StackItem>
-            <Card style={{ minHeight: '600px' }}>
-              <CardTitle>
-                <Flex
-                  justifyContent={{ default: 'justifyContentSpaceBetween' }}
-                  alignItems={{ default: 'alignItemsCenter' }}
-                >
-                  <FlexItem>
-                    <Title headingLevel="h3" size="lg">
-                      <ServerIcon style={{ marginRight: '8px', color: '#0066cc' }} />
-                      {selectedNode.name}
-                    </Title>
-                  </FlexItem>
-                  <FlexItem>
-                    <Flex alignItems={{ default: 'alignItemsCenter' }}>
-                      <FlexItem style={{ marginRight: '16px' }}>
-                        <Badge color={selectedNode.status === 'Ready' ? 'green' : 'red'}>
-                          {selectedNode.status}
-                        </Badge>
-                      </FlexItem>
-                      <FlexItem>
-                        <Badge color={selectedNode.role.includes('control') ? 'blue' : 'grey'}>
-                          {selectedNode.role.includes('control') ? 'Control Plane' : 'Worker'}
-                        </Badge>
-                      </FlexItem>
-                    </Flex>
-                  </FlexItem>
-                </Flex>
-              </CardTitle>
-              <CardBody>
-                <Tabs
-                  activeKey={activeTab}
-                  onSelect={(_event, tabIndex) => setActiveTab(tabIndex as string)}
-                >
-                  {/* Overview Tab */}
-                  <Tab eventKey="overview" title={<TabTitleText>Overview</TabTitleText>}>
-                    <Grid hasGutter style={{ marginTop: '16px' }}>
-                      <GridItem span={6}>
-                        <Card isCompact>
-                          <CardTitle>
-                            <Title headingLevel="h4" size="md">
-                              <InfoCircleIcon style={{ marginRight: '8px', color: '#0066cc' }} />
-                              System Information
-                            </Title>
-                          </CardTitle>
-                          <CardBody>
-                            <DescriptionList isHorizontal>
-                              <DescriptionListGroup>
-                                <DescriptionListTerm>Container Runtime</DescriptionListTerm>
-                                <DescriptionListDescription>
-                                  {selectedNode.containerRuntime}
-                                </DescriptionListDescription>
-                              </DescriptionListGroup>
-                              <DescriptionListGroup>
-                                <DescriptionListTerm>Kernel Version</DescriptionListTerm>
-                                <DescriptionListDescription>
-                                  {selectedNode.version}
-                                </DescriptionListDescription>
-                              </DescriptionListGroup>
-                              <DescriptionListGroup>
-                                <DescriptionListTerm>Operating System</DescriptionListTerm>
-                                <DescriptionListDescription>
-                                  {selectedNode.operatingSystem}
-                                </DescriptionListDescription>
-                              </DescriptionListGroup>
-                              <DescriptionListGroup>
-                                <DescriptionListTerm>Architecture</DescriptionListTerm>
-                                <DescriptionListDescription>
-                                  {selectedNode.architecture}
-                                </DescriptionListDescription>
-                              </DescriptionListGroup>
-                              <DescriptionListGroup>
-                                <DescriptionListTerm>Zone</DescriptionListTerm>
-                                <DescriptionListDescription>
-                                  {selectedNode.zone}
-                                </DescriptionListDescription>
-                              </DescriptionListGroup>
-                              <DescriptionListGroup>
-                                <DescriptionListTerm>Instance Type</DescriptionListTerm>
-                                <DescriptionListDescription>
-                                  {selectedNode.instanceType}
-                                </DescriptionListDescription>
-                              </DescriptionListGroup>
-                            </DescriptionList>
-                          </CardBody>
-                        </Card>
-                      </GridItem>
+        {/* Node Details Drawer */}
+        <NodeDetailsDrawer 
+          node={selectedNode} 
+          isOpen={isDrawerOpen} 
+          onClose={handleDrawerClose} 
+          onHeightChange={handleDrawerHeightChange}
+        />
 
-                      <GridItem span={6}>
-                        <Card isCompact>
-                          <CardTitle>
-                            <Title headingLevel="h4" size="md">
-                              <CpuIcon style={{ marginRight: '8px', color: '#0066cc' }} />
-                              Resource Allocation
-                            </Title>
-                          </CardTitle>
-                          <CardBody>
-                            <DescriptionList isHorizontal>
-                              <DescriptionListGroup>
-                                <DescriptionListTerm>CPU Capacity</DescriptionListTerm>
-                                <DescriptionListDescription>
-                                  {selectedNode.allocatableResources.cpu}
-                                </DescriptionListDescription>
-                              </DescriptionListGroup>
-                              <DescriptionListGroup>
-                                <DescriptionListTerm>Memory Capacity</DescriptionListTerm>
-                                <DescriptionListDescription>
-                                  {selectedNode.allocatableResources.memory}
-                                </DescriptionListDescription>
-                              </DescriptionListGroup>
-                              <DescriptionListGroup>
-                                <DescriptionListTerm>Max Pods</DescriptionListTerm>
-                                <DescriptionListDescription>
-                                  {selectedNode.allocatableResources.pods}
-                                </DescriptionListDescription>
-                              </DescriptionListGroup>
-                              <DescriptionListGroup>
-                                <DescriptionListTerm>Current Pods</DescriptionListTerm>
-                                <DescriptionListDescription>
-                                  <Badge>{selectedNode.pods.length}</Badge>
-                                </DescriptionListDescription>
-                              </DescriptionListGroup>
-                              <DescriptionListGroup>
-                                <DescriptionListTerm>Scheduling</DescriptionListTerm>
-                                <DescriptionListDescription>
-                                  {selectedNode.cordoned ? (
-                                    <Badge color="orange">Cordoned</Badge>
-                                  ) : selectedNode.drained ? (
-                                    <Badge color="red">Drained</Badge>
-                                  ) : (
-                                    <Badge color="green">Schedulable</Badge>
-                                  )}
-                                </DescriptionListDescription>
-                              </DescriptionListGroup>
-                              <DescriptionListGroup>
-                                <DescriptionListTerm>Node Age</DescriptionListTerm>
-                                <DescriptionListDescription>
-                                  {selectedNode.age}
-                                </DescriptionListDescription>
-                              </DescriptionListGroup>
-                            </DescriptionList>
-                          </CardBody>
-                        </Card>
-                      </GridItem>
-
-                      {/* Network & Debug Information */}
-                      <GridItem span={12}>
-                        <Grid hasGutter>
-                          <GridItem span={6}>
-                            <Card isCompact>
-                              <CardTitle>
-                                <Title headingLevel="h4" size="md">
-                                  <InfoCircleIcon
-                                    style={{ marginRight: '8px', color: '#0066cc' }}
-                                  />
-                                  Network & Debug Info
-                                </Title>
-                              </CardTitle>
-                              <CardBody>
-                                <DescriptionList isHorizontal>
-                                  <DescriptionListGroup>
-                                    <DescriptionListTerm>Internal IP</DescriptionListTerm>
-                                    <DescriptionListDescription>
-                                      <Badge color="blue">
-                                        {selectedNode.networkInfo.internalIP || 'N/A'}
-                                      </Badge>
-                                    </DescriptionListDescription>
-                                  </DescriptionListGroup>
-                                  <DescriptionListGroup>
-                                    <DescriptionListTerm>External IP</DescriptionListTerm>
-                                    <DescriptionListDescription>
-                                      <Badge color="green">
-                                        {selectedNode.networkInfo.externalIP || 'N/A'}
-                                      </Badge>
-                                    </DescriptionListDescription>
-                                  </DescriptionListGroup>
-                                  <DescriptionListGroup>
-                                    <DescriptionListTerm>Alerts</DescriptionListTerm>
-                                    <DescriptionListDescription>
-                                      <Badge
-                                        color={selectedNode.alerts.length > 0 ? 'red' : 'green'}
-                                      >
-                                        {selectedNode.alerts.length} alerts
-                                      </Badge>
-                                    </DescriptionListDescription>
-                                  </DescriptionListGroup>
-                                  <DescriptionListGroup>
-                                    <DescriptionListTerm>Taints</DescriptionListTerm>
-                                    <DescriptionListDescription>
-                                      <Badge
-                                        color={selectedNode.taints.length > 0 ? 'orange' : 'green'}
-                                      >
-                                        {selectedNode.taints.length} taints
-                                      </Badge>
-                                    </DescriptionListDescription>
-                                  </DescriptionListGroup>
-                                </DescriptionList>
-                              </CardBody>
-                            </Card>
-                          </GridItem>
-                          <GridItem span={6}>
-                            <Card isCompact>
-                              <CardTitle>
-                                <Title headingLevel="h4" size="md">
-                                  <BellIcon style={{ marginRight: '8px', color: '#d73502' }} />
-                                  Resource Pressure
-                                </Title>
-                              </CardTitle>
-                              <CardBody>
-                                <DescriptionList isHorizontal>
-                                  <DescriptionListGroup>
-                                    <DescriptionListTerm>Memory Pressure</DescriptionListTerm>
-                                    <DescriptionListDescription>
-                                      <Badge
-                                        color={
-                                          selectedNode.resourcePressure.memory ? 'red' : 'green'
-                                        }
-                                      >
-                                        {selectedNode.resourcePressure.memory ? 'YES' : 'NO'}
-                                      </Badge>
-                                    </DescriptionListDescription>
-                                  </DescriptionListGroup>
-                                  <DescriptionListGroup>
-                                    <DescriptionListTerm>Disk Pressure</DescriptionListTerm>
-                                    <DescriptionListDescription>
-                                      <Badge
-                                        color={selectedNode.resourcePressure.disk ? 'red' : 'green'}
-                                      >
-                                        {selectedNode.resourcePressure.disk ? 'YES' : 'NO'}
-                                      </Badge>
-                                    </DescriptionListDescription>
-                                  </DescriptionListGroup>
-                                  <DescriptionListGroup>
-                                    <DescriptionListTerm>PID Pressure</DescriptionListTerm>
-                                    <DescriptionListDescription>
-                                      <Badge
-                                        color={selectedNode.resourcePressure.pid ? 'red' : 'green'}
-                                      >
-                                        {selectedNode.resourcePressure.pid ? 'YES' : 'NO'}
-                                      </Badge>
-                                    </DescriptionListDescription>
-                                  </DescriptionListGroup>
-                                  <DescriptionListGroup>
-                                    <DescriptionListTerm>Overall Health</DescriptionListTerm>
-                                    <DescriptionListDescription>
-                                      <Badge
-                                        color={
-                                          selectedNode.status === 'Ready' &&
-                                          !selectedNode.resourcePressure.memory &&
-                                          !selectedNode.resourcePressure.disk &&
-                                          !selectedNode.resourcePressure.pid &&
-                                          selectedNode.alerts.length === 0
-                                            ? 'green'
-                                            : 'orange'
-                                        }
-                                      >
-                                        {selectedNode.status === 'Ready' &&
-                                        !selectedNode.resourcePressure.memory &&
-                                        !selectedNode.resourcePressure.disk &&
-                                        !selectedNode.resourcePressure.pid &&
-                                        selectedNode.alerts.length === 0
-                                          ? 'Healthy'
-                                          : 'Needs Attention'}
-                                      </Badge>
-                                    </DescriptionListDescription>
-                                  </DescriptionListGroup>
-                                </DescriptionList>
-                              </CardBody>
-                            </Card>
-                          </GridItem>
-                        </Grid>
-                      </GridItem>
-
-                      {/* Resource Utilization Charts */}
-                      <GridItem span={12}>
-                        <Card isCompact>
-                          <CardTitle>
-                            <Title headingLevel="h4" size="md">
-                              <ChartLineIcon style={{ marginRight: '8px', color: '#0066cc' }} />
-                              Resource Utilization
-                            </Title>
-                          </CardTitle>
-                          <CardBody>
-                            <Grid hasGutter>
-                              <GridItem span={6}>
-                                <div style={{ marginBottom: '16px' }}>
-                                  <span style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>
-                                    CPU Usage
-                                  </span>
-                                  <Progress
-                                    value={selectedNode.metrics.cpu.current}
-                                    title="CPU"
-                                    size={ProgressSize.lg}
-                                    variant={
-                                      selectedNode.metrics.cpu.current > 80
-                                        ? 'danger'
-                                        : selectedNode.metrics.cpu.current > 60
-                                        ? 'warning'
-                                        : 'success'
-                                    }
-                                  />
-                                  <span style={{ fontSize: '0.75rem', color: '#6a6e73' }}>
-                                    {selectedNode.metrics.cpu.current}% of{' '}
-                                    {selectedNode.allocatableResources.cpu}
-                                  </span>
-                                </div>
-                              </GridItem>
-                              <GridItem span={6}>
-                                <div style={{ marginBottom: '16px' }}>
-                                  <span style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>
-                                    Memory Usage
-                                  </span>
-                                  <Progress
-                                    value={selectedNode.metrics.memory.current}
-                                    title="Memory"
-                                    size={ProgressSize.lg}
-                                    variant={
-                                      selectedNode.metrics.memory.current > 80
-                                        ? 'danger'
-                                        : selectedNode.metrics.memory.current > 60
-                                        ? 'warning'
-                                        : 'success'
-                                    }
-                                  />
-                                  <span style={{ fontSize: '0.75rem', color: '#6a6e73' }}>
-                                    {selectedNode.metrics.memory.current}% of{' '}
-                                    {selectedNode.allocatableResources.memory}
-                                  </span>
-                                </div>
-                              </GridItem>
-                            </Grid>
-                          </CardBody>
-                        </Card>
-                      </GridItem>
-                    </Grid>
-                  </Tab>
-
-                  {/* Conditions Tab */}
-                  <Tab
-                    eventKey="conditions"
-                    title={<TabTitleText>Health & Conditions</TabTitleText>}
-                  >
-                    <div style={{ marginTop: '16px' }}>
-                      <Title headingLevel="h4" size="md" style={{ marginBottom: '16px' }}>
-                        <BellIcon style={{ marginRight: '8px', color: '#0066cc' }} />
-                        Node Conditions
-                      </Title>
-                      <Table aria-label="Node conditions table">
-                        <Thead>
-                          <Tr>
-                            <Th>Type</Th>
-                            <Th>Status</Th>
-                            <Th>Last Transition</Th>
-                            <Th>Reason</Th>
-                            <Th>Message</Th>
-                          </Tr>
-                        </Thead>
-                        <Tbody>
-                          {selectedNode.conditions.map((condition, index) => (
-                            <Tr key={index}>
-                              <Td>
-                                <Badge
-                                  color={
-                                    condition.status === 'True'
-                                      ? 'green'
-                                      : condition.status === 'False'
-                                      ? 'red'
-                                      : 'orange'
-                                  }
-                                >
-                                  {condition.type}
-                                </Badge>
-                              </Td>
-                              <Td>{condition.status}</Td>
-                              <Td>{new Date(condition.lastTransitionTime).toLocaleString()}</Td>
-                              <Td>{condition.reason}</Td>
-                              <Td style={{ maxWidth: '300px', wordBreak: 'break-word' }}>
-                                {condition.message}
-                              </Td>
-                            </Tr>
-                          ))}
-                        </Tbody>
-                      </Table>
-                    </div>
-                  </Tab>
-
-                  {/* Pods Tab */}
-                  <Tab
-                    eventKey="pods"
-                    title={<TabTitleText>Pods ({selectedNode.pods.length})</TabTitleText>}
-                  >
-                    <div style={{ marginTop: '16px' }}>
-                      <Title headingLevel="h4" size="md" style={{ marginBottom: '16px' }}>
-                        <CubesIcon style={{ marginRight: '8px', color: '#0066cc' }} />
-                        Running Pods
-                      </Title>
-                      <Table aria-label="Pods table">
-                        <Thead>
-                          <Tr>
-                            <Th>Name</Th>
-                            <Th>Namespace</Th>
-                            <Th>Status</Th>
-                            <Th>Containers</Th>
-                            <Th>Restarts</Th>
-                            <Th>Age</Th>
-                          </Tr>
-                        </Thead>
-                        <Tbody>
-                          {selectedNode.pods.slice(0, 20).map((pod, index) => (
-                            <Tr key={index}>
-                              <Td>{pod.name}</Td>
-                              <Td>
-                                <Badge>{pod.namespace}</Badge>
-                              </Td>
-                              <Td>
-                                <Badge
-                                  color={
-                                    pod.status === 'Running'
-                                      ? 'green'
-                                      : pod.status === 'Pending'
-                                      ? 'orange'
-                                      : 'red'
-                                  }
-                                >
-                                  {pod.status}
-                                </Badge>
-                              </Td>
-                              <Td>
-                                {pod.readyContainers}/{pod.containers}
-                              </Td>
-                              <Td>
-                                {pod.restarts > 0 ? (
-                                  <Badge color={pod.restarts > 5 ? 'red' : 'orange'}>
-                                    {pod.restarts}
-                                  </Badge>
-                                ) : (
-                                  <Badge color="green">0</Badge>
-                                )}
-                              </Td>
-                              <Td>{pod.age}</Td>
-                            </Tr>
-                          ))}
-                        </Tbody>
-                      </Table>
-                      {selectedNode.pods.length > 20 && (
-                        <div style={{ marginTop: '16px', textAlign: 'center', color: '#6a6e73' }}>
-                          Showing first 20 of {selectedNode.pods.length} pods
-                        </div>
-                      )}
-                    </div>
-                  </Tab>
-
-                  {/* Events Tab */}
-                  <Tab eventKey="events" title={<TabTitleText>Events</TabTitleText>}>
-                    <div style={{ marginTop: '16px' }}>
-                      <Title headingLevel="h4" size="md" style={{ marginBottom: '16px' }}>
-                        <ListIcon style={{ marginRight: '8px', color: '#0066cc' }} />
-                        Recent Events
-                      </Title>
-                      {selectedNode.events.length > 0 ? (
-                        <Table aria-label="Events table">
-                          <Thead>
-                            <Tr>
-                              <Th>Type</Th>
-                              <Th>Reason</Th>
-                              <Th>Message</Th>
-                              <Th>Count</Th>
-                              <Th>Last Seen</Th>
-                            </Tr>
-                          </Thead>
-                          <Tbody>
-                            {selectedNode.events.map((event, index) => (
-                              <Tr key={index}>
-                                <Td>
-                                  <Badge color={event.type === 'Warning' ? 'orange' : 'blue'}>
-                                    {event.type}
-                                  </Badge>
-                                </Td>
-                                <Td>{event.reason}</Td>
-                                <Td style={{ maxWidth: '400px', wordBreak: 'break-word' }}>
-                                  {event.message}
-                                </Td>
-                                <Td>
-                                  <Badge>{event.count}</Badge>
-                                </Td>
-                                <Td>{new Date(event.timestamp).toLocaleString()}</Td>
-                              </Tr>
-                            ))}
-                          </Tbody>
-                        </Table>
-                      ) : (
-                        <EmptyState>
-                          <EmptyStateBody>No recent events found for this node.</EmptyStateBody>
-                        </EmptyState>
-                      )}
-                    </div>
-                  </Tab>
-
-                  {/* Alerts Tab */}
-                  <Tab
-                    eventKey="alerts"
-                    title={
-                      <TabTitleText>
-                        <BellIcon style={{ marginRight: '8px' }} />
-                        Alerts ({selectedNode.alerts.length})
-                      </TabTitleText>
-                    }
-                  >
-                    <div style={{ marginTop: '16px' }}>
-                      <Title headingLevel="h4" size="md" style={{ marginBottom: '16px' }}>
-                        <BellIcon style={{ marginRight: '8px', color: '#d73502' }} />
-                        Node Alerts & Warnings
-                      </Title>
-                      {selectedNode.alerts.length === 0 ? (
-                        <EmptyState>
-                          <Title headingLevel="h4" size="lg">
-                            No Alerts
-                          </Title>
-                          <EmptyStateBody>
-                            No alerts found for this node. This is a good thing!
-                          </EmptyStateBody>
-                        </EmptyState>
-                      ) : (
-                        <Table aria-label="Alerts table">
-                          <Thead>
-                            <Tr>
-                              <Th>Severity</Th>
-                              <Th>Source</Th>
-                              <Th>Reason</Th>
-                              <Th>Message</Th>
-                              <Th>Count</Th>
-                              <Th>Time</Th>
-                            </Tr>
-                          </Thead>
-                          <Tbody>
-                            {selectedNode.alerts.map((alert, index) => (
-                              <Tr key={index}>
-                                <Td>
-                                  <Badge
-                                    color={
-                                      alert.severity === 'critical'
-                                        ? 'red'
-                                        : alert.severity === 'warning'
-                                        ? 'orange'
-                                        : 'blue'
-                                    }
-                                  >
-                                    {alert.severity.toUpperCase()}
-                                  </Badge>
-                                </Td>
-                                <Td>{alert.source}</Td>
-                                <Td>{alert.reason}</Td>
-                                <Td style={{ maxWidth: '400px', wordBreak: 'break-word' }}>
-                                  {alert.message}
-                                </Td>
-                                <Td>
-                                  <Badge>{alert.count}</Badge>
-                                </Td>
-                                <Td>{new Date(alert.timestamp).toLocaleString()}</Td>
-                              </Tr>
-                            ))}
-                          </Tbody>
-                        </Table>
-                      )}
-                    </div>
-                  </Tab>
-
-                  {/* Logs Tab */}
-                  <Tab
-                    eventKey="logs"
-                    title={
-                      <TabTitleText>
-                        <MonitoringIcon style={{ marginRight: '8px' }} />
-                        Logs ({selectedNode.logs.length})
-                      </TabTitleText>
-                    }
-                  >
-                    <div style={{ marginTop: '16px' }}>
-                      <Flex
-                        justifyContent={{ default: 'justifyContentSpaceBetween' }}
-                        alignItems={{ default: 'alignItemsCenter' }}
-                        style={{ marginBottom: '20px' }}
-                      >
-                        <FlexItem>
-                          <Title headingLevel="h4" size="md">
-                            <MonitoringIcon style={{ marginRight: '8px', color: '#0066cc' }} />
-                            Node System Logs
-                          </Title>
-                        </FlexItem>
-                        {selectedNode.logs.length > 0 && (
-                          <FlexItem>
-                            <Flex alignItems={{ default: 'alignItemsCenter' }}>
-                              <FlexItem style={{ marginRight: '8px' }}>
-                                <Badge color="green">
-                                  {selectedNode.logs.length} log source
-                                  {selectedNode.logs.length !== 1 ? 's' : ''}
-                                </Badge>
-                              </FlexItem>
-                              {selectedNode.logs.some((log) =>
-                                log.component.includes('systemd-journal'),
-                              ) && (
-                                <FlexItem>
-                                  <Badge color="blue">📋 Journal Available</Badge>
-                                </FlexItem>
-                              )}
-                            </Flex>
-                          </FlexItem>
-                        )}
-                      </Flex>
-
-                      {selectedNode.logs.length > 0 &&
-                        selectedNode.logs.some((log) =>
-                          log.component.includes('systemd-journal'),
-                        ) && (
-                          <Alert
-                            variant="info"
-                            title="systemd Journal Logs Available"
-                            style={{ marginBottom: '20px' }}
-                          >
-                            <p>
-                              This node&apos;s systemd journal logs are accessible! Journal logs
-                              provide detailed system service information including:
-                            </p>
-                            <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
-                              <li>
-                                <strong>Service Status:</strong> kubelet, crio, NetworkManager, and
-                                more
-                              </li>
-                              <li>
-                                <strong>System Events:</strong> Boot processes, service
-                                starts/stops, errors
-                              </li>
-                              <li>
-                                <strong>Detailed Timing:</strong> Precise timestamps for all system
-                                events
-                              </li>
-                              <li>
-                                <strong>Structured Data:</strong> Machine-readable log format with
-                                metadata
-                              </li>
-                            </ul>
-                          </Alert>
-                        )}
-
-                      {selectedNode.logs.length === 0 ? (
-                        <Card>
-                          <CardBody>
-                            <EmptyState>
-                              <div
-                                style={{ fontSize: '48px', color: '#6a6e73', marginBottom: '16px' }}
-                              >
-                                🔒
-                              </div>
-                              <Title headingLevel="h4" size="lg">
-                                Node Logs Restricted
-                              </Title>
-                              <EmptyStateBody>
-                                <p style={{ fontSize: '1rem', marginBottom: '20px' }}>
-                                  Direct node log access is restricted in this OpenShift cluster for
-                                  security reasons.
-                                </p>
-                                <Card
-                                  isCompact
-                                  style={{ textAlign: 'left', backgroundColor: '#f8f9fa' }}
-                                >
-                                  <CardTitle>
-                                    <Title headingLevel="h6" size="md">
-                                      💡 Alternative Ways to Access Node Logs & Journal
-                                    </Title>
-                                  </CardTitle>
-                                  <CardBody>
-                                    <Stack hasGutter>
-                                      <StackItem>
-                                        <strong>📟 Command Line Access (systemd journal):</strong>
-                                        <div
-                                          style={{
-                                            fontFamily: 'monospace',
-                                            fontSize: '0.85rem',
-                                            marginTop: '8px',
-                                            padding: '8px',
-                                            backgroundColor: '#2d3748',
-                                            color: '#e2e8f0',
-                                            borderRadius: '4px',
-                                          }}
-                                        >
-                                          <div># General node logs</div>
-                                          <div>oc adm node-logs {selectedNode.name}</div>
-                                          <div></div>
-                                          <div># Specific systemd journal units</div>
-                                          <div>oc adm node-logs {selectedNode.name} -u kubelet</div>
-                                          <div>oc adm node-logs {selectedNode.name} -u crio</div>
-                                          <div>
-                                            oc adm node-logs {selectedNode.name} -u NetworkManager
-                                          </div>
-                                          <div>
-                                            oc adm node-logs {selectedNode.name} -u systemd-resolved
-                                          </div>
-                                          <div></div>
-                                          <div># Follow logs in real-time</div>
-                                          <div>
-                                            oc adm node-logs {selectedNode.name} -u kubelet -f
-                                          </div>
-                                          <div></div>
-                                          <div># Get last 100 lines from journal</div>
-                                          <div>oc adm node-logs {selectedNode.name} --tail=100</div>
-                                        </div>
-                                      </StackItem>
-                                      <StackItem>
-                                        <strong>📋 Journal Log Units Available:</strong>
-                                        <div
-                                          style={{
-                                            marginTop: '8px',
-                                            padding: '8px',
-                                            backgroundColor: '#e8f4f8',
-                                            borderRadius: '4px',
-                                          }}
-                                        >
-                                          <ul
-                                            style={{
-                                              marginTop: '4px',
-                                              paddingLeft: '20px',
-                                              fontSize: '0.9rem',
-                                            }}
-                                          >
-                                            <li>
-                                              <strong>kubelet</strong> - Kubernetes node agent
-                                            </li>
-                                            <li>
-                                              <strong>crio</strong> - Container runtime
-                                            </li>
-                                            <li>
-                                              <strong>NetworkManager</strong> - Network management
-                                            </li>
-                                            <li>
-                                              <strong>systemd-resolved</strong> - DNS resolution
-                                            </li>
-                                            <li>
-                                              <strong>dbus</strong> - System message bus
-                                            </li>
-                                            <li>
-                                              <strong>sshd</strong> - SSH daemon
-                                            </li>
-                                            <li>
-                                              <strong>chronyd</strong> - NTP time sync
-                                            </li>
-                                          </ul>
-                                        </div>
-                                      </StackItem>
-                                      <StackItem>
-                                        <strong>📊 Alternative Data Sources:</strong>
-                                        <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
-                                          <li>
-                                            Check the <strong>Events</strong> tab for recent node
-                                            activity
-                                          </li>
-                                          <li>
-                                            Monitor the <strong>Alerts</strong> tab for health
-                                            warnings
-                                          </li>
-                                          <li>
-                                            View the <strong>Conditions</strong> tab for system
-                                            status
-                                          </li>
-                                        </ul>
-                                      </StackItem>
-                                    </Stack>
-                                  </CardBody>
-                                </Card>
-                              </EmptyStateBody>
-                            </EmptyState>
-                          </CardBody>
-                        </Card>
-                      ) : (
-                        <Stack hasGutter>
-                          {selectedNode.logs.map((log, index) => {
-                            const getLogLevelIcon = (level?: string) => {
-                              switch (level?.toLowerCase()) {
-                                case 'error':
-                                case 'fatal':
-                                  return { icon: '🔴', color: '#c9190b', bgColor: '#fdf2f2' };
-                                case 'warn':
-                                case 'warning':
-                                  return { icon: '🟡', color: '#f0ab00', bgColor: '#fdf7e7' };
-                                case 'info':
-                                case 'information':
-                                  return { icon: '🔵', color: '#0066cc', bgColor: '#e7f1fa' };
-                                case 'debug':
-                                  return { icon: '🟣', color: '#8476d1', bgColor: '#f4f1ff' };
-                                default:
-                                  return { icon: '📄', color: '#72767b', bgColor: '#f8f9fa' };
-                              }
-                            };
-
-                            const getLogTypeIcon = (component: string) => {
-                              if (component === 'journal-logs-info') {
-                                return { icon: '💡', description: 'Journal Access Guide' };
-                              }
-                              if (component.includes('systemd-journal')) {
-                                return { icon: '📋', description: 'systemd Journal' };
-                              }
-                              if (component.includes('kubelet')) {
-                                return { icon: '⚙️', description: 'Kubelet Service' };
-                              }
-                              if (component.includes('crio')) {
-                                return { icon: '🐳', description: 'Container Runtime' };
-                              }
-                              if (component.includes('network')) {
-                                return { icon: '🌐', description: 'Network Service' };
-                              }
-                              if (component.includes('kernel') || component.includes('dmesg')) {
-                                return { icon: '🔧', description: 'Kernel/System' };
-                              }
-                              if (component.includes('audit')) {
-                                return { icon: '🔍', description: 'Audit Logs' };
-                              }
-                              return { icon: '📄', description: 'System Log' };
-                            };
-
-                            const logStyle = getLogLevelIcon(log.level);
-                            const logType = getLogTypeIcon(log.component);
-                            const logLines = log.content.split('\n').filter((line) => line.trim());
-                            const isJournalLog = log.component.includes('systemd-journal');
-                            const isInfoLog = log.component === 'journal-logs-info';
-
-                            return (
-                              <StackItem key={index}>
-                                <Card
-                                  style={{
-                                    border: isInfoLog
-                                      ? '2px solid #17a2b8'
-                                      : isJournalLog
-                                      ? '2px solid #28a745'
-                                      : `2px solid ${logStyle.color}20`,
-                                    boxShadow: isInfoLog
-                                      ? '0 6px 16px rgba(23, 162, 184, 0.3)'
-                                      : isJournalLog
-                                      ? '0 4px 12px rgba(40, 167, 69, 0.2)'
-                                      : '0 2px 8px rgba(0, 0, 0, 0.1)',
-                                    background: isInfoLog
-                                      ? 'linear-gradient(135deg, #d1ecf1 0%, #ffffff 50%)'
-                                      : isJournalLog
-                                      ? 'linear-gradient(135deg, #d4edda 0%, #ffffff 50%)'
-                                      : `linear-gradient(135deg, ${logStyle.bgColor} 0%, #ffffff 50%)`,
-                                  }}
-                                >
-                                  <CardTitle>
-                                    <Flex
-                                      justifyContent={{ default: 'justifyContentSpaceBetween' }}
-                                      alignItems={{ default: 'alignItemsCenter' }}
-                                    >
-                                      <FlexItem>
-                                        <Flex alignItems={{ default: 'alignItemsCenter' }}>
-                                          <FlexItem
-                                            style={{ fontSize: '1.2rem', marginRight: '8px' }}
-                                          >
-                                            {logType.icon}
-                                          </FlexItem>
-                                          <FlexItem>
-                                            <Title
-                                              headingLevel="h5"
-                                              size="md"
-                                              style={{
-                                                color: isInfoLog
-                                                  ? '#17a2b8'
-                                                  : isJournalLog
-                                                  ? '#28a745'
-                                                  : logStyle.color,
-                                              }}
-                                            >
-                                              {log.component}
-                                            </Title>
-                                          </FlexItem>
-                                          <FlexItem style={{ marginLeft: '8px' }}>
-                                            <Badge
-                                              color={
-                                                isInfoLog ? 'cyan' : isJournalLog ? 'green' : 'blue'
-                                              }
-                                              style={{ fontSize: '0.7rem' }}
-                                            >
-                                              {isInfoLog
-                                                ? 'Info Guide'
-                                                : isJournalLog
-                                                ? 'Journal'
-                                                : logType.description}
-                                            </Badge>
-                                          </FlexItem>
-                                          <FlexItem style={{ marginLeft: '8px' }}>
-                                            <Badge color="blue" style={{ fontSize: '0.7rem' }}>
-                                              #{String(index + 1).padStart(2, '0')}
-                                            </Badge>
-                                          </FlexItem>
-                                          <FlexItem style={{ fontSize: '1rem', marginLeft: '8px' }}>
-                                            {logStyle.icon}
-                                          </FlexItem>
-                                        </Flex>
-                                      </FlexItem>
-                                      <FlexItem>
-                                        <Flex alignItems={{ default: 'alignItemsCenter' }}>
-                                          <FlexItem style={{ marginRight: '12px' }}>
-                                            <Badge color="green">
-                                              {logLines.length} line
-                                              {logLines.length !== 1 ? 's' : ''}
-                                            </Badge>
-                                          </FlexItem>
-                                          <FlexItem>
-                                            <Badge color="blue">
-                                              {new Date(log.timestamp).toLocaleString()}
-                                            </Badge>
-                                          </FlexItem>
-                                        </Flex>
-                                      </FlexItem>
-                                    </Flex>
-                                  </CardTitle>
-                                  <CardBody>
-                                    <div
-                                      style={{
-                                        border: '1px solid #e3e4e6',
-                                        borderRadius: '8px',
-                                        backgroundColor: '#1e1e1e',
-                                        color: '#f8f8f2',
-                                        overflow: 'hidden',
-                                      }}
-                                    >
-                                      {/* Log Header */}
-                                      <div
-                                        style={{
-                                          padding: '8px 16px',
-                                          backgroundColor: '#2d3748',
-                                          borderBottom: '1px solid #4a5568',
-                                          fontSize: '0.75rem',
-                                          fontFamily: 'monospace',
-                                          color: '#a0aec0',
-                                        }}
-                                      >
-                                        📂 {log.component} • {new Date(log.timestamp).toISOString()}
-                                      </div>
-
-                                      {/* Log Content */}
-                                      <pre
-                                        style={{
-                                          margin: 0,
-                                          padding: '16px',
-                                          fontSize: '0.8rem',
-                                          backgroundColor: 'transparent',
-                                          border: 'none',
-                                          maxHeight: '400px',
-                                          overflow: 'auto',
-                                          lineHeight: '1.5',
-                                          fontFamily:
-                                            '"SF Mono", "Monaco", "Inconsolata", "Roboto Mono", "Source Code Pro", monospace',
-                                          whiteSpace: 'pre-wrap',
-                                          wordBreak: 'break-word',
-                                          color: '#f8f8f2',
-                                        }}
-                                      >
-                                        {log.content}
-                                      </pre>
-
-                                      {/* Log Footer with Stats */}
-                                      <div
-                                        style={{
-                                          padding: '8px 16px',
-                                          backgroundColor: '#2d3748',
-                                          borderTop: '1px solid #4a5568',
-                                          fontSize: '0.7rem',
-                                          fontFamily: 'monospace',
-                                          color: '#a0aec0',
-                                          display: 'flex',
-                                          justifyContent: 'space-between',
-                                        }}
-                                      >
-                                        <span>📊 {logLines.length} total lines</span>
-                                        <span>
-                                          🕒 Last updated:{' '}
-                                          {new Date(log.timestamp).toLocaleTimeString()}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </CardBody>
-                                </Card>
-                              </StackItem>
-                            );
-                          })}
-                        </Stack>
-                      )}
-                    </div>
-                  </Tab>
-
-                  {/* System Info Tab */}
-                  <Tab
-                    eventKey="system"
-                    title={
-                      <TabTitleText>
-                        <ServerIcon style={{ marginRight: '8px' }} />
-                        System Info
-                      </TabTitleText>
-                    }
-                  >
-                    <div style={{ marginTop: '16px' }}>
-                      <Title headingLevel="h4" size="md" style={{ marginBottom: '16px' }}>
-                        <ServerIcon style={{ marginRight: '8px', color: '#0066cc' }} />
-                        System Information & Resources
-                      </Title>
-                      <Grid hasGutter>
-                        <GridItem span={6}>
-                          <Card>
-                            <CardTitle>Filesystem Statistics</CardTitle>
-                            <CardBody>
-                              <DescriptionList>
-                                {selectedNode.systemInfo.filesystem.capacityBytes ? (
-                                  <DescriptionListGroup>
-                                    <DescriptionListTerm>Total Capacity</DescriptionListTerm>
-                                    <DescriptionListDescription>
-                                      <Badge color="blue">
-                                        {(
-                                          selectedNode.systemInfo.filesystem.capacityBytes /
-                                          (1024 * 1024 * 1024)
-                                        ).toFixed(2)}{' '}
-                                        GB
-                                      </Badge>
-                                    </DescriptionListDescription>
-                                  </DescriptionListGroup>
-                                ) : (
-                                  <DescriptionListGroup>
-                                    <DescriptionListTerm>Filesystem Data</DescriptionListTerm>
-                                    <DescriptionListDescription>
-                                      <Badge color="orange">Not Available</Badge>
-                                    </DescriptionListDescription>
-                                  </DescriptionListGroup>
-                                )}
-                                {selectedNode.systemInfo.filesystem.availableBytes && (
-                                  <DescriptionListGroup>
-                                    <DescriptionListTerm>Available Space</DescriptionListTerm>
-                                    <DescriptionListDescription>
-                                      <Badge color="green">
-                                        {(
-                                          selectedNode.systemInfo.filesystem.availableBytes /
-                                          (1024 * 1024 * 1024)
-                                        ).toFixed(2)}{' '}
-                                        GB
-                                      </Badge>
-                                    </DescriptionListDescription>
-                                  </DescriptionListGroup>
-                                )}
-                                {selectedNode.systemInfo.filesystem.usedBytes && (
-                                  <DescriptionListGroup>
-                                    <DescriptionListTerm>Used Space</DescriptionListTerm>
-                                    <DescriptionListDescription>
-                                      <Badge color="orange">
-                                        {(
-                                          selectedNode.systemInfo.filesystem.usedBytes /
-                                          (1024 * 1024 * 1024)
-                                        ).toFixed(2)}{' '}
-                                        GB
-                                      </Badge>
-                                    </DescriptionListDescription>
-                                  </DescriptionListGroup>
-                                )}
-                                {selectedNode.systemInfo.filesystem.inodes && (
-                                  <DescriptionListGroup>
-                                    <DescriptionListTerm>Inodes Usage</DescriptionListTerm>
-                                    <DescriptionListDescription>
-                                      <Badge>
-                                        {selectedNode.systemInfo.filesystem.inodesUsed || 0} /{' '}
-                                        {selectedNode.systemInfo.filesystem.inodes}
-                                      </Badge>
-                                    </DescriptionListDescription>
-                                  </DescriptionListGroup>
-                                )}
-                              </DescriptionList>
-                            </CardBody>
-                          </Card>
-                        </GridItem>
-                        <GridItem span={6}>
-                          <Card>
-                            <CardTitle>Runtime & Process Limits</CardTitle>
-                            <CardBody>
-                              <DescriptionList>
-                                {selectedNode.systemInfo.runtime.imageFs?.capacityBytes ? (
-                                  <DescriptionListGroup>
-                                    <DescriptionListTerm>Image FS Capacity</DescriptionListTerm>
-                                    <DescriptionListDescription>
-                                      <Badge color="blue">
-                                        {(
-                                          selectedNode.systemInfo.runtime.imageFs.capacityBytes /
-                                          (1024 * 1024 * 1024)
-                                        ).toFixed(2)}{' '}
-                                        GB
-                                      </Badge>
-                                    </DescriptionListDescription>
-                                  </DescriptionListGroup>
-                                ) : (
-                                  <DescriptionListGroup>
-                                    <DescriptionListTerm>Runtime Data</DescriptionListTerm>
-                                    <DescriptionListDescription>
-                                      <Badge color="orange">Not Available</Badge>
-                                    </DescriptionListDescription>
-                                  </DescriptionListGroup>
-                                )}
-                                {selectedNode.systemInfo.runtime.imageFs?.availableBytes && (
-                                  <DescriptionListGroup>
-                                    <DescriptionListTerm>Image FS Available</DescriptionListTerm>
-                                    <DescriptionListDescription>
-                                      <Badge color="green">
-                                        {(
-                                          selectedNode.systemInfo.runtime.imageFs.availableBytes /
-                                          (1024 * 1024 * 1024)
-                                        ).toFixed(2)}{' '}
-                                        GB
-                                      </Badge>
-                                    </DescriptionListDescription>
-                                  </DescriptionListGroup>
-                                )}
-                                {selectedNode.systemInfo.rlimit.maxpid && (
-                                  <DescriptionListGroup>
-                                    <DescriptionListTerm>Max PIDs</DescriptionListTerm>
-                                    <DescriptionListDescription>
-                                      <Badge>{selectedNode.systemInfo.rlimit.maxpid}</Badge>
-                                    </DescriptionListDescription>
-                                  </DescriptionListGroup>
-                                )}
-                                {selectedNode.systemInfo.rlimit.curproc && (
-                                  <DescriptionListGroup>
-                                    <DescriptionListTerm>Current Processes</DescriptionListTerm>
-                                    <DescriptionListDescription>
-                                      <Badge>{selectedNode.systemInfo.rlimit.curproc}</Badge>
-                                    </DescriptionListDescription>
-                                  </DescriptionListGroup>
-                                )}
-                              </DescriptionList>
-                            </CardBody>
-                          </Card>
-                        </GridItem>
-                        <GridItem span={12}>
-                          <Card>
-                            <CardTitle>Network Information</CardTitle>
-                            <CardBody>
-                              <DescriptionList isHorizontal>
-                                <DescriptionListGroup>
-                                  <DescriptionListTerm>Internal IP</DescriptionListTerm>
-                                  <DescriptionListDescription>
-                                    <Badge color="blue">
-                                      {selectedNode.networkInfo.internalIP || 'N/A'}
-                                    </Badge>
-                                  </DescriptionListDescription>
-                                </DescriptionListGroup>
-                                <DescriptionListGroup>
-                                  <DescriptionListTerm>External IP</DescriptionListTerm>
-                                  <DescriptionListDescription>
-                                    <Badge color="green">
-                                      {selectedNode.networkInfo.externalIP || 'N/A'}
-                                    </Badge>
-                                  </DescriptionListDescription>
-                                </DescriptionListGroup>
-                                <DescriptionListGroup>
-                                  <DescriptionListTerm>Hostname</DescriptionListTerm>
-                                  <DescriptionListDescription>
-                                    <Badge>{selectedNode.networkInfo.hostname || 'N/A'}</Badge>
-                                  </DescriptionListDescription>
-                                </DescriptionListGroup>
-                                <DescriptionListGroup>
-                                  <DescriptionListTerm>Resource Pressure</DescriptionListTerm>
-                                  <DescriptionListDescription>
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                      <Badge
-                                        color={
-                                          selectedNode.resourcePressure.memory ? 'red' : 'green'
-                                        }
-                                      >
-                                        Memory:{' '}
-                                        {selectedNode.resourcePressure.memory ? 'YES' : 'NO'}
-                                      </Badge>
-                                      <Badge
-                                        color={selectedNode.resourcePressure.disk ? 'red' : 'green'}
-                                      >
-                                        Disk: {selectedNode.resourcePressure.disk ? 'YES' : 'NO'}
-                                      </Badge>
-                                      <Badge
-                                        color={selectedNode.resourcePressure.pid ? 'red' : 'green'}
-                                      >
-                                        PID: {selectedNode.resourcePressure.pid ? 'YES' : 'NO'}
-                                      </Badge>
-                                    </div>
-                                  </DescriptionListDescription>
-                                </DescriptionListGroup>
-                              </DescriptionList>
-                            </CardBody>
-                          </Card>
-                        </GridItem>
-                      </Grid>
-                    </div>
-                  </Tab>
-
-                  {/* Taints Tab */}
-                  <Tab
-                    eventKey="taints"
-                    title={
-                      <TabTitleText>
-                        <TagIcon style={{ marginRight: '8px' }} />
-                        Taints ({selectedNode.taints.length})
-                      </TabTitleText>
-                    }
-                  >
-                    <div style={{ marginTop: '16px' }}>
-                      <Title headingLevel="h4" size="md" style={{ marginBottom: '16px' }}>
-                        <TagIcon style={{ marginRight: '8px', color: '#ec7a08' }} />
-                        Node Taints & Scheduling
-                      </Title>
-                      {selectedNode.taints.length === 0 ? (
-                        <EmptyState>
-                          <Title headingLevel="h4" size="lg">
-                            No Taints
-                          </Title>
-                          <EmptyStateBody>
-                            This node has no taints configured. All pods that tolerate the
-                            node&apos;s constraints can be scheduled here.
-                          </EmptyStateBody>
-                        </EmptyState>
-                      ) : (
-                        <Table aria-label="Taints table">
-                          <Thead>
-                            <Tr>
-                              <Th>Key</Th>
-                              <Th>Value</Th>
-                              <Th>Effect</Th>
-                              <Th>Added</Th>
-                              <Th>Description</Th>
-                            </Tr>
-                          </Thead>
-                          <Tbody>
-                            {selectedNode.taints.map((taint, index) => (
-                              <Tr key={index}>
-                                <Td>
-                                  <Badge color="blue">{taint.key}</Badge>
-                                </Td>
-                                <Td>{taint.value || 'N/A'}</Td>
-                                <Td>
-                                  <Badge
-                                    color={
-                                      taint.effect === 'NoSchedule'
-                                        ? 'orange'
-                                        : taint.effect === 'NoExecute'
-                                        ? 'red'
-                                        : 'purple'
-                                    }
-                                  >
-                                    {taint.effect}
-                                  </Badge>
-                                </Td>
-                                <Td>
-                                  {taint.timeAdded
-                                    ? new Date(taint.timeAdded).toLocaleString()
-                                    : 'N/A'}
-                                </Td>
-                                <Td style={{ fontSize: '0.875rem', color: '#6a6e73' }}>
-                                  {taint.effect === 'NoSchedule' &&
-                                    'Prevents new pods from being scheduled'}
-                                  {taint.effect === 'NoExecute' &&
-                                    'Evicts existing pods and prevents new scheduling'}
-                                  {taint.effect === 'PreferNoSchedule' &&
-                                    'Prefers not to schedule new pods'}
-                                </Td>
-                              </Tr>
-                            ))}
-                          </Tbody>
-                        </Table>
-                      )}
-                    </div>
-                  </Tab>
-
-                  {/* Labels & Annotations Tab */}
-                  <Tab
-                    eventKey="metadata"
-                    title={<TabTitleText>Labels & Annotations</TabTitleText>}
-                  >
-                    <Grid hasGutter style={{ marginTop: '16px' }}>
-                      <GridItem span={6}>
-                        <Card isCompact>
-                          <CardTitle>
-                            <Title headingLevel="h4" size="md">
-                              <TagIcon style={{ marginRight: '8px', color: '#0066cc' }} />
-                              Labels
-                            </Title>
-                          </CardTitle>
-                          <CardBody>
-                            {Object.keys(selectedNode.labels).length > 0 ? (
-                              <DescriptionList>
-                                {Object.entries(selectedNode.labels).map(([key, value]) => (
-                                  <DescriptionListGroup key={key}>
-                                    <DescriptionListTerm style={{ fontSize: '0.875rem' }}>
-                                      {key}
-                                    </DescriptionListTerm>
-                                    <DescriptionListDescription style={{ fontSize: '0.875rem' }}>
-                                      <Badge>{value}</Badge>
-                                    </DescriptionListDescription>
-                                  </DescriptionListGroup>
-                                ))}
-                              </DescriptionList>
-                            ) : (
-                              <EmptyState>
-                                <EmptyStateBody>No labels found</EmptyStateBody>
-                              </EmptyState>
-                            )}
-                          </CardBody>
-                        </Card>
-                      </GridItem>
-
-                      <GridItem span={6}>
-                        <Card isCompact>
-                          <CardTitle>
-                            <Title headingLevel="h4" size="md">
-                              <InfoCircleIcon style={{ marginRight: '8px', color: '#0066cc' }} />
-                              Annotations
-                            </Title>
-                          </CardTitle>
-                          <CardBody>
-                            {Object.keys(selectedNode.annotations).length > 0 ? (
-                              <DescriptionList>
-                                {Object.entries(selectedNode.annotations)
-                                  .slice(0, 10)
-                                  .map(([key, value]) => (
-                                    <DescriptionListGroup key={key}>
-                                      <DescriptionListTerm style={{ fontSize: '0.875rem' }}>
-                                        {key}
-                                      </DescriptionListTerm>
-                                      <DescriptionListDescription
-                                        style={{ fontSize: '0.875rem', wordBreak: 'break-all' }}
-                                      >
-                                        {value.length > 100
-                                          ? `${value.substring(0, 100)}...`
-                                          : value}
-                                      </DescriptionListDescription>
-                                    </DescriptionListGroup>
-                                  ))}
-                                {Object.keys(selectedNode.annotations).length > 10 && (
-                                  <div
-                                    style={{
-                                      marginTop: '8px',
-                                      color: '#6a6e73',
-                                      fontSize: '0.75rem',
-                                    }}
-                                  >
-                                    Showing first 10 of{' '}
-                                    {Object.keys(selectedNode.annotations).length} annotations
-                                  </div>
-                                )}
-                              </DescriptionList>
-                            ) : (
-                              <EmptyState>
-                                <EmptyStateBody>No annotations found</EmptyStateBody>
-                              </EmptyState>
-                            )}
-                          </CardBody>
-                        </Card>
-                      </GridItem>
-                    </Grid>
-                  </Tab>
-                </Tabs>
-              </CardBody>
-            </Card>
-          </StackItem>
-        )}
+        {/* Removed inline panel - now using drawer */}
       </Stack>
     </PageSection>
   );

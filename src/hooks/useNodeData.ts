@@ -4,6 +4,30 @@ import { K8sResourceKind } from '@openshift-console/dynamic-plugin-sdk';
 import { NodeDetail, NodeCondition, NodeMetrics, NodeEvent, NodeTaint } from '../types';
 import { NodeAddress } from '../types/kubernetes';
 
+// Interface for Kubernetes Pod Status
+interface KubernetesPodStatus {
+  phase: string;
+  containerStatuses?: Array<{
+    restartCount: number;
+    ready: boolean;
+  }>;
+}
+
+// Interface for Kubernetes Pod Spec
+interface KubernetesPodSpec {
+  containers: Array<unknown>;
+}
+
+// Interface for typed event data
+interface KubernetesEventData {
+  type: string;
+  reason: string;
+  message: string;
+  firstTimestamp?: string;
+  eventTime?: string;
+  count?: number;
+}
+
 // Define a simplified PodResource interface for the dashboard
 interface SimplePodResource {
   name: string;
@@ -68,6 +92,7 @@ export const useNodeData = (): UseNodeDataReturn => {
     nodeEvents: K8sResourceKind[],
     _nodeMetrics?: K8sResourceKind,
   ): NodeDetail => {
+    // Note: _nodeMetrics parameter available for future enhancement
     const name = nodeData.metadata?.name || 'Unknown';
     const labels = nodeData.metadata?.labels || {};
     const annotations = nodeData.metadata?.annotations || {};
@@ -165,7 +190,9 @@ export const useNodeData = (): UseNodeDataReturn => {
       pods: K8sResourceKind[],
       _allocatable: Record<string, string>,
     ): NodeMetrics => {
-      const runningPods = pods.filter((p) => (p.status as any)?.phase === 'Running').length;
+      const runningPods = pods.filter(
+        (p) => (p.status as KubernetesPodStatus)?.phase === 'Running',
+      ).length;
 
       // Estimate CPU usage based on pod count and status
       const cpuUsagePercent = Math.min(
@@ -204,32 +231,39 @@ export const useNodeData = (): UseNodeDataReturn => {
     const metrics = calculateNodeMetrics(nodePods, allocatable);
 
     // Process pods
-    const pods: SimplePodResource[] = nodePods.map((pod: K8sResourceKind) => ({
-      name: pod.metadata?.name || 'Unknown',
-      namespace: pod.metadata?.namespace || 'Unknown',
-      status: (pod.status as any)?.phase || 'Unknown',
-      cpuUsage: Math.random() * 100, // Simplified
-      memoryUsage: Math.random() * 100, // Simplified
-      restarts:
-        (pod.status as any)?.containerStatuses?.reduce(
-          (sum: number, container: any) => sum + (container.restartCount || 0),
-          0,
-        ) || 0,
-      age: getAge(pod.metadata?.creationTimestamp || new Date().toISOString()),
-      containers: (pod.spec as any)?.containers?.length || 0,
-      readyContainers:
-        (pod.status as any)?.containerStatuses?.filter((c: any) => c.ready).length || 0,
-    }));
+    const pods: SimplePodResource[] = nodePods.map((pod: K8sResourceKind) => {
+      const podStatus = pod.status as KubernetesPodStatus;
+      const podSpec = pod.spec as KubernetesPodSpec;
+
+      return {
+        name: pod.metadata?.name || 'Unknown',
+        namespace: pod.metadata?.namespace || 'Unknown',
+        status: podStatus?.phase || 'Unknown',
+        cpuUsage: Math.random() * 100, // Simplified
+        memoryUsage: Math.random() * 100, // Simplified
+        restarts:
+          podStatus?.containerStatuses?.reduce(
+            (sum: number, container) => sum + (container.restartCount || 0),
+            0,
+          ) || 0,
+        age: getAge(pod.metadata?.creationTimestamp || new Date().toISOString()),
+        containers: podSpec?.containers?.length || 0,
+        readyContainers: podStatus?.containerStatuses?.filter((c) => c.ready).length || 0,
+      };
+    });
 
     // Process events
-    const events: NodeEvent[] = nodeEvents.map((event: K8sResourceKind) => ({
-      type: (event as any).type === 'Warning' ? 'Warning' : 'Normal',
-      reason: (event as any).reason || 'Unknown',
-      message: (event as any).message || '',
-      timestamp:
-        (event as any).firstTimestamp || (event as any).eventTime || new Date().toISOString(),
-      count: (event as any).count || 1,
-    }));
+    const events: NodeEvent[] = nodeEvents.map((event: K8sResourceKind) => {
+      const eventData = event as unknown as KubernetesEventData;
+
+      return {
+        type: eventData.type === 'Warning' ? ('Warning' as const) : ('Normal' as const),
+        reason: eventData.reason || 'Unknown',
+        message: eventData.message || '',
+        timestamp: eventData.firstTimestamp || eventData.eventTime || new Date().toISOString(),
+        count: eventData.count || 1,
+      };
+    });
 
     // Determine resource pressure from conditions
     const resourcePressure = {

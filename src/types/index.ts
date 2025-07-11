@@ -30,3 +30,14 @@ export type {
   NodeListResponse,
   PodListResponse,
 } from './kubernetes';
+
+// Debug and logging types
+export type {
+  NodeDebugData,
+  NodeDebugAlert,
+  NodeDebugLog,
+  NodeDebugSystemInfo,
+  KubernetesEvent,
+  KubernetesPod,
+  LogSource,
+} from './debug';
