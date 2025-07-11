@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Title,
   Tabs,
@@ -56,32 +56,34 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
 
   if (!node || !isOpen) return null;
 
-  // Resize handlers
-  const handleResize = useCallback((e: MouseEvent) => {
-    const newWidth = window.innerWidth - e.clientX;
-    setDrawerWidth(Math.max(400, Math.min(1200, newWidth)));
-  }, []);
-
-  const handleResizeEnd = useCallback(() => {
-    setIsResizing(false);
-    document.removeEventListener('mousemove', handleResize);
-    document.removeEventListener('mouseup', handleResizeEnd);
-  }, [handleResize]);
-
-  const handleResizeStart = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
-    document.addEventListener('mousemove', handleResize);
-    document.addEventListener('mouseup', handleResizeEnd);
-  };
-
-  // Cleanup resize listeners on unmount
+  // Resize handlers with proper cleanup
   useEffect(() => {
+    const handleResize = (e: MouseEvent) => {
+      const newWidth = window.innerWidth - e.clientX;
+      setDrawerWidth(Math.max(400, Math.min(1200, newWidth)));
+    };
+
+    const handleResizeEnd = () => {
+      setIsResizing(false);
+      document.removeEventListener('mousemove', handleResize);
+      document.removeEventListener('mouseup', handleResizeEnd);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleResize);
+      document.addEventListener('mouseup', handleResizeEnd);
+    }
+
     return () => {
       document.removeEventListener('mousemove', handleResize);
       document.removeEventListener('mouseup', handleResizeEnd);
     };
-  }, [handleResize, handleResizeEnd]);
+  }, [isResizing]);
+
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
 
   const formatMemoryForDisplay = (memoryValue: string): string => {
     if (memoryValue.endsWith('Ki')) {
