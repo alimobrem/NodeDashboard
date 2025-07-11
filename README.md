@@ -34,7 +34,8 @@ A comprehensive OpenShift Console dynamic plugin for real-time monitoring and ma
 
 ### 🎨 **Modern UI Experience**
 - **Responsive Design**: Clean, consistent card layouts optimized for all screen sizes
-- **No Scroll Bars**: Properly sized components that fit content naturally
+- **Advanced Side Drawer**: Resizable drawer (50% default width) positioned below sticky header with intelligent height management
+- **No Scroll Bars**: Perfectly sized components that fit content naturally within viewport constraints
 - **Visual Hierarchy**: Color-coded status indicators and intuitive navigation
 - **PatternFly Components**: Built with OpenShift's design system for consistency
 - **Loading States**: Smooth loading indicators and error handling
@@ -44,11 +45,18 @@ A comprehensive OpenShift Console dynamic plugin for real-time monitoring and ma
 
 ### Modular Architecture
 - **Component Organization**: Modular structure with dedicated directories:
-  - `src/components/nodes/` - Node-specific components (NodeCard, NodeFilters, etc.)
+  - `src/components/nodes/` - Node-specific components (NodeCard, NodeFilters, NodeDetailsDrawer)
   - `src/components/errors/` - Error handling components (ErrorBoundary)
   - `src/hooks/` - Custom React hooks (useNodeData, useNodeFilters, useNodeSelection)
   - `src/types/` - Comprehensive TypeScript type definitions
   - `src/utils/` - Utility functions (formatUtils, timeUtils)
+
+### Advanced Drawer Architecture
+- **Dynamic Height Management**: Intelligent height calculation based on viewport and sticky header positioning
+- **Horizontal Resizing**: Smooth resize functionality with minimum/maximum width constraints (300px - 80% viewport)
+- **Content Optimization**: Tab-based content organization with overflow prevention
+- **Window Responsive**: Automatic recalculation on window resize events
+- **Performance Optimized**: Efficient rendering with proper cleanup and event handling
 
 ### Real-Time Data Architecture
 - **WebSocket Connections**: Direct integration with OpenShift API watch endpoints
@@ -478,12 +486,20 @@ yarn run build             # ✅ Successful compilation
 
 ### Recent Quality Improvements (v2.1.0)
 
-- 🔧 **Critical Error Resolution**: Fixed all TypeScript compilation errors
-- 🛡️ **React Security**: Resolved unescaped entity issues in JSX
-- 🚫 **Eliminated Dangerous Patterns**: Removed non-null assertions with proper null handling
-- 🏷️ **Enhanced Type Definitions**: Replaced `any` types with proper TypeScript interfaces
-- 🧹 **Code Cleanup**: Fixed unused variables and improved parameter handling
-- 📐 **Type Precision**: Added specific type imports and improved type inference
+- ✅ **Critical Error Resolution**: Fixed all TypeScript compilation errors and React security issues
+- 🔧 **Enhanced Type Safety**: Replaced dangerous `any` types with proper TypeScript interfaces
+- 🛡️ **Security Hardening**: Removed non-null assertions and unescaped React entities
+- 📊 **Performance Optimization**: Streamlined component rendering and state management
+- 🧹 **Code Cleanup**: Eliminated unused variables and improved error handling patterns
+
+### Latest Improvements (v2.2.0)
+
+- 🎨 **Advanced Drawer System**: Completely redesigned drawer with intelligent height management
+- 📐 **No Scroll Bars**: Perfect viewport fitting with dynamic height calculation and content optimization
+- ↔️ **Enhanced Resizing**: Improved horizontal resize with proper cursor feedback and smooth animations
+- 📱 **Window Responsive**: Dynamic height recalculation on window resize for optimal user experience
+- 🔧 **Content Organization**: Tab-based layout with proper overflow prevention and consistent spacing
+- ⚡ **Performance Optimized**: Efficient rendering with window event handling and proper cleanup
 
 ### Development Quality Commands
 
