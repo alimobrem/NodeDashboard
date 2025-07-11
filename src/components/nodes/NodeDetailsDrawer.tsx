@@ -199,7 +199,8 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
   };
 
   // Calculate sticky header height to position drawer below summary cards
-  const stickyHeaderHeight = 240; // Height of the sticky summary cards section
+  // Header section (~80px) + Cards (120px + 32px padding) + PageSection padding (16px) + safety margin (12px)
+  const stickyHeaderHeight = 260; // Increased from 240px to avoid overlap with global card header
   
   // Calculate available height for drawer content using dynamic window height
   const availableHeight = windowHeight - stickyHeaderHeight;
@@ -208,7 +209,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
   const tabsHeight = 48; // Height of tabs section
   const maxContentHeight = availableHeight - drawerHeaderHeight - drawerPadding - tabsHeight;
 
-  // Custom side drawer styles - positioned below sticky header
+  // Custom side drawer styles - positioned below sticky header with proper spacing
   const drawerStyles: React.CSSProperties = {
     position: 'fixed',
     top: `${stickyHeaderHeight}px`,

@@ -1520,7 +1520,8 @@ This view shows the same Kubernetes component logs available in the built-in Ope
   }
 
   // Calculate sticky header height (header + cards + spacing)
-  const stickyHeaderHeight = 240; // Approximate height for header (80px) + cards (120px) + spacing (40px)
+  // Header section (~80px) + Cards (120px + 32px padding) + PageSection padding (16px) + safety margin (12px)
+  const stickyHeaderHeight = 260; // Increased from 240px to avoid overlap with drawer
 
   return (
     <>
