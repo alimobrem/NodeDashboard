@@ -104,7 +104,12 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       // Use custom fallback if provided
       if (this.props.fallback) {
         const FallbackComponent = this.props.fallback;
-        return <FallbackComponent error={this.state.error!} reset={this.handleReset} />;
+        return (
+          <FallbackComponent
+            error={this.state.error || new Error('Unknown error')}
+            reset={this.handleReset}
+          />
+        );
       }
 
       // Default error UI

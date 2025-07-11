@@ -534,7 +534,7 @@ export interface Volume {
   storageos?: StorageOSVolumeSource;
   csi?: CSIVolumeSource;
   ephemeral?: EphemeralVolumeSource;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface HostPathVolumeSource {

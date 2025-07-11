@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import { K8sResourceKind } from '@openshift-console/dynamic-plugin-sdk';
-import { NodeDetail, NodeCondition, NodeMetrics, NodeEvent } from '../types';
+import { NodeDetail, NodeCondition, NodeMetrics, NodeEvent, NodeTaint } from '../types';
 import { NodeAddress } from '../types/kubernetes';
 
 // Define a simplified PodResource interface for the dashboard
@@ -142,7 +142,7 @@ export const useNodeData = (): UseNodeDataReturn => {
     };
 
     // Extract taints
-    const taints = (nodeData.spec?.taints || []).map((taint: any) => ({
+    const taints = (nodeData.spec?.taints || []).map((taint: NodeTaint) => ({
       key: taint.key,
       value: taint.value,
       effect: taint.effect,

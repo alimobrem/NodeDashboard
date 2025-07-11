@@ -1351,7 +1351,7 @@ This view shows the same Kubernetes component logs available in the built-in Ope
     }
   };
 
-  const getUptime = (conditions: any[]): string => {
+  const getUptime = (conditions: NodeCondition[]): string => {
     const readyCondition = conditions.find((c) => c.type === 'Ready');
     if (readyCondition && readyCondition.lastTransitionTime) {
       return getAge(readyCondition.lastTransitionTime);
@@ -1393,18 +1393,18 @@ This view shows the same Kubernetes component logs available in the built-in Ope
         : [];
 
       const processedNodes = await Promise.all(
-        nodesArray.map(async (nodeData: any) => {
+        nodesArray.map(async (nodeData: K8sResourceKind) => {
           const nodePods = podsArray.filter(
-            (pod: any) => pod.spec.nodeName === nodeData.metadata.name,
+            (pod: K8sResourceKind) => pod.spec?.nodeName === nodeData.metadata?.name,
           );
           const nodeEvents = eventsArray.filter(
-            (event: any) =>
-              event.involvedObject?.name === nodeData.metadata.name &&
-              event.involvedObject?.kind === 'Node',
+            (event: K8sResourceKind) =>
+              (event as any).involvedObject?.name === nodeData.metadata?.name &&
+              (event as any).involvedObject?.kind === 'Node',
           );
 
           // Fetch additional debugging data for this node
-          const debugData = await fetchNodeDebugData(nodeData.metadata.name);
+          const debugData = await fetchNodeDebugData(nodeData.metadata?.name || '');
 
           return processNodeData(nodeData, nodePods, nodeEvents, undefined, debugData);
         }),
@@ -2340,8 +2340,8 @@ This view shows the same Kubernetes component logs available in the built-in Ope
                             style={{ marginBottom: '20px' }}
                           >
                             <p>
-                              This node's systemd journal logs are accessible! Journal logs provide
-                              detailed system service information including:
+                              This node&apos;s systemd journal logs are accessible! Journal logs
+                              provide detailed system service information including:
                             </p>
                             <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
                               <li>
@@ -2934,8 +2934,8 @@ This view shows the same Kubernetes component logs available in the built-in Ope
                             No Taints
                           </Title>
                           <EmptyStateBody>
-                            This node has no taints configured. All pods that tolerate the node's
-                            constraints can be scheduled here.
+                            This node has no taints configured. All pods that tolerate the
+                            node&apos;s constraints can be scheduled here.
                           </EmptyStateBody>
                         </EmptyState>
                       ) : (
