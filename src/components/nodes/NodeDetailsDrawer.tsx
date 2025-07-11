@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   Title,
   Tabs,
@@ -28,7 +28,7 @@ import { Table, Thead, Tbody, Tr, Th, Td } from '@patternfly/react-table';
 import {
   ServerIcon,
   InfoCircleIcon,
-  CpuIcon,
+  
   CheckCircleIcon,
   TimesCircleIcon,
   ExclamationTriangleIcon,
@@ -38,6 +38,10 @@ import {
   ListIcon,
   MonitoringIcon,
   FilterIcon,
+  MemoryIcon,
+  NetworkIcon,
+  
+  TimesIcon,
 } from '@patternfly/react-icons';
 import type { NodeDetail, NodeCondition } from '../../types';
 
@@ -45,79 +49,16 @@ interface NodeDetailsDrawerProps {
   node: NodeDetail | null;
   isOpen: boolean;
   onClose: () => void;
-  onWidthChange?: (width: number) => void;
 }
 
-const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ 
-  node, 
-  isOpen, 
+const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
+  node,
+  isOpen,
   onClose,
-  onWidthChange 
 }) => {
   const [activeTab, setActiveTab] = useState<string>('overview');
-  const [drawerWidth, setDrawerWidth] = useState<number>(window.innerWidth * 0.5); // 50% of viewport width
-  const [isResizing, setIsResizing] = useState<boolean>(false);
-  const [windowHeight, setWindowHeight] = useState<number>(window.innerHeight); // Track window height
-  const drawerRef = useRef<HTMLDivElement>(null);
-  const resizeHandleRef = useRef<HTMLDivElement>(null);
 
-  // Handle window resize to recalculate drawer height
-  useEffect(() => {
-    const handleWindowResize = () => {
-      setWindowHeight(window.innerHeight);
-    };
-
-    window.addEventListener('resize', handleWindowResize);
-    return () => window.removeEventListener('resize', handleWindowResize);
-  }, []);
-
-  // Handle resize functionality
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
-  }, []);
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isResizing) return;
-    
-    const newWidth = window.innerWidth - e.clientX; // Distance from cursor to right edge
-    const minWidth = 300; // Minimum width
-    const maxWidth = window.innerWidth * 0.8; // Maximum 80% of viewport width
-    
-    const constrainedWidth = Math.min(Math.max(newWidth, minWidth), maxWidth);
-    setDrawerWidth(constrainedWidth);
-    onWidthChange?.(constrainedWidth);
-  }, [isResizing, onWidthChange]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsResizing(false);
-  }, []);
-
-  useEffect(() => {
-    if (isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'ew-resize'; // Horizontal resize cursor
-      document.body.style.userSelect = 'none';
-      
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-      };
-    }
-    return undefined;
-  }, [isResizing, handleMouseMove, handleMouseUp]);
-
-  // Notify parent of width changes when drawer opens
-  useEffect(() => {
-    if (isOpen && onWidthChange) {
-      onWidthChange(drawerWidth);
-    }
-  }, [isOpen, drawerWidth, onWidthChange]);
-
-  if (!node) return null;
+  if (!node || !isOpen) return null;
 
   const formatMemoryForDisplay = (memoryValue: string): string => {
     if (memoryValue.endsWith('Ki')) {
@@ -198,67 +139,29 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
     return 'debug';
   };
 
-  // Calculate sticky header height to position drawer below summary cards
-  // PageSection padding (24px) + Header (~70px) + Stack gutter (16px) + Cards (152px) + PageSection bottom (16px) + margins (20px)
-  const stickyHeaderHeight = 300; // Increased from 260px to properly clear sticky header
-  
-  // Calculate available height for drawer content using dynamic window height
-  const availableHeight = windowHeight - stickyHeaderHeight;
-  const drawerHeaderHeight = 80; // Approximate height of drawer header
-  const drawerPadding = 48; // Total padding (24px top + 24px bottom)
-  const tabsHeight = 48; // Height of tabs section
-  const maxContentHeight = availableHeight - drawerHeaderHeight - drawerPadding - tabsHeight;
-
-  // Custom side drawer styles - positioned below sticky header with proper spacing
+  // Inline drawer styles - simple card styling
   const drawerStyles: React.CSSProperties = {
-    position: 'fixed',
-    top: `${stickyHeaderHeight}px`,
-    right: 0,
-    height: `calc(100vh - ${stickyHeaderHeight}px)`, // Explicit height instead of bottom: 0
-    width: `${drawerWidth}px`,
     backgroundColor: '#fff',
-    boxShadow: '-4px 0 16px rgba(0, 0, 0, 0.1)',
-    zIndex: 998, // Below sticky header (999) but above content
-    display: isOpen ? 'flex' : 'none',
-    flexDirection: 'column',
-    transition: isResizing ? 'none' : 'width 0.3s ease-in-out',
-    transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
-  };
-
-  const resizeHandleStyles: React.CSSProperties = {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: '12px',
-    backgroundColor: '#f1f1f1',
-    cursor: 'ew-resize',
-    borderRight: '1px solid #d2d2d2',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'background-color 0.2s ease',
-  };
-
-  const contentStyles: React.CSSProperties = {
-    flex: 1,
-    overflowY: 'auto',
-    overflowX: 'hidden',
-    padding: '24px',
-    maxHeight: `${maxContentHeight}px`, // Constrain content height
+    border: '1px solid #d2d2d2',
+    borderRadius: '8px',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+    marginTop: '24px',
   };
 
   const headerStyles: React.CSSProperties = {
     borderBottom: '1px solid #e8e8e8',
     padding: '16px 24px',
     backgroundColor: '#f8f9fa',
-    flexShrink: 0, // Prevent header from shrinking
+    borderRadius: '8px 8px 0 0',
+  };
+
+  const contentStyles: React.CSSProperties = {
+    padding: '0 24px 24px 24px',
   };
 
   const tabContentStyles: React.CSSProperties = {
     padding: '16px 0',
-    minHeight: '200px', // Ensure minimum content height
-    overflowX: 'hidden', // Prevent horizontal scroll in tab content
+    minHeight: '200px',
   };
 
   const getPodStatusColor = (status: string) => {
@@ -278,58 +181,31 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
     }
   };
 
+
+
   return (
-    <div ref={drawerRef} style={drawerStyles}>
-      {/* Header */}
+    <div style={drawerStyles}>
       <div style={headerStyles}>
-        <Flex
-          justifyContent={{ default: 'justifyContentSpaceBetween' }}
-          alignItems={{ default: 'alignItemsCenter' }}
-        >
+        <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }}>
           <FlexItem>
-            <Title headingLevel="h2" size="xl">
-              <ServerIcon style={{ marginRight: '12px', color: '#0066cc' }} />
+            <Title headingLevel="h2" size="lg">
+              <ServerIcon style={{ marginRight: '8px', color: '#0066cc' }} />
               {node.name}
             </Title>
+            <div style={{ marginTop: '4px', fontSize: '0.875rem', color: '#6a6e73' }}>
+              {node.role} • {node.zone} • {node.instanceType}
+            </div>
           </FlexItem>
           <FlexItem>
-            <Flex
-              alignItems={{ default: 'alignItemsCenter' }}
-              spaceItems={{ default: 'spaceItemsLg' }}
-            >
-              <FlexItem>
-                <Badge
-                  color={node.status === 'Ready' ? 'green' : 'red'}
-                  style={{ fontSize: '0.9rem' }}
-                >
-                  {node.status}
-                </Badge>
-              </FlexItem>
-              <FlexItem>
-                <Badge
-                  color={node.role.includes('control') ? 'blue' : 'grey'}
-                  style={{ fontSize: '0.9rem' }}
-                >
-                  {node.role.includes('control') ? 'Control Plane' : 'Worker'}
-                </Badge>
-              </FlexItem>
-              <FlexItem>
-                <Button variant="plain" onClick={onClose} aria-label="Close drawer">
-                  ✕
-                </Button>
-              </FlexItem>
-            </Flex>
+            <Button variant="plain" onClick={onClose}>
+              <TimesIcon />
+            </Button>
           </FlexItem>
         </Flex>
       </div>
 
-      {/* Content */}
       <div style={contentStyles}>
-        <Tabs
-          activeKey={activeTab}
-          onSelect={(_event, tabIndex) => setActiveTab(tabIndex as string)}
-          style={{ marginBottom: '24px' }}
-        >
+        <Tabs activeKey={activeTab} onSelect={(_event, tabIndex) => setActiveTab(tabIndex as string)}>
           {/* Overview Tab */}
           <Tab eventKey="overview" title={<TabTitleText>Overview</TabTitleText>}>
             <div style={tabContentStyles}>
@@ -346,31 +222,27 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
                       <DescriptionList>
                         <DescriptionListGroup>
                           <DescriptionListTerm>Container Runtime</DescriptionListTerm>
-                          <DescriptionListDescription>
-                            {node.containerRuntime}
-                          </DescriptionListDescription>
-                        </DescriptionListGroup>
-                        <DescriptionListGroup>
-                          <DescriptionListTerm>Kernel Version</DescriptionListTerm>
-                          <DescriptionListDescription>{node.version}</DescriptionListDescription>
+                          <DescriptionListDescription>{node.containerRuntime}</DescriptionListDescription>
                         </DescriptionListGroup>
                         <DescriptionListGroup>
                           <DescriptionListTerm>Operating System</DescriptionListTerm>
-                          <DescriptionListDescription>
-                            {node.operatingSystem}
-                          </DescriptionListDescription>
+                          <DescriptionListDescription>{node.operatingSystem}</DescriptionListDescription>
                         </DescriptionListGroup>
                         <DescriptionListGroup>
                           <DescriptionListTerm>Architecture</DescriptionListTerm>
                           <DescriptionListDescription>{node.architecture}</DescriptionListDescription>
                         </DescriptionListGroup>
                         <DescriptionListGroup>
-                          <DescriptionListTerm>Zone</DescriptionListTerm>
-                          <DescriptionListDescription>{node.zone}</DescriptionListDescription>
+                          <DescriptionListTerm>Kubernetes Version</DescriptionListTerm>
+                          <DescriptionListDescription>{node.version}</DescriptionListDescription>
                         </DescriptionListGroup>
                         <DescriptionListGroup>
-                          <DescriptionListTerm>Instance Type</DescriptionListTerm>
-                          <DescriptionListDescription>{node.instanceType}</DescriptionListDescription>
+                          <DescriptionListTerm>Node Age</DescriptionListTerm>
+                          <DescriptionListDescription>{node.age}</DescriptionListDescription>
+                        </DescriptionListGroup>
+                        <DescriptionListGroup>
+                          <DescriptionListTerm>Uptime</DescriptionListTerm>
+                          <DescriptionListDescription>{node.uptime}</DescriptionListDescription>
                         </DescriptionListGroup>
                       </DescriptionList>
                     </CardBody>
@@ -381,51 +253,47 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
                   <Card>
                     <CardTitle>
                       <Title headingLevel="h3" size="lg">
-                        <CpuIcon style={{ marginRight: '8px', color: '#0066cc' }} />
+                        <MemoryIcon style={{ marginRight: '8px', color: '#0066cc' }} />
                         Resource Allocation
                       </Title>
                     </CardTitle>
                     <CardBody>
                       <DescriptionList>
                         <DescriptionListGroup>
-                          <DescriptionListTerm>CPU Capacity</DescriptionListTerm>
+                          <DescriptionListTerm>CPU</DescriptionListTerm>
                           <DescriptionListDescription>
                             {node.allocatableResources.cpu}
                           </DescriptionListDescription>
                         </DescriptionListGroup>
                         <DescriptionListGroup>
-                          <DescriptionListTerm>Memory Capacity</DescriptionListTerm>
+                          <DescriptionListTerm>Memory</DescriptionListTerm>
                           <DescriptionListDescription>
                             {formatMemoryForDisplay(node.allocatableResources.memory)}
                           </DescriptionListDescription>
                         </DescriptionListGroup>
                         <DescriptionListGroup>
-                          <DescriptionListTerm>Max Pods</DescriptionListTerm>
+                          <DescriptionListTerm>Pods</DescriptionListTerm>
                           <DescriptionListDescription>
                             {node.allocatableResources.pods}
                           </DescriptionListDescription>
                         </DescriptionListGroup>
                         <DescriptionListGroup>
-                          <DescriptionListTerm>Current Pods</DescriptionListTerm>
+                          <DescriptionListTerm>Current CPU Usage</DescriptionListTerm>
                           <DescriptionListDescription>
-                            <Badge>{node.pods.length}</Badge>
+                            {node.metrics.cpu.current.toFixed(1)}%
                           </DescriptionListDescription>
                         </DescriptionListGroup>
                         <DescriptionListGroup>
-                          <DescriptionListTerm>Scheduling</DescriptionListTerm>
+                          <DescriptionListTerm>Current Memory Usage</DescriptionListTerm>
                           <DescriptionListDescription>
-                            {node.cordoned ? (
-                              <Badge color="orange">Cordoned</Badge>
-                            ) : node.drained ? (
-                              <Badge color="red">Drained</Badge>
-                            ) : (
-                              <Badge color="green">Schedulable</Badge>
-                            )}
+                            {node.metrics.memory.current.toFixed(1)}%
                           </DescriptionListDescription>
                         </DescriptionListGroup>
                         <DescriptionListGroup>
-                          <DescriptionListTerm>Node Age</DescriptionListTerm>
-                          <DescriptionListDescription>{node.age}</DescriptionListDescription>
+                          <DescriptionListTerm>Running Pods</DescriptionListTerm>
+                          <DescriptionListDescription>
+                            {node.pods.filter(p => p.status === 'Running').length} / {node.pods.length}
+                          </DescriptionListDescription>
                         </DescriptionListGroup>
                       </DescriptionList>
                     </CardBody>
@@ -436,31 +304,43 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
                   <Card>
                     <CardTitle>
                       <Title headingLevel="h3" size="lg">
-                        <InfoCircleIcon style={{ marginRight: '8px', color: '#0066cc' }} />
+                        <NetworkIcon style={{ marginRight: '8px', color: '#0066cc' }} />
                         Network Information
                       </Title>
                     </CardTitle>
                     <CardBody>
-                      <DescriptionList isHorizontal>
-                        <DescriptionListGroup>
-                          <DescriptionListTerm>Internal IP</DescriptionListTerm>
-                          <DescriptionListDescription>
-                            <Badge color="blue">{node.networkInfo.internalIP || 'N/A'}</Badge>
-                          </DescriptionListDescription>
-                        </DescriptionListGroup>
-                        <DescriptionListGroup>
-                          <DescriptionListTerm>External IP</DescriptionListTerm>
-                          <DescriptionListDescription>
-                            <Badge color="green">{node.networkInfo.externalIP || 'N/A'}</Badge>
-                          </DescriptionListDescription>
-                        </DescriptionListGroup>
-                        <DescriptionListGroup>
-                          <DescriptionListTerm>Hostname</DescriptionListTerm>
-                          <DescriptionListDescription>
-                            <Badge>{node.networkInfo.hostname || 'N/A'}</Badge>
-                          </DescriptionListDescription>
-                        </DescriptionListGroup>
-                      </DescriptionList>
+                      <Grid hasGutter>
+                        <GridItem span={4}>
+                          <DescriptionList>
+                            <DescriptionListGroup>
+                              <DescriptionListTerm>Internal IP</DescriptionListTerm>
+                              <DescriptionListDescription>
+                                {node.networkInfo.internalIP || 'Not available'}
+                              </DescriptionListDescription>
+                            </DescriptionListGroup>
+                          </DescriptionList>
+                        </GridItem>
+                        <GridItem span={4}>
+                          <DescriptionList>
+                            <DescriptionListGroup>
+                              <DescriptionListTerm>External IP</DescriptionListTerm>
+                              <DescriptionListDescription>
+                                {node.networkInfo.externalIP || 'Not available'}
+                              </DescriptionListDescription>
+                            </DescriptionListGroup>
+                          </DescriptionList>
+                        </GridItem>
+                        <GridItem span={4}>
+                          <DescriptionList>
+                            <DescriptionListGroup>
+                              <DescriptionListTerm>Hostname</DescriptionListTerm>
+                              <DescriptionListDescription>
+                                {node.networkInfo.hostname || 'Not available'}
+                              </DescriptionListDescription>
+                            </DescriptionListGroup>
+                          </DescriptionList>
+                        </GridItem>
+                      </Grid>
                     </CardBody>
                   </Card>
                 </GridItem>
@@ -550,9 +430,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
                               <Badge color="blue">{pod.namespace}</Badge>
                             </Td>
                             <Td>
-                              <Badge color={getPodStatusColor(pod.status)}>
-                                {pod.status}
-                              </Badge>
+                              <Badge color={getPodStatusColor(pod.status)}>{pod.status}</Badge>
                             </Td>
                             <Td>{pod.cpuUsage.toFixed(2)}%</Td>
                             <Td>{pod.memoryUsage.toFixed(2)}%</Td>
@@ -811,55 +689,6 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
             </div>
           </Tab>
         </Tabs>
-      </div>
-
-      {/* Horizontal Resize Handle */}
-      <div 
-        ref={resizeHandleRef}
-        style={resizeHandleStyles}
-        onMouseDown={handleMouseDown}
-      >
-        <div style={{
-          width: '3px',
-          height: '48px',
-          backgroundColor: '#999',
-          borderRadius: '2px',
-          transition: 'all 0.2s ease',
-          position: 'relative',
-        }}>
-          {/* Vertical drag lines indicator */}
-          <div style={{
-            position: 'absolute',
-            left: '-2px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '3px',
-          }}>
-            <div style={{
-              width: '3px',
-              height: '3px',
-              backgroundColor: '#bbb',
-              borderRadius: '50%',
-              transition: 'background-color 0.2s ease',
-            }} />
-            <div style={{
-              width: '3px',
-              height: '3px',
-              backgroundColor: '#bbb',
-              borderRadius: '50%',
-              transition: 'background-color 0.2s ease',
-            }} />
-            <div style={{
-              width: '3px',
-              height: '3px',
-              backgroundColor: '#bbb',
-              borderRadius: '50%',
-              transition: 'background-color 0.2s ease',
-            }} />
-          </div>
-        </div>
       </div>
     </div>
   );

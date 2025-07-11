@@ -736,10 +736,9 @@ const NodesDashboard: React.FC = () => {
   const [nodes, setNodes] = useState<NodeDetail[]>([]);
   const [selectedNode, setSelectedNode] = useState<NodeDetail | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [drawerWidth, setDrawerWidth] = useState<number>(window.innerWidth * 0.5); // Track drawer width
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
 
   // Add CSS animation for pulse effect
   const pulseAnimation = `
@@ -1208,7 +1207,7 @@ This view shows the same Kubernetes component logs available in the built-in Ope
       const memoryTotalKi = parseFloat(allocatable.memory.replace('Ki', ''));
 
       // Parse real metrics from Kubernetes metrics API - handle generic K8sResourceKind
-      const usage = (realMetrics as Record<string, any>).usage || {};
+      const usage = (realMetrics as Record<string, unknown>).usage as Record<string, string> || {};
       const cpuUsageNanocores = parseFloat(usage.cpu?.replace('n', '') || '0');
       const memoryUsageKi = parseFloat(usage.memory?.replace('Ki', '') || '0');
 
@@ -1244,8 +1243,16 @@ This view shows the same Kubernetes component logs available in the built-in Ope
 
     // Process pods
     const pods: PodResource[] = nodePods.map((pod: K8sResourceKind) => {
-      const podStatus = pod.status as Record<string, any>;
-      const podSpec = pod.spec as Record<string, any>;
+      const podStatus = pod.status as {
+        phase?: string;
+        containerStatuses?: Array<{
+          restartCount?: number;
+          ready?: boolean;
+        }>;
+      };
+      const podSpec = pod.spec as {
+        containers?: Array<unknown>;
+      };
 
       return {
         name: pod.metadata?.name || 'Unknown',
@@ -1255,19 +1262,26 @@ This view shows the same Kubernetes component logs available in the built-in Ope
         memoryUsage: Math.random() * 100, // Simplified
         restarts:
           podStatus?.containerStatuses?.reduce(
-            (sum: number, container: Record<string, any>) => sum + (container.restartCount || 0),
+            (sum: number, container) => sum + (container.restartCount || 0),
             0,
           ) || 0,
         age: getAge(pod.metadata?.creationTimestamp || new Date().toISOString()),
         containers: podSpec?.containers?.length || 0,
         readyContainers:
-          podStatus?.containerStatuses?.filter((c: Record<string, any>) => c.ready).length || 0,
+          podStatus?.containerStatuses?.filter((c) => c.ready).length || 0,
       };
     });
 
     // Process events
     const events: NodeEvent[] = nodeEvents.slice(0, 10).map((event: K8sResourceKind) => {
-      const eventData = event as Record<string, any>;
+      const eventData = event as {
+        type?: string;
+        reason?: string;
+        message?: string;
+        firstTimestamp?: string;
+        eventTime?: string;
+        count?: number;
+      };
 
       return {
         type: eventData.type === 'Warning' ? ('Warning' as const) : ('Normal' as const),
@@ -1400,7 +1414,12 @@ This view shows the same Kubernetes component logs available in the built-in Ope
             (pod: K8sResourceKind) => pod.spec?.nodeName === nodeData.metadata?.name,
           );
           const nodeEvents = eventsArray.filter((event: K8sResourceKind) => {
-            const eventData = event as Record<string, any>;
+            const eventData = event as {
+              involvedObject?: {
+                name?: string;
+                kind?: string;
+              };
+            };
             return (
               eventData.involvedObject?.name === nodeData.metadata?.name &&
               eventData.involvedObject?.kind === 'Node'
@@ -1483,10 +1502,6 @@ This view shows the same Kubernetes component logs available in the built-in Ope
     setSelectedNode(null);
   };
 
-  const handleDrawerWidthChange = (width: number) => {
-    setDrawerWidth(width);
-  };
-
 
 
   // Loading state
@@ -1526,7 +1541,7 @@ This view shows the same Kubernetes component logs available in the built-in Ope
   return (
     <>
       {/* Sticky Header Section */}
-      <div 
+      <div
         style={{
           position: 'sticky',
           top: 0,
@@ -1578,7 +1593,9 @@ This view shows the same Kubernetes component logs available in the built-in Ope
                             animation: 'pulse 2s infinite',
                           }}
                         />
-                        <span style={{ fontSize: '0.875rem', color: '#0066cc', fontWeight: 'bold' }}>
+                        <span
+                          style={{ fontSize: '0.875rem', color: '#0066cc', fontWeight: 'bold' }}
+                        >
                           Real-time Data
                         </span>
                       </div>
@@ -1640,7 +1657,10 @@ This view shows the same Kubernetes component logs available in the built-in Ope
                         <ExclamationTriangleIcon style={{ color: '#f0ab00', fontSize: '2rem' }} />
                       </div>
                       <Title headingLevel="h2" size="xl" style={{ color: '#f0ab00' }}>
-                        {nodes.filter((n) => n.cordoned || n.drained || n.status === 'NotReady').length}
+                        {
+                          nodes.filter((n) => n.cordoned || n.drained || n.status === 'NotReady')
+                            .length
+                        }
                       </Title>
                       <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>Needs Attention</div>
                     </CardBody>
@@ -1653,128 +1673,126 @@ This view shows the same Kubernetes component logs available in the built-in Ope
       </div>
 
       {/* Main Content Section */}
-      <PageSection 
-        style={{ 
-          paddingTop: '24px',
-          minHeight: `calc(100vh - ${stickyHeaderHeight}px)`,
-          marginRight: isDrawerOpen ? `${drawerWidth}px` : '0', // Push content when drawer is open
-          transition: 'margin-right 0.3s ease-in-out',
-        }}
+      <PageSection
+                  style={{
+            paddingTop: '24px',
+            minHeight: `calc(100vh - ${stickyHeaderHeight}px)`,
+          }}
       >
         <Stack hasGutter>
+          {/* Simplified Filtering Controls */}
+          <StackItem>
+            <Card>
+              <CardBody style={{ padding: '16px' }}>
+                <Toolbar>
+                  <ToolbarContent>
+                    <ToolbarItem>
+                      <SearchInput
+                        placeholder="Search nodes, zones, instance types..."
+                        value={searchTerm}
+                        onChange={(_event, value) => setSearchTerm(value)}
+                        onClear={() => setSearchTerm('')}
+                        style={{ width: '300px' }}
+                      />
+                    </ToolbarItem>
+                    <ToolbarItem>
+                      <Select
+                        isOpen={isStatusDropdownOpen}
+                        onOpenChange={setIsStatusDropdownOpen}
+                        toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                          <MenuToggle
+                            ref={toggleRef}
+                            onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                            isExpanded={isStatusDropdownOpen}
+                          >
+                            <FilterIcon style={{ marginRight: '8px' }} />
+                            Status:{' '}
+                            {statusFilter === 'all'
+                              ? 'All'
+                              : statusFilter === 'ready'
+                              ? 'Ready'
+                              : 'Not Ready'}
+                          </MenuToggle>
+                        )}
+                        onSelect={(_event, value) => {
+                          setStatusFilter(value as 'all' | 'ready' | 'notready');
+                          setIsStatusDropdownOpen(false);
+                        }}
+                        selected={statusFilter}
+                      >
+                        <SelectOption value="all">All Status</SelectOption>
+                        <SelectOption value="ready">Ready</SelectOption>
+                        <SelectOption value="notready">Not Ready</SelectOption>
+                      </Select>
+                    </ToolbarItem>
+                    <ToolbarItem>
+                      <Select
+                        isOpen={isRoleDropdownOpen}
+                        onOpenChange={setIsRoleDropdownOpen}
+                        toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                          <MenuToggle
+                            ref={toggleRef}
+                            onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
+                            isExpanded={isRoleDropdownOpen}
+                          >
+                            <ServerIcon style={{ marginRight: '8px' }} />
+                            Role:{' '}
+                            {roleFilter === 'all'
+                              ? 'All'
+                              : roleFilter === 'control'
+                              ? 'Control Plane'
+                              : 'Worker'}
+                          </MenuToggle>
+                        )}
+                        onSelect={(_event, value) => {
+                          setRoleFilter(value as 'all' | 'control' | 'worker');
+                          setIsRoleDropdownOpen(false);
+                        }}
+                        selected={roleFilter}
+                      >
+                        <SelectOption value="all">All Roles</SelectOption>
+                        <SelectOption value="control">Control Plane</SelectOption>
+                        <SelectOption value="worker">Worker</SelectOption>
+                      </Select>
+                    </ToolbarItem>
+                    <ToolbarItem>
+                      <span style={{ fontSize: '0.875rem', color: '#6a6e73' }}>
+                        Showing {filteredAndSortedNodes.length} of {nodes.length} nodes
+                      </span>
+                    </ToolbarItem>
+                  </ToolbarContent>
+                </Toolbar>
+              </CardBody>
+            </Card>
+          </StackItem>
 
-        {/* Simplified Filtering Controls */}
-        <StackItem>
-          <Card>
-            <CardBody style={{ padding: '16px' }}>
-              <Toolbar>
-                <ToolbarContent>
-                  <ToolbarItem>
-                    <SearchInput
-                      placeholder="Search nodes, zones, instance types..."
-                      value={searchTerm}
-                      onChange={(_event, value) => setSearchTerm(value)}
-                      onClear={() => setSearchTerm('')}
-                      style={{ width: '300px' }}
-                    />
-                  </ToolbarItem>
-                  <ToolbarItem>
-                    <Select
-                      isOpen={isStatusDropdownOpen}
-                      onOpenChange={setIsStatusDropdownOpen}
-                      toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                        <MenuToggle
-                          ref={toggleRef}
-                          onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
-                          isExpanded={isStatusDropdownOpen}
-                        >
-                          <FilterIcon style={{ marginRight: '8px' }} />
-                          Status:{' '}
-                          {statusFilter === 'all'
-                            ? 'All'
-                            : statusFilter === 'ready'
-                            ? 'Ready'
-                            : 'Not Ready'}
-                        </MenuToggle>
-                      )}
-                      onSelect={(_event, value) => {
-                        setStatusFilter(value as any);
-                        setIsStatusDropdownOpen(false);
-                      }}
-                      selected={statusFilter}
-                    >
-                      <SelectOption value="all">All Status</SelectOption>
-                      <SelectOption value="ready">Ready</SelectOption>
-                      <SelectOption value="notready">Not Ready</SelectOption>
-                    </Select>
-                  </ToolbarItem>
-                  <ToolbarItem>
-                    <Select
-                      isOpen={isRoleDropdownOpen}
-                      onOpenChange={setIsRoleDropdownOpen}
-                      toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                        <MenuToggle
-                          ref={toggleRef}
-                          onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
-                          isExpanded={isRoleDropdownOpen}
-                        >
-                          <ServerIcon style={{ marginRight: '8px' }} />
-                          Role:{' '}
-                          {roleFilter === 'all'
-                            ? 'All'
-                            : roleFilter === 'control'
-                            ? 'Control Plane'
-                            : 'Worker'}
-                        </MenuToggle>
-                      )}
-                      onSelect={(_event, value) => {
-                        setRoleFilter(value as any);
-                        setIsRoleDropdownOpen(false);
-                      }}
-                      selected={roleFilter}
-                    >
-                      <SelectOption value="all">All Roles</SelectOption>
-                      <SelectOption value="control">Control Plane</SelectOption>
-                      <SelectOption value="worker">Worker</SelectOption>
-                    </Select>
-                  </ToolbarItem>
-                  <ToolbarItem>
-                    <span style={{ fontSize: '0.875rem', color: '#6a6e73' }}>
-                      Showing {filteredAndSortedNodes.length} of {nodes.length} nodes
-                    </span>
-                  </ToolbarItem>
-                </ToolbarContent>
-              </Toolbar>
-            </CardBody>
-          </Card>
-        </StackItem>
+                    {/* Enhanced Node Cards Grid */}
+          <StackItem>
+            <Grid hasGutter>
+              {filteredAndSortedNodes.map((node) => (
+                <GridItem key={node.name} span={12} md={6} lg={4}>
+                  <EnhancedNodeCard
+                    node={node}
+                    onClick={handleNodeSelection}
+                    isSelected={selectedNode?.name === node.name}
+                  />
+                </GridItem>
+              ))}
+            </Grid>
+          </StackItem>
 
-        {/* Enhanced Node Cards Grid */}
-        <StackItem>
-          <Grid hasGutter>
-            {filteredAndSortedNodes.map((node) => (
-              <GridItem key={node.name} span={12} md={6} lg={4}>
-                <EnhancedNodeCard
-                  node={node}
-                  onClick={handleNodeSelection}
-                  isSelected={selectedNode?.name === node.name}
-                />
-              </GridItem>
-            ))}
-          </Grid>
-        </StackItem>
-
-        {/* Node Details Drawer */}
-        <NodeDetailsDrawer 
-          node={selectedNode} 
-          isOpen={isDrawerOpen} 
-          onClose={handleDrawerClose}
-          onWidthChange={handleDrawerWidthChange}
-        />
-
-        {/* Removed inline panel - now using drawer */}
-      </Stack>
-    </PageSection>
+          {/* Inline Node Details */}
+          {isDrawerOpen && (
+            <StackItem>
+              <NodeDetailsDrawer
+                node={selectedNode}
+                isOpen={isDrawerOpen}
+                onClose={handleDrawerClose}
+              />
+            </StackItem>
+          )}
+        </Stack>
+      </PageSection>
     </>
   );
 };

@@ -332,12 +332,12 @@ export const useNodeData = (): UseNodeDataReturn => {
 
         const processedNodes = nodesArray.map(async (nodeData: K8sResourceKind) => {
           const nodePods = podsArray.filter(
-            (pod: K8sResourceKind) => (pod.spec as any).nodeName === nodeData.metadata?.name,
+            (pod: K8sResourceKind) => (pod.spec as { nodeName?: string }).nodeName === nodeData.metadata?.name,
           );
           const nodeEvents = eventsArray.filter(
             (event: K8sResourceKind) =>
-              (event as any).involvedObject?.name === nodeData.metadata?.name &&
-              (event as any).involvedObject?.kind === 'Node',
+              (event as { involvedObject?: { name?: string; kind?: string } }).involvedObject?.name === nodeData.metadata?.name &&
+              (event as { involvedObject?: { name?: string; kind?: string } }).involvedObject?.kind === 'Node',
           );
 
           return processNodeData(nodeData, nodePods, nodeEvents);
