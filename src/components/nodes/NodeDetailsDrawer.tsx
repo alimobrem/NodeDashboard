@@ -140,9 +140,12 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
   };
 
   // Side drawer styles - slides in from the right
+  // OpenShift Console masthead height is typically 56px
+  const mastheadHeight = '56px';
+  
   const overlayStyles: React.CSSProperties = {
     position: 'fixed',
-    top: 0,
+    top: mastheadHeight,
     left: 0,
     right: 0,
     bottom: 0,
@@ -155,7 +158,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
 
   const drawerStyles: React.CSSProperties = {
     position: 'fixed',
-    top: 0,
+    top: mastheadHeight,
     right: 0,
     bottom: 0,
     width: '600px',
