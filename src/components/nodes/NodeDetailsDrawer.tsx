@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Title,
   Tabs,
@@ -63,24 +63,23 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
   if (!node || !isOpen) return null;
 
   // Resize handlers
-  const handleResize = React.useCallback((e: MouseEvent) => {
-    if (!isResizing) return;
+  const handleResize = useCallback((e: MouseEvent) => {
     const newWidth = window.innerWidth - e.clientX;
     setDrawerWidth(Math.max(400, Math.min(1200, newWidth)));
-  }, [isResizing]);
+  }, []);
 
-  const handleResizeEnd = React.useCallback(() => {
+  const handleResizeEnd = useCallback(() => {
     setIsResizing(false);
     document.removeEventListener('mousemove', handleResize);
     document.removeEventListener('mouseup', handleResizeEnd);
   }, [handleResize]);
 
-  const handleResizeStart = (e: React.MouseEvent) => {
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizing(true);
     document.addEventListener('mousemove', handleResize);
     document.addEventListener('mouseup', handleResizeEnd);
-  };
+  }, [handleResize, handleResizeEnd]);
 
   // Cleanup resize listeners on unmount
   useEffect(() => {
