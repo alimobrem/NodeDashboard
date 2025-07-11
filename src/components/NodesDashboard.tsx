@@ -1207,7 +1207,8 @@ This view shows the same Kubernetes component logs available in the built-in Ope
       const memoryTotalKi = parseFloat(allocatable.memory.replace('Ki', ''));
 
       // Parse real metrics from Kubernetes metrics API - handle generic K8sResourceKind
-      const usage = (realMetrics as Record<string, unknown>).usage as Record<string, string> || {};
+      const usage =
+        ((realMetrics as Record<string, unknown>).usage as Record<string, string>) || {};
       const cpuUsageNanocores = parseFloat(usage.cpu?.replace('n', '') || '0');
       const memoryUsageKi = parseFloat(usage.memory?.replace('Ki', '') || '0');
 
@@ -1267,8 +1268,7 @@ This view shows the same Kubernetes component logs available in the built-in Ope
           ) || 0,
         age: getAge(pod.metadata?.creationTimestamp || new Date().toISOString()),
         containers: podSpec?.containers?.length || 0,
-        readyContainers:
-          podStatus?.containerStatuses?.filter((c) => c.ready).length || 0,
+        readyContainers: podStatus?.containerStatuses?.filter((c) => c.ready).length || 0,
       };
     });
 
@@ -1502,8 +1502,6 @@ This view shows the same Kubernetes component logs available in the built-in Ope
     setSelectedNode(null);
   };
 
-
-
   // Loading state
   if (loading) {
     return (
@@ -1674,10 +1672,10 @@ This view shows the same Kubernetes component logs available in the built-in Ope
 
       {/* Main Content Section */}
       <PageSection
-                  style={{
-            paddingTop: '24px',
-            minHeight: `calc(100vh - ${stickyHeaderHeight}px)`,
-          }}
+        style={{
+          paddingTop: '24px',
+          minHeight: `calc(100vh - ${stickyHeaderHeight}px)`,
+        }}
       >
         <Stack hasGutter>
           {/* Simplified Filtering Controls */}
@@ -1766,7 +1764,7 @@ This view shows the same Kubernetes component logs available in the built-in Ope
             </Card>
           </StackItem>
 
-                    {/* Enhanced Node Cards Grid */}
+          {/* Enhanced Node Cards Grid */}
           <StackItem>
             <Grid hasGutter>
               {filteredAndSortedNodes.map((node) => (
@@ -1780,16 +1778,11 @@ This view shows the same Kubernetes component logs available in the built-in Ope
               ))}
             </Grid>
           </StackItem>
-
         </Stack>
       </PageSection>
 
       {/* Side Drawer - Fixed Position */}
-      <NodeDetailsDrawer
-        node={selectedNode}
-        isOpen={isDrawerOpen}
-        onClose={handleDrawerClose}
-      />
+      <NodeDetailsDrawer node={selectedNode} isOpen={isDrawerOpen} onClose={handleDrawerClose} />
     </>
   );
 };
