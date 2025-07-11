@@ -270,10 +270,10 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
             <FlexItem>
               <Title headingLevel="h2" size="lg">
                 <ServerIcon style={{ marginRight: '8px', color: '#0066cc' }} />
-                {node.name}
+                {node?.name || 'Unknown Node'}
               </Title>
               <div style={{ marginTop: '8px', fontSize: '0.875rem', color: '#6a6e73' }}>
-                {node.role} • {node.zone} • {node.instanceType}
+                {node?.role || 'N/A'} • {node?.zone || 'N/A'} • {node?.instanceType || 'N/A'}
               </div>
             </FlexItem>
             <FlexItem>
@@ -306,32 +306,32 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                           <DescriptionListGroup>
                             <DescriptionListTerm>Container Runtime</DescriptionListTerm>
                             <DescriptionListDescription>
-                              {node.containerRuntime}
+                              {node?.containerRuntime || 'N/A'}
                             </DescriptionListDescription>
                           </DescriptionListGroup>
                           <DescriptionListGroup>
                             <DescriptionListTerm>Operating System</DescriptionListTerm>
                             <DescriptionListDescription>
-                              {node.operatingSystem}
+                              {node?.operatingSystem || 'N/A'}
                             </DescriptionListDescription>
                           </DescriptionListGroup>
                           <DescriptionListGroup>
                             <DescriptionListTerm>Architecture</DescriptionListTerm>
                             <DescriptionListDescription>
-                              {node.architecture}
+                              {node?.architecture || 'N/A'}
                             </DescriptionListDescription>
                           </DescriptionListGroup>
                           <DescriptionListGroup>
                             <DescriptionListTerm>Kubernetes Version</DescriptionListTerm>
-                            <DescriptionListDescription>{node.version}</DescriptionListDescription>
+                            <DescriptionListDescription>{node?.version || 'N/A'}</DescriptionListDescription>
                           </DescriptionListGroup>
                           <DescriptionListGroup>
                             <DescriptionListTerm>Node Age</DescriptionListTerm>
-                            <DescriptionListDescription>{node.age}</DescriptionListDescription>
+                            <DescriptionListDescription>{node?.age || 'N/A'}</DescriptionListDescription>
                           </DescriptionListGroup>
                           <DescriptionListGroup>
                             <DescriptionListTerm>Uptime</DescriptionListTerm>
-                            <DescriptionListDescription>{node.uptime}</DescriptionListDescription>
+                            <DescriptionListDescription>{node?.uptime || 'N/A'}</DescriptionListDescription>
                           </DescriptionListGroup>
                         </DescriptionList>
                       </CardBody>
@@ -381,8 +381,8 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                           <DescriptionListGroup>
                             <DescriptionListTerm>Running Pods</DescriptionListTerm>
                             <DescriptionListDescription>
-                              {(node.pods || []).filter((p) => p.status === 'Running').length} /{' '}
-                              {(node.pods || []).length}
+                              {(node?.pods || []).filter((p) => p?.status === 'Running').length} /{' '}
+                              {(node?.pods || []).length}
                             </DescriptionListDescription>
                           </DescriptionListGroup>
                         </DescriptionList>
@@ -442,7 +442,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
             <Tab eventKey="conditions" title={<TabTitleText>Conditions</TabTitleText>}>
               <div style={tabContentStyles}>
                 <Stack hasGutter>
-                  {(node.conditions || []).map((condition, index) => (
+                  {(node?.conditions || []).map((condition, index) => (
                     <StackItem key={index}>
                       <Alert
                         variant={getConditionVariant(condition)}
@@ -484,7 +484,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
             </Tab>
 
             {/* Pods Tab */}
-            <Tab eventKey="pods" title={<TabTitleText>Pods ({(node.pods || []).length})</TabTitleText>}>
+            <Tab eventKey="pods" title={<TabTitleText>Pods ({(node?.pods || []).length})</TabTitleText>}>
               <div style={tabContentStyles}>
                 <Card>
                   <CardTitle>
@@ -494,7 +494,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                     </Title>
                   </CardTitle>
                   <CardBody>
-                    {(node.pods || []).length === 0 ? (
+                    {(node?.pods || []).length === 0 ? (
                       <Alert variant={AlertVariant.info} title="No Running Pods">
                         This node currently has no running pods.
                       </Alert>
@@ -513,22 +513,22 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                           </Tr>
                         </Thead>
                         <Tbody>
-                          {(node.pods || []).map((pod, index) => (
+                          {(node?.pods || []).map((pod, index) => (
                             <Tr key={index}>
-                              <Td>{pod.name}</Td>
+                              <Td>{pod?.name || 'N/A'}</Td>
                               <Td>
-                                <Badge color="blue">{pod.namespace}</Badge>
+                                <Badge color="blue">{pod?.namespace || 'N/A'}</Badge>
                               </Td>
                               <Td>
-                                <Badge color={getPodStatusColor(pod.status)}>{pod.status}</Badge>
+                                <Badge color={getPodStatusColor(pod?.status || 'Unknown')}>{pod?.status || 'Unknown'}</Badge>
                               </Td>
-                              <Td>{pod.cpuUsage?.toFixed(2) || 'N/A'}%</Td>
-                              <Td>{pod.memoryUsage?.toFixed(2) || 'N/A'}%</Td>
+                              <Td>{pod?.cpuUsage?.toFixed(2) || 'N/A'}%</Td>
+                              <Td>{pod?.memoryUsage?.toFixed(2) || 'N/A'}%</Td>
                               <Td>
-                                {pod.readyContainers || 0}/{pod.containers || 0}
+                                {pod?.readyContainers || 0}/{pod?.containers || 0}
                               </Td>
-                              <Td>{pod.restarts || 0}</Td>
-                              <Td>{pod.age}</Td>
+                              <Td>{pod?.restarts || 0}</Td>
+                              <Td>{pod?.age || 'N/A'}</Td>
                             </Tr>
                           ))}
                         </Tbody>
@@ -542,7 +542,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
             {/* Events Tab */}
             <Tab
               eventKey="events"
-              title={<TabTitleText>Events ({(node.events || []).length})</TabTitleText>}
+              title={<TabTitleText>Events ({(node?.events || []).length})</TabTitleText>}
             >
               <div style={tabContentStyles}>
                 <Card>
@@ -564,28 +564,28 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                         </Tr>
                       </Thead>
                       <Tbody>
-                        {(node.events || []).slice(0, 20).map((event, index) => (
+                        {(node?.events || []).slice(0, 20).map((event, index) => (
                           <Tr key={index}>
                             <Td>
-                              <Badge color={event.type === 'Warning' ? 'red' : 'green'}>
-                                {event.type}
+                              <Badge color={event?.type === 'Warning' ? 'red' : 'green'}>
+                                {event?.type || 'Unknown'}
                               </Badge>
                             </Td>
-                            <Td>{event.reason}</Td>
+                            <Td>{event?.reason || 'N/A'}</Td>
                             <Td style={{ maxWidth: '400px', wordBreak: 'break-word' }}>
-                              {event.message}
+                              {event?.message || 'N/A'}
                             </Td>
                             <Td>
-                              <Badge>{event.count}</Badge>
+                              <Badge>{event?.count || 0}</Badge>
                             </Td>
-                            <Td>{new Date(event.timestamp).toLocaleString()}</Td>
+                            <Td>{event?.timestamp ? new Date(event.timestamp).toLocaleString() : 'N/A'}</Td>
                           </Tr>
                         ))}
                       </Tbody>
                     </Table>
-                    {(node.events || []).length > 20 && (
+                    {(node?.events || []).length > 20 && (
                       <div style={{ marginTop: '16px', textAlign: 'center', color: '#6a6e73' }}>
-                        Showing first 20 of {(node.events || []).length} events
+                        Showing first 20 of {(node?.events || []).length} events
                       </div>
                     )}
                   </CardBody>
@@ -602,31 +602,31 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                       <CardTitle>
                         <Title headingLevel="h3" size="lg">
                           <TagIcon style={{ marginRight: '8px', color: '#0066cc' }} />
-                          Taints ({(node.taints || []).length})
+                          Taints ({(node?.taints || []).length})
                         </Title>
                       </CardTitle>
                       <CardBody>
-                        {(node.taints || []).length === 0 ? (
+                        {(node?.taints || []).length === 0 ? (
                           <Alert variant={AlertVariant.info} title="No Taints">
                             This node has no taints configured. All pods that tolerate the
                             node&apos;s constraints can be scheduled here.
                           </Alert>
                         ) : (
                           <Stack hasGutter>
-                            {(node.taints || []).map((taint, index) => (
+                            {(node?.taints || []).map((taint, index) => (
                               <StackItem key={index}>
                                 <Alert
                                   variant={AlertVariant.warning}
-                                  title={`${taint.key}=${taint.value || 'N/A'}`}
+                                  title={`${taint?.key || 'Unknown'}=${taint?.value || 'N/A'}`}
                                 >
                                   <DescriptionList>
                                     <DescriptionListGroup>
                                       <DescriptionListTerm>Effect</DescriptionListTerm>
                                       <DescriptionListDescription>
-                                        <Badge color="orange">{taint.effect}</Badge>
+                                        <Badge color="orange">{taint?.effect || 'N/A'}</Badge>
                                       </DescriptionListDescription>
                                     </DescriptionListGroup>
-                                    {taint.timeAdded && (
+                                    {taint?.timeAdded && (
                                       <DescriptionListGroup>
                                         <DescriptionListTerm>Time Added</DescriptionListTerm>
                                         <DescriptionListDescription>
@@ -649,12 +649,12 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                       <CardTitle>
                         <Title headingLevel="h3" size="lg">
                           <FilterIcon style={{ marginRight: '8px', color: '#0066cc' }} />
-                          Labels ({Object.keys(node.labels || {}).length})
+                          Labels ({Object.keys(node?.labels || {}).length})
                         </Title>
                       </CardTitle>
                       <CardBody>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                          {Object.entries(node.labels || {}).map(([key, value]) => (
+                          {Object.entries(node?.labels || {}).map(([key, value]) => (
                             <Badge key={key} style={{ fontSize: '0.75rem' }}>
                               {key}: {value}
                             </Badge>
@@ -676,46 +676,46 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                       <CardTitle>
                         <Title headingLevel="h3" size="lg">
                           <BellIcon style={{ marginRight: '8px', color: '#0066cc' }} />
-                          Alerts ({(node.alerts || []).length})
+                          Alerts ({(node?.alerts || []).length})
                         </Title>
                       </CardTitle>
                       <CardBody>
-                        {(node.alerts || []).length === 0 ? (
+                        {(node?.alerts || []).length === 0 ? (
                           <Alert variant={AlertVariant.success} title="No Active Alerts">
                             This node has no active alerts or issues detected.
                           </Alert>
                         ) : (
                           <Stack hasGutter>
-                            {(node.alerts || []).slice(0, 10).map((alert, index) => (
+                            {(node?.alerts || []).slice(0, 10).map((alert, index) => (
                               <StackItem key={index}>
                                 <Alert
                                   variant={
-                                    alert.severity === 'critical'
+                                    alert?.severity === 'critical'
                                       ? AlertVariant.danger
-                                      : alert.severity === 'warning'
+                                      : alert?.severity === 'warning'
                                       ? AlertVariant.warning
                                       : AlertVariant.info
                                   }
-                                  title={`${alert.reason} (${alert.severity})`}
+                                  title={`${alert?.reason || 'Unknown'} (${alert?.severity || 'Unknown'})`}
                                 >
-                                  <p>{alert.message}</p>
+                                  <p>{alert?.message || 'N/A'}</p>
                                   <DescriptionList>
                                     <DescriptionListGroup>
                                       <DescriptionListTerm>Source</DescriptionListTerm>
                                       <DescriptionListDescription>
-                                        {alert.source}
+                                        {alert?.source || 'N/A'}
                                       </DescriptionListDescription>
                                     </DescriptionListGroup>
                                     <DescriptionListGroup>
                                       <DescriptionListTerm>Count</DescriptionListTerm>
                                       <DescriptionListDescription>
-                                        <Badge>{alert.count}</Badge>
+                                        <Badge>{alert?.count || 0}</Badge>
                                       </DescriptionListDescription>
                                     </DescriptionListGroup>
                                     <DescriptionListGroup>
                                       <DescriptionListTerm>Time</DescriptionListTerm>
                                       <DescriptionListDescription>
-                                        {new Date(alert.timestamp).toLocaleString()}
+                                        {alert?.timestamp ? new Date(alert.timestamp).toLocaleString() : 'N/A'}
                                       </DescriptionListDescription>
                                     </DescriptionListGroup>
                                   </DescriptionList>
@@ -733,11 +733,11 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                       <CardTitle>
                         <Title headingLevel="h3" size="lg">
                           <MonitoringIcon style={{ marginRight: '8px', color: '#0066cc' }} />
-                          System Logs ({(node.logs || []).length})
+                          System Logs ({(node?.logs || []).length})
                         </Title>
                       </CardTitle>
                       <CardBody>
-                        {(node.logs || []).length === 0 ? (
+                        {(node?.logs || []).length === 0 ? (
                           <Alert variant={AlertVariant.info} title="No System Logs">
                             This node&apos;s systemd journal logs are accessible! Journal logs
                             provide detailed information about system services, kernel messages, and
@@ -745,17 +745,17 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                           </Alert>
                         ) : (
                           <List>
-                            {(node.logs || []).slice(0, 20).map((log, index) => (
+                            {(node?.logs || []).slice(0, 20).map((log, index) => (
                               <ListItem key={index}>
                                 <Flex alignItems={{ default: 'alignItemsFlexStart' }}>
-                                  <FlexItem>{getLogTypeIcon(log.component)}</FlexItem>
+                                  <FlexItem>{getLogTypeIcon(log?.component || 'unknown')}</FlexItem>
                                   <FlexItem>
-                                    {getLogLevelIcon(log.level || detectLogLevel(log.content))}
+                                    {getLogLevelIcon(log?.level || detectLogLevel(log?.content || ''))}
                                   </FlexItem>
                                   <FlexItem flex={{ default: 'flex_1' }}>
                                     <div style={{ fontSize: '0.875rem' }}>
-                                      <strong>{log.component}</strong> -{' '}
-                                      {new Date(log.timestamp).toLocaleString()}
+                                      <strong>{log?.component || 'Unknown'}</strong> -{' '}
+                                      {log?.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A'}
                                     </div>
                                     <div
                                       style={{
@@ -767,7 +767,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                                         wordBreak: 'break-word',
                                       }}
                                     >
-                                      {log.content}
+                                      {log?.content || 'N/A'}
                                     </div>
                                   </FlexItem>
                                 </Flex>
