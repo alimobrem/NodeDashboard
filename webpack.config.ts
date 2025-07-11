@@ -30,7 +30,14 @@ const config: Configuration = {
     rules: [
       {
         test: /\.(jsx?|tsx?)$/,
-        exclude: /\/node_modules\//,
+        exclude: [
+          /\/node_modules\//,
+          /\.(test|spec)\.(ts|tsx|js|jsx)$/,
+          /\/__tests__\//,
+          /src\/.*\/__tests__\//,
+          /src\/.*\.test\.(ts|tsx)$/,
+          /src\/.*\.spec\.(ts|tsx)$/
+        ],
         use: [
           {
             loader: 'ts-loader',
@@ -60,18 +67,27 @@ const config: Configuration = {
     ],
   },
   devServer: {
-    static: './dist',
     port: 9001,
-    host: '0.0.0.0', // Bind to all network interfaces
-    // Allow Bridge running in a container to connect to the plugin dev server.
+    host: '0.0.0.0',
     allowedHosts: 'all',
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
       'Access-Control-Allow-Headers': 'X-Requested-With, Content-Type, Authorization',
     },
+    static: false,
+    compress: true,
+    hot: true,
+    liveReload: true,
     devMiddleware: {
-      writeToDisk: true,
+      publicPath: '/',
+      writeToDisk: false,
+    },
+    client: {
+      overlay: {
+        errors: true,
+        warnings: false,
+      },
     },
   },
   plugins: [

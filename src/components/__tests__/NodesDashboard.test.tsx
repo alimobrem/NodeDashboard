@@ -36,9 +36,15 @@ jest.mock('@openshift-console/dynamic-plugin-sdk', () => ({
 }));
 
 // Get the mocked functions after the mock is defined
-const { useK8sWatchResource: mockUseK8sWatchResource } = jest.requireMock('@openshift-console/dynamic-plugin-sdk');
-const { k8sListItems: mockK8sListItems } = jest.requireMock('@openshift-console/dynamic-plugin-sdk');
-const { usePrometheusQuery: mockUsePrometheusQuery } = jest.requireMock('@openshift-console/dynamic-plugin-sdk');
+const { useK8sWatchResource: mockUseK8sWatchResource } = jest.requireMock(
+  '@openshift-console/dynamic-plugin-sdk',
+);
+const { k8sListItems: mockK8sListItems } = jest.requireMock(
+  '@openshift-console/dynamic-plugin-sdk',
+);
+const { usePrometheusQuery: mockUsePrometheusQuery } = jest.requireMock(
+  '@openshift-console/dynamic-plugin-sdk',
+);
 
 describe('Enhanced Node Dashboard with Real-time Data', () => {
   beforeEach(() => {
@@ -46,7 +52,7 @@ describe('Enhanced Node Dashboard with Real-time Data', () => {
 
     // Default mock setup with some nodes for successful scenarios
     const defaultNodes = createMockNodes(3);
-    
+
     // Mock useK8sWatchResource to return proper format [data, loaded, error]
     // The component calls this hook 3 times (nodes, pods, events)
     mockUseK8sWatchResource.mockImplementation((params: any) => {
@@ -59,7 +65,7 @@ describe('Enhanced Node Dashboard with Real-time Data', () => {
       }
       return [[], false, null];
     });
-    
+
     mockK8sListItems.mockResolvedValue([]);
     mockUsePrometheusQuery.mockReturnValue([[], null, false]);
   });
@@ -68,11 +74,13 @@ describe('Enhanced Node Dashboard with Real-time Data', () => {
     it('should display loading state with real-time messaging', () => {
       // Mock loading state - all three hooks return false for loaded
       mockUseK8sWatchResource.mockImplementation(() => [[], false, null]);
-      
+
       render(<NodesDashboard />);
-      
+
       expect(screen.getByText('Loading Node Data')).toBeInTheDocument();
-      expect(screen.getByText('Fetching real-time cluster node information...')).toBeInTheDocument();
+      expect(
+        screen.getByText('Fetching real-time cluster node information...'),
+      ).toBeInTheDocument();
     });
 
     it('should display the enhanced dashboard title and real-time description', async () => {
@@ -80,7 +88,9 @@ describe('Enhanced Node Dashboard with Real-time Data', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Enhanced Node Dashboard')).toBeInTheDocument();
-        expect(screen.getByText('Comprehensive visual monitoring of cluster nodes with real-time data')).toBeInTheDocument();
+        expect(
+          screen.getByText('Comprehensive visual monitoring of cluster nodes with real-time data'),
+        ).toBeInTheDocument();
       });
     });
 
@@ -127,12 +137,18 @@ describe('Enhanced Node Dashboard with Real-time Data', () => {
   describe('Error Handling with Watch Resources', () => {
     it('should handle watch resource errors gracefully', async () => {
       // Mock watch resources to return errors
-      mockUseK8sWatchResource.mockImplementation(() => [null, true, new Error('Failed to load nodes')]);
+      mockUseK8sWatchResource.mockImplementation(() => [
+        null,
+        true,
+        new Error('Failed to load nodes'),
+      ]);
 
       render(<NodesDashboard />);
 
       await waitFor(() => {
-        expect(screen.getByText('Failed to connect to the OpenShift API. Please check your connection.')).toBeInTheDocument();
+        expect(
+          screen.getByText('Failed to connect to the OpenShift API. Please check your connection.'),
+        ).toBeInTheDocument();
       });
     });
 
@@ -203,12 +219,12 @@ describe('Enhanced Node Dashboard with Real-time Data', () => {
       await waitFor(() => {
         const nodeElements = screen.getAllByText(/worker-node-/);
         expect(nodeElements.length).toBeGreaterThan(0);
-        
+
         // Click on first node element that's likely clickable (typically in a card)
         if (nodeElements[0].closest('div[style*="cursor"]') || nodeElements[0].closest('button')) {
           fireEvent.click(nodeElements[0]);
         }
-        
+
         // Verify the component doesn't crash
         expect(screen.getByText('Enhanced Node Dashboard')).toBeInTheDocument();
       });
@@ -232,12 +248,12 @@ describe('Enhanced Node Dashboard with Real-time Data', () => {
     it('should properly set up watch resources for nodes, pods, and events', () => {
       render(<NodesDashboard />);
 
-             // Verify that useK8sWatchResource was called for all three resource types
-       const calls = mockUseK8sWatchResource.mock.calls;
-       
-       const nodeCall = calls.find((call: any) => call[0].groupVersionKind.kind === 'Node');
-       const podCall = calls.find((call: any) => call[0].groupVersionKind.kind === 'Pod');
-       const eventCall = calls.find((call: any) => call[0].groupVersionKind.kind === 'Event');
+      // Verify that useK8sWatchResource was called for all three resource types
+      const calls = mockUseK8sWatchResource.mock.calls;
+
+      const nodeCall = calls.find((call: any) => call[0].groupVersionKind.kind === 'Node');
+      const podCall = calls.find((call: any) => call[0].groupVersionKind.kind === 'Pod');
+      const eventCall = calls.find((call: any) => call[0].groupVersionKind.kind === 'Event');
 
       expect(nodeCall).toBeDefined();
       expect(podCall).toBeDefined();
@@ -264,14 +280,14 @@ describe('Enhanced Node Dashboard with Real-time Data', () => {
       });
 
       const { rerender } = render(<NodesDashboard />);
-      
+
       // Initially should show loading
       expect(screen.getByText('Loading Node Data')).toBeInTheDocument();
 
       // Simulate progression of data loading
       step = 1;
       rerender(<NodesDashboard />);
-      
+
       step = 2;
       rerender(<NodesDashboard />);
 
@@ -325,7 +341,7 @@ describe('Enhanced Node Dashboard with Real-time Data', () => {
 
     it('should handle large datasets efficiently with real-time updates', async () => {
       const largeMockNodes = createLargeMockNodeDataset(100);
-      
+
       mockUseK8sWatchResource.mockImplementation((params: any) => {
         if (params.groupVersionKind.kind === 'Node') {
           return [largeMockNodes, true, null];
@@ -354,11 +370,13 @@ describe('Enhanced Node Dashboard with Real-time Data', () => {
       mockUseK8sWatchResource.mockImplementation((params: any) => {
         if (params.groupVersionKind.kind === 'Node') {
           // Simulate continuous updates by slightly modifying the data
-          const modifiedNodes = baseNodes.map(node => ({
+          const modifiedNodes = baseNodes.map((node) => ({
             ...node,
             metadata: {
               ...node.metadata,
-              resourceVersion: String(parseInt(node.metadata?.resourceVersion || '0') + updateCount),
+              resourceVersion: String(
+                parseInt(node.metadata?.resourceVersion || '0') + updateCount,
+              ),
             },
           }));
           return [modifiedNodes, true, null];
@@ -380,7 +398,7 @@ describe('Enhanced Node Dashboard with Real-time Data', () => {
         for (let i = 0; i < 5; i++) {
           updateCount++;
           rerender(<NodesDashboard />);
-          await new Promise(resolve => setTimeout(resolve, 10));
+          await new Promise((resolve) => setTimeout(resolve, 10));
         }
       });
 
@@ -388,7 +406,7 @@ describe('Enhanced Node Dashboard with Real-time Data', () => {
     });
 
     it('should efficiently filter and sort nodes in real-time', async () => {
-      const controlPlaneNodes = createMockNodes(25).map(node => ({
+      const controlPlaneNodes = createMockNodes(25).map((node) => ({
         ...node,
         metadata: {
           ...node.metadata,
@@ -420,7 +438,7 @@ describe('Enhanced Node Dashboard with Real-time Data', () => {
 
       const filterTime = await measurePerformance('Filtering operations', async () => {
         const searchInput = screen.getByPlaceholderText(/search/i);
-        
+
         fireEvent.change(searchInput, { target: { value: 'control' } });
         await waitFor(() => {
           expect(searchInput).toHaveValue('control');
@@ -439,11 +457,13 @@ describe('Enhanced Node Dashboard with Real-time Data', () => {
   describe('Accessibility and User Experience', () => {
     it('should provide clear loading states', () => {
       mockUseK8sWatchResource.mockImplementation(() => [[], false, null]);
-      
+
       render(<NodesDashboard />);
-      
+
       expect(screen.getByText('Loading Node Data')).toBeInTheDocument();
-      expect(screen.getByText('Fetching real-time cluster node information...')).toBeInTheDocument();
+      expect(
+        screen.getByText('Fetching real-time cluster node information...'),
+      ).toBeInTheDocument();
     });
 
     it('should display meaningful error messages', async () => {
@@ -452,7 +472,9 @@ describe('Enhanced Node Dashboard with Real-time Data', () => {
       render(<NodesDashboard />);
 
       await waitFor(() => {
-        expect(screen.getByText('Failed to connect to the OpenShift API. Please check your connection.')).toBeInTheDocument();
+        expect(
+          screen.getByText('Failed to connect to the OpenShift API. Please check your connection.'),
+        ).toBeInTheDocument();
       });
     });
 
@@ -464,7 +486,9 @@ describe('Enhanced Node Dashboard with Real-time Data', () => {
       });
 
       // Component should render successfully regardless of viewport
-      expect(screen.getByText('Comprehensive visual monitoring of cluster nodes with real-time data')).toBeInTheDocument();
+      expect(
+        screen.getByText('Comprehensive visual monitoring of cluster nodes with real-time data'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -475,21 +499,21 @@ describe('Enhanced Node Dashboard with Real-time Data', () => {
         {
           metadata: { name: 'pod-1', namespace: 'default' },
           spec: { nodeName: 'worker-node-1' },
-          status: { phase: 'Running' }
+          status: { phase: 'Running' },
         },
         {
           metadata: { name: 'pod-2', namespace: 'default' },
           spec: { nodeName: 'worker-node-2' },
-          status: { phase: 'Running' }
-        }
+          status: { phase: 'Running' },
+        },
       ];
       const mockEvents = [
         {
           involvedObject: { name: 'worker-node-1', kind: 'Node' },
           type: 'Normal',
           reason: 'NodeReady',
-          message: 'Node worker-node-1 status is now: NodeReady'
-        }
+          message: 'Node worker-node-1 status is now: NodeReady',
+        },
       ];
 
       mockUseK8sWatchResource.mockImplementation((params: any) => {
@@ -517,10 +541,10 @@ describe('Enhanced Node Dashboard with Real-time Data', () => {
 
     it('should handle real-time data synchronization', async () => {
       let dataVersion = 1;
-      
+
       mockUseK8sWatchResource.mockImplementation((params: any) => {
         if (params.groupVersionKind.kind === 'Node') {
-          const nodes = createMockNodes(3).map(node => ({
+          const nodes = createMockNodes(3).map((node) => ({
             ...node,
             metadata: {
               ...node.metadata,

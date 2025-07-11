@@ -1,0 +1,37 @@
+$ NODE_ENV=development webpack serve --mode=development
+<i> [webpack-dev-server] Project is running at:
+<i> [webpack-dev-server] Loopback: http://localhost:9001/
+<i> [webpack-dev-server] On Your Network (IPv4): http://192.168.129.49:9001/
+<i> [webpack-dev-server] On Your Network (IPv6): http://[fe80::1]:9001/
+assets by path *.js 3.29 MiB
+  assets by chunk 2.46 MiB (id hint: vendors)
+    asset vendors-node_modules_patternfly_react-core_dist_esm_helpers_Popper_Popper_js-chunk.js 1.04 MiB [emitted] (id hint: vendors) 1 related asset
+    asset vendors-node_modules_patternfly_react-table_dist_esm_components_Table_index_js-chunk.js 431 KiB [emitted] (id hint: vendors) 1 related asset
+    asset vendors-node_modules_patternfly_react-core_dist_esm_components_Toolbar_index_js-chunk.js 148 KiB [emitted] (id hint: vendors) 1 related asset
+    asset vendors-node_modules_patternfly_react-core_dist_esm_components_Menu_Menu_js-node_modules_patt-b35725-chunk.js 110 KiB [emitted] (id hint: vendors) 1 related asset
+    asset vendors-node_modules_patternfly_react-core_dist_esm_components_SearchInput_index_js-node_modu-a8c6d2-chunk.js 94 KiB [emitted] (id hint: vendors) 1 related asset
+    asset vendors-node_modules_patternfly_react-core_dist_esm_components_Page_index_js-chunk.js 89.1 KiB [emitted] (id hint: vendors) 1 related asset
+    asset vendors-node_modules_patternfly_react-core_dist_esm_helpers_FocusTrap_FocusTrap_js-node_modul-048a17-chunk.js 81.9 KiB [emitted] (id hint: vendors) 1 related asset
+    asset vendors-node_modules_patternfly_react-core_dist_esm_components_Tabs_index_js-chunk.js 70.2 KiB [emitted] (id hint: vendors) 1 related asset
+    asset vendors-node_modules_patternfly_react-core_dist_esm_components_Alert_index_js-chunk.js 65.6 KiB [emitted] (id hint: vendors) 1 related asset
+    + 11 assets
+  + 66 assets
+asset plugin-manifest.json 1010 bytes [emitted]
+asset locales/en/plugin__node-dashboard.json 43 bytes [emitted] [from: ../locales/en/plugin__node-dashboard.json] [copied]
+orphan modules 35.1 KiB [orphan] 54 modules
+runtime modules 95.8 KiB 17 modules
+modules by path ../node_modules/ 1.84 MiB 504 modules
+modules by path ./ 110 KiB
+  ./components/NodesDashboard.tsx 109 KiB [built] [code generated]
+  + 41 modules
+consume-shared-module modules 1.39 KiB
+  modules by path consume shared module (default) @patternfly/ 1.31 KiB 32 modules
+  + 2 modules
+provide-module modules 1.31 KiB
+  modules by path provide shared module (default) @patternfly/react-core/dist/dynamic/ 714 bytes 17 modules
+  modules by path provide shared module (default) @patternfly/react-icons/dist/dynamic/icons/ 588 bytes 14 modules
+  provide shared module (default) @patternfly/react-table/dist/dynamic/components/Table@6.2.2 = ../node_modules/@patternfly/react-table/dist/esm/components/Table/index.js 42 bytes [built] [code generated]
+container entry 42 bytes [built] [code generated]
+@patternfly/react-styles/css/components/Popper/Popper.css (ignored) 15 bytes [built] [code generated]
+webpack 5.75.0 compiled successfully in 2424 ms
+<i> [webpack-dev-server] Gracefully shutting down. To force exit, press ^C again. Please wait...

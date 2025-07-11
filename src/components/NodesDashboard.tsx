@@ -7,7 +7,6 @@ import {
   Alert,
   AlertVariant,
   Badge,
-
   Card,
   CardBody,
   CardTitle,
@@ -21,7 +20,6 @@ import {
   FlexItem,
   Grid,
   GridItem,
-
   PageSection,
   Progress,
   ProgressSize,
@@ -40,18 +38,10 @@ import {
   SelectOption,
   MenuToggle,
   MenuToggleElement,
-
 } from '@patternfly/react-core';
 
 // PatternFly Table Components
-import {
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-} from '@patternfly/react-table';
+import { Table, Thead, Tbody, Tr, Th, Td } from '@patternfly/react-table';
 
 // PatternFly Icons
 import {
@@ -66,7 +56,6 @@ import {
   CubesIcon,
   FilterIcon,
   BellIcon,
-
   TagIcon,
   ListIcon,
   ChartLineIcon,
@@ -266,11 +255,16 @@ const EnhancedNodeCard: React.FC<EnhancedNodeCardProps> = ({ node, onClick, isSe
 
   const getPodStatusColor = (status: string) => {
     switch (status) {
-      case 'Running': return '#3e8635';
-      case 'Pending': return '#f0ab00';
-      case 'Failed': return '#c9190b';
-      case 'Succeeded': return '#339af0';
-      default: return '#6a6e73';
+      case 'Running':
+        return '#3e8635';
+      case 'Pending':
+        return '#f0ab00';
+      case 'Failed':
+        return '#c9190b';
+      case 'Succeeded':
+        return '#339af0';
+      default:
+        return '#6a6e73';
     }
   };
 
@@ -297,16 +291,19 @@ const EnhancedNodeCard: React.FC<EnhancedNodeCardProps> = ({ node, onClick, isSe
     return memoryValue;
   };
 
-  const runningPods = node.pods.filter(pod => pod.status === 'Running').length;
-  const pendingPods = node.pods.filter(pod => pod.status === 'Pending').length;
-  const failedPods = node.pods.filter(pod => pod.status === 'Failed').length;
+  const runningPods = node.pods.filter((pod) => pod.status === 'Running').length;
+  const pendingPods = node.pods.filter((pod) => pod.status === 'Pending').length;
+  const failedPods = node.pods.filter((pod) => pod.status === 'Failed').length;
   const totalPods = node.pods.length;
 
   const cpu = formatCPU(node.allocatableResources.cpu);
   const memory = formatMemoryForDisplay(node.allocatableResources.memory);
 
-  const hasAlerts = node.cordoned || node.drained || node.status === 'NotReady' || 
-                   node.events.some(event => event.type === 'Warning');
+  const hasAlerts =
+    node.cordoned ||
+    node.drained ||
+    node.status === 'NotReady' ||
+    node.events.some((event) => event.type === 'Warning');
 
   return (
     <Card
@@ -335,7 +332,7 @@ const EnhancedNodeCard: React.FC<EnhancedNodeCardProps> = ({ node, onClick, isSe
         <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsSm' }}>
           <FlexItem>
             {React.cloneElement(getNodeHealthIcon(node), {
-              style: { color: getNodeHealthColor(node), fontSize: '1.5rem' }
+              style: { color: getNodeHealthColor(node), fontSize: '1.5rem' },
             })}
           </FlexItem>
           <FlexItem flex={{ default: 'flex_1' }}>
@@ -344,26 +341,28 @@ const EnhancedNodeCard: React.FC<EnhancedNodeCardProps> = ({ node, onClick, isSe
                 {node.name}
               </Title>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <Badge 
-                  style={{ 
-                    backgroundColor: getNodeHealthColor(node), 
+                <Badge
+                  style={{
+                    backgroundColor: getNodeHealthColor(node),
                     color: 'white',
-                    fontSize: '0.75rem'
+                    fontSize: '0.75rem',
                   }}
                 >
                   {node.status}
                 </Badge>
-                <Badge 
-                  style={{ 
-                    backgroundColor: node.role.includes('control') ? '#0066cc' : '#6a6e73', 
+                <Badge
+                  style={{
+                    backgroundColor: node.role.includes('control') ? '#0066cc' : '#6a6e73',
                     color: 'white',
-                    fontSize: '0.75rem'
+                    fontSize: '0.75rem',
                   }}
                 >
                   {node.role.includes('control') ? 'Control Plane' : 'Worker'}
                 </Badge>
                 {hasAlerts && (
-                  <Badge style={{ backgroundColor: '#f0ab00', color: 'white', fontSize: '0.75rem' }}>
+                  <Badge
+                    style={{ backgroundColor: '#f0ab00', color: 'white', fontSize: '0.75rem' }}
+                  >
                     <BellIcon style={{ marginRight: '4px', fontSize: '0.75rem' }} />
                     Alert
                   </Badge>
@@ -380,12 +379,33 @@ const EnhancedNodeCard: React.FC<EnhancedNodeCardProps> = ({ node, onClick, isSe
           <StackItem>
             <Grid hasGutter>
               <GridItem span={6}>
-                <div style={{ textAlign: 'center', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '6px' }}>
+                <div
+                  style={{
+                    textAlign: 'center',
+                    padding: '12px',
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '4px',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: '6px',
+                    }}
+                  >
                     <CpuIcon style={{ marginRight: '6px', color: '#0066cc' }} />
                     <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>CPU</span>
                   </div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0066cc', marginBottom: '4px' }}>
+                  <div
+                    style={{
+                      fontSize: '1.5rem',
+                      fontWeight: 700,
+                      color: '#0066cc',
+                      marginBottom: '4px',
+                    }}
+                  >
                     {node.metrics?.cpu?.current || 0}%
                   </div>
                   <div style={{ fontSize: '0.75rem', color: '#6a6e73', marginBottom: '6px' }}>
@@ -402,12 +422,33 @@ const EnhancedNodeCard: React.FC<EnhancedNodeCardProps> = ({ node, onClick, isSe
                 </div>
               </GridItem>
               <GridItem span={6}>
-                <div style={{ textAlign: 'center', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '6px' }}>
+                <div
+                  style={{
+                    textAlign: 'center',
+                    padding: '12px',
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '4px',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: '6px',
+                    }}
+                  >
                     <MemoryIcon style={{ marginRight: '6px', color: '#ff6b35' }} />
                     <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>Memory</span>
                   </div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#ff6b35', marginBottom: '4px' }}>
+                  <div
+                    style={{
+                      fontSize: '1.5rem',
+                      fontWeight: 700,
+                      color: '#ff6b35',
+                      marginBottom: '4px',
+                    }}
+                  >
                     {node.metrics?.memory?.current || 0}%
                   </div>
                   <div style={{ fontSize: '0.75rem', color: '#6a6e73', marginBottom: '6px' }}>
@@ -429,7 +470,14 @@ const EnhancedNodeCard: React.FC<EnhancedNodeCardProps> = ({ node, onClick, isSe
           {/* Pod Visualization Section */}
           <StackItem>
             <div style={{ backgroundColor: '#f8f9fa', padding: '12px', borderRadius: '4px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '10px',
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <CubesIcon style={{ color: '#009639', fontSize: '1rem' }} />
                   <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>Pods</span>
@@ -438,16 +486,18 @@ const EnhancedNodeCard: React.FC<EnhancedNodeCardProps> = ({ node, onClick, isSe
                   {totalPods}/{node.allocatableResources.pods}
                 </span>
               </div>
-              
+
               {/* Pod Grid Visualization */}
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, 10px)', 
-                gap: '2px', 
-                marginBottom: '10px',
-                maxHeight: '100px',
-                overflow: 'visible'
-              }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, 10px)',
+                  gap: '2px',
+                  marginBottom: '10px',
+                  maxHeight: '100px',
+                  overflow: 'visible',
+                }}
+              >
                 {node.pods.slice(0, 60).map((pod, index) => (
                   <div
                     key={`${pod.name}-${index}`}
@@ -460,7 +510,9 @@ const EnhancedNodeCard: React.FC<EnhancedNodeCardProps> = ({ node, onClick, isSe
                       border: pod.restarts > 0 ? '1px solid #f0ab00' : 'none',
                       position: 'relative',
                     }}
-                    title={`${pod.name}: ${pod.status}${pod.restarts > 0 ? ` (${pod.restarts} restarts)` : ''}`}
+                    title={`${pod.name}: ${pod.status}${
+                      pod.restarts > 0 ? ` (${pod.restarts} restarts)` : ''
+                    }`}
                   />
                 ))}
                 {totalPods > 60 && (
@@ -482,18 +534,39 @@ const EnhancedNodeCard: React.FC<EnhancedNodeCardProps> = ({ node, onClick, isSe
               {/* Pod Status Summary */}
               <div style={{ display: 'flex', gap: '12px', fontSize: '0.75rem', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <div style={{ width: '10px', height: '10px', backgroundColor: '#3e8635', borderRadius: '2px' }} />
+                  <div
+                    style={{
+                      width: '10px',
+                      height: '10px',
+                      backgroundColor: '#3e8635',
+                      borderRadius: '2px',
+                    }}
+                  />
                   <span>{runningPods} Running</span>
                 </div>
                 {pendingPods > 0 && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <div style={{ width: '10px', height: '10px', backgroundColor: '#f0ab00', borderRadius: '2px' }} />
+                    <div
+                      style={{
+                        width: '10px',
+                        height: '10px',
+                        backgroundColor: '#f0ab00',
+                        borderRadius: '2px',
+                      }}
+                    />
                     <span>{pendingPods} Pending</span>
                   </div>
                 )}
                 {failedPods > 0 && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <div style={{ width: '10px', height: '10px', backgroundColor: '#c9190b', borderRadius: '2px' }} />
+                    <div
+                      style={{
+                        width: '10px',
+                        height: '10px',
+                        backgroundColor: '#c9190b',
+                        borderRadius: '2px',
+                      }}
+                    />
                     <span>{failedPods} Failed</span>
                   </div>
                 )}
@@ -503,7 +576,14 @@ const EnhancedNodeCard: React.FC<EnhancedNodeCardProps> = ({ node, onClick, isSe
 
           {/* Node Details Section */}
           <StackItem style={{ flex: 1 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.875rem' }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '8px',
+                fontSize: '0.875rem',
+              }}
+            >
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#6a6e73' }}>Zone:</span>
@@ -521,11 +601,15 @@ const EnhancedNodeCard: React.FC<EnhancedNodeCardProps> = ({ node, onClick, isSe
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#6a6e73' }}>Version:</span>
-                  <span style={{ fontWeight: 600, fontSize: '0.8rem' }}>{node.version.split('+')[0]}</span>
+                  <span style={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                    {node.version.split('+')[0]}
+                  </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#6a6e73' }}>OS:</span>
-                  <span style={{ fontWeight: 600, fontSize: '0.8rem' }}>{node.operatingSystem}</span>
+                  <span style={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                    {node.operatingSystem}
+                  </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#6a6e73' }}>Arch:</span>
@@ -533,11 +617,25 @@ const EnhancedNodeCard: React.FC<EnhancedNodeCardProps> = ({ node, onClick, isSe
                 </div>
               </div>
             </div>
-            
+
             {/* Conditions Summary */}
             {node.conditions.length > 0 && (
-              <div style={{ marginTop: '12px', padding: '10px', backgroundColor: '#f0f8ff', borderRadius: '4px' }}>
-                <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '8px', color: '#0066cc' }}>
+              <div
+                style={{
+                  marginTop: '12px',
+                  padding: '10px',
+                  backgroundColor: '#f0f8ff',
+                  borderRadius: '4px',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    marginBottom: '8px',
+                    color: '#0066cc',
+                  }}
+                >
                   Conditions
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
@@ -569,7 +667,77 @@ const EnhancedNodeCard: React.FC<EnhancedNodeCardProps> = ({ node, onClick, isSe
   );
 };
 
-// Utility functions removed (unused)
+// Utility functions for log processing
+const detectLogLevel = (logContent: string): string => {
+  const content = logContent.toLowerCase();
+  if (content.includes('error') || content.includes('failed') || content.includes('fatal')) {
+    return 'error';
+  }
+  if (content.includes('warn') || content.includes('warning')) {
+    return 'warning';
+  }
+  if (content.includes('info')) {
+    return 'info';
+  }
+  if (content.includes('debug')) {
+    return 'debug';
+  }
+  return 'info';
+};
+
+const generateNodeStatusLog = (nodeData: any): string => {
+  const nodeName = nodeData.metadata?.name || 'Unknown';
+  const conditions = nodeData.status?.conditions || [];
+  const nodeInfo = nodeData.status?.nodeInfo || {};
+  const addresses = nodeData.status?.addresses || [];
+  const allocatable = nodeData.status?.allocatable || {};
+
+  let statusLog = `Node Status Summary for ${nodeName}\n`;
+  statusLog += `${'='.repeat(50)}\n\n`;
+
+  // Basic node info
+  statusLog += `Node Information:\n`;
+  statusLog += `  OS Image: ${nodeInfo.osImage || 'Unknown'}\n`;
+  statusLog += `  Kernel Version: ${nodeInfo.kernelVersion || 'Unknown'}\n`;
+  statusLog += `  Container Runtime: ${nodeInfo.containerRuntimeVersion || 'Unknown'}\n`;
+  statusLog += `  Kubelet Version: ${nodeInfo.kubeletVersion || 'Unknown'}\n`;
+  statusLog += `  Architecture: ${nodeInfo.architecture || 'Unknown'}\n\n`;
+
+  // Network addresses
+  if (addresses.length > 0) {
+    statusLog += `Network Addresses:\n`;
+    addresses.forEach((addr: any) => {
+      statusLog += `  ${addr.type}: ${addr.address}\n`;
+    });
+    statusLog += `\n`;
+  }
+
+  // Node conditions
+  if (conditions.length > 0) {
+    statusLog += `Node Conditions:\n`;
+    conditions.forEach((condition: any) => {
+      const status = condition.status === 'True' ? '✓' : '✗';
+      statusLog += `  ${status} ${condition.type}: ${condition.status}\n`;
+      if (condition.message) {
+        statusLog += `    Message: ${condition.message}\n`;
+      }
+      if (condition.reason) {
+        statusLog += `    Reason: ${condition.reason}\n`;
+      }
+      statusLog += `    Last Transition: ${condition.lastTransitionTime}\n\n`;
+    });
+  }
+
+  // Resource allocation
+  if (Object.keys(allocatable).length > 0) {
+    statusLog += `Allocatable Resources:\n`;
+    Object.entries(allocatable).forEach(([resource, value]) => {
+      statusLog += `  ${resource}: ${value}\n`;
+    });
+  }
+
+  return statusLog;
+};
 
 // Main Dashboard Component
 const NodesDashboard: React.FC = () => {
@@ -586,7 +754,7 @@ const NodesDashboard: React.FC = () => {
       100% { opacity: 1; }
     }
   `;
-  
+
   React.useEffect(() => {
     const style = document.createElement('style');
     style.textContent = pulseAnimation;
@@ -595,7 +763,7 @@ const NodesDashboard: React.FC = () => {
       document.head.removeChild(style);
     };
   }, []);
-  
+
   // Simplified filtering states
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'ready' | 'notready'>('all');
@@ -631,13 +799,11 @@ const NodesDashboard: React.FC = () => {
     },
     isList: true,
   });
-  
+
   // Extract values from watch results safely
   const [watchedNodes, nodesLoaded, nodesError] = nodesWatch || [null, false, null];
   const [watchedPods, podsLoaded, podsError] = podsWatch || [null, false, null];
   const [watchedEvents, eventsLoaded, eventsError] = eventsWatch || [null, false, null];
-
-
 
   // Fetch additional debugging data for a specific node
   const fetchNodeDebugData = React.useCallback(async (nodeName: string) => {
@@ -648,10 +814,10 @@ const NodesDashboard: React.FC = () => {
       systemInfo: {
         filesystem: {},
         runtime: {},
-        rlimit: {}
+        rlimit: {},
       },
       networkStatus: {},
-      resourcePressure: {}
+      resourcePressure: {},
     };
 
     // Skip API calls during testing
@@ -662,7 +828,7 @@ const NodesDashboard: React.FC = () => {
     try {
       // Fetch node-specific events (more detailed)
       const nodeEventsResponse = await fetch(
-        `/api/kubernetes/api/v1/events?fieldSelector=involvedObject.name=${nodeName},involvedObject.kind=Node&limit=50`
+        `/api/kubernetes/api/v1/events?fieldSelector=involvedObject.name=${nodeName},involvedObject.kind=Node&limit=50`,
       );
       if (nodeEventsResponse.ok) {
         const nodeEventsData = await nodeEventsResponse.json();
@@ -675,44 +841,254 @@ const NodesDashboard: React.FC = () => {
             reason: event.reason,
             timestamp: event.firstTimestamp || event.eventTime,
             count: event.count || 1,
-            source: event.source?.component || 'unknown'
+            source: event.source?.component || 'unknown',
           }));
       }
 
-      // Try to fetch node logs (system components)
+      // Enhanced log fetching with comprehensive error handling and validation
+      console.log(`🔍 Starting enhanced log fetch for node: ${nodeName}`);
+      console.log(
+        `📊 Debug: Current debugData.logs length before fetching: ${debugData.logs.length}`,
+      );
+
+      // Force clear any existing logs to see new results
+      debugData.logs = [];
+
+      // Method 1: Try Console Backend API (most reliable)
       try {
-        const kubeletLogsResponse = await fetch(
-          `/api/kubernetes/api/v1/nodes/${nodeName}/proxy/logs/kubelet.log?tailLines=20`
+        const consoleLogResponse = await fetch(
+          `/api/console/nodes/${nodeName}/logs?source=all&lines=50`,
+          {
+            headers: {
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+            },
+          },
         );
-        if (kubeletLogsResponse.ok) {
-          const kubeletLogs = await kubeletLogsResponse.text();
-          debugData.logs.push({
-            component: 'kubelet',
-            content: kubeletLogs.split('\n').slice(-20).join('\n'),
-            timestamp: new Date().toISOString()
-          });
+
+        if (consoleLogResponse.ok) {
+          const consoleLogData = await consoleLogResponse.json();
+          if (consoleLogData && consoleLogData.logs) {
+            Object.entries(consoleLogData.logs).forEach(([source, logContent]: [string, any]) => {
+              if (logContent && typeof logContent === 'string' && logContent.trim().length > 20) {
+                debugData.logs.push({
+                  component: `${source} (console-api)`,
+                  content: logContent,
+                  timestamp: new Date().toISOString(),
+                  level: 'info',
+                });
+              }
+            });
+          }
         }
-      } catch (err) {
-        console.warn('Could not fetch kubelet logs:', err);
+      } catch (consoleErr) {
+        console.log('📡 Console backend logs not available:', consoleErr);
       }
+
+      // Method 2: Kubernetes Component Logs (same as built-in console)
+      const logSources = [
+        {
+          path: 'kube-apiserver',
+          name: 'Kubernetes API Server',
+          files: ['audit.log', 'termination.log'],
+        },
+        { path: 'oauth-apiserver', name: 'OAuth API Server', files: ['termination.log'] },
+        { path: 'openshift-apiserver', name: 'OpenShift API Server', files: ['termination.log'] },
+        { path: 'etcd', name: 'etcd Database', files: ['termination.log'] },
+        { path: 'crio', name: 'Container Runtime (CRI-O)', files: ['crio.log'] },
+        { path: 'containers', name: 'Container Logs', files: [] }, // Directory listing
+      ];
+
+      console.log(`📋 Fetching Kubernetes component logs (same as built-in console)...`);
+
+      for (const source of logSources) {
+        try {
+          console.log(`📋 Checking ${source.name} logs...`);
+
+          // First, check if the log directory exists
+          const dirResponse = await fetch(
+            `/api/kubernetes/api/v1/nodes/${nodeName}/proxy/logs/${source.path}/`,
+            { headers: { Accept: 'text/html' } },
+          );
+
+          if (dirResponse.ok) {
+            const dirContent = await dirResponse.text();
+
+            if (source.path === 'containers') {
+              // Handle container logs directory
+              if (dirContent.includes('.log')) {
+                const containerFiles = dirContent.match(/href="[^"]*\.log"/g)?.slice(0, 5) || [];
+                if (containerFiles.length > 0) {
+                  const fileList = containerFiles
+                    .map((f) => f.replace(/href="|"/g, ''))
+                    .map((f) => (f.length > 80 ? f.substring(0, 80) + '...' : f))
+                    .join('\n');
+
+                  debugData.logs.push({
+                    component: 'container-logs',
+                    content: `=== Container Logs Available ===\n\nFound ${containerFiles.length} container log files:\n\n${fileList}\n\nNote: Use the Pods tab to view individual container logs with better formatting and filtering.`,
+                    timestamp: new Date().toISOString(),
+                    level: 'info',
+                  });
+                  console.log(`✅ Found ${containerFiles.length} container log files`);
+                }
+              }
+            } else {
+              // Handle specific log files for Kubernetes components
+              const availableFiles = dirContent.match(/href="[^"]*\.(log|txt)"/g) || [];
+
+              for (const file of availableFiles.slice(0, 3)) {
+                // Limit to first 3 files
+                const fileName = file.replace(/href="|"/g, '');
+                if (fileName === '.' || fileName === '..') continue;
+
+                try {
+                  const logResponse = await fetch(
+                    `/api/kubernetes/api/v1/nodes/${nodeName}/proxy/logs/${source.path}/${fileName}`,
+                    { headers: { Accept: 'text/plain' } },
+                  );
+
+                  if (logResponse.ok) {
+                    const logContent = await logResponse.text();
+
+                    if (logContent && logContent.trim().length > 50) {
+                      // Get last 20 lines for readability
+                      const lines = logContent.split('\n').filter((line) => line.trim());
+                      const recentLines = lines.slice(-20);
+
+                      debugData.logs.push({
+                        component: `${source.path}-${fileName}`,
+                        content: `=== ${source.name} (${fileName}) ===\n\n${recentLines.join(
+                          '\n',
+                        )}`,
+                        timestamp: new Date().toISOString(),
+                        level: detectLogLevel(logContent),
+                      });
+                      console.log(`✅ Successfully fetched ${source.name} log: ${fileName}`);
+                    }
+                  }
+                } catch (fileErr) {
+                  console.log(`📋 Could not fetch ${fileName} from ${source.name}:`, fileErr);
+                }
+              }
+            }
+          }
+        } catch (sourceErr) {
+          console.log(`📋 ${source.name} logs not available:`, sourceErr);
+        }
+      }
+
+      // Method 3: System Pods Information (instead of journal logs)
+      try {
+        const systemNamespaces = [
+          'kube-system',
+          'openshift-system',
+          'openshift-kube-apiserver',
+          'openshift-etcd',
+        ];
+
+        for (const namespace of systemNamespaces.slice(0, 2)) {
+          // Limit to first 2 namespaces
+          try {
+            const podsResponse = await fetch(
+              `/api/kubernetes/api/v1/namespaces/${namespace}/pods?fieldSelector=spec.nodeName=${nodeName}&limit=3`,
+            );
+
+            if (podsResponse.ok) {
+              const podsData = await podsResponse.json();
+              if (podsData.items && podsData.items.length > 0) {
+                const podList = podsData.items
+                  .slice(0, 3)
+                  .map((pod: any) => `• ${pod.metadata.name} (${pod.status.phase})`)
+                  .join('\n');
+
+                debugData.logs.push({
+                  component: `system-pods-${namespace}`,
+                  content: `=== System Pods in ${namespace} ===\n\n${podList}\n\nUse the Pods tab to view detailed logs for these system components.`,
+                  timestamp: new Date().toISOString(),
+                  level: 'info',
+                });
+                console.log(`✅ Found ${podsData.items.length} system pods in ${namespace}`);
+              }
+            }
+          } catch (podErr) {
+            console.log(`📋 Could not fetch pods from ${namespace}:`, podErr);
+          }
+        }
+      } catch (podError) {
+        console.log('📋 System pod information not available:', podError);
+      }
+
+      // Add helpful information about log access (always show this)
+      debugData.logs.push({
+        component: 'log-access-guide',
+        content: `=== Node Logging Information ===
+
+This view shows the same Kubernetes component logs available in the built-in OpenShift Console.
+
+📋 Available Log Sources:
+• Kubernetes API Server audit logs
+• Container runtime (CRI-O) logs  
+• OAuth and OpenShift API server logs
+• etcd database logs
+• Container logs (access via Pods tab)
+
+🔧 Additional Log Access Methods:
+• Command line: oc adm node-logs ${nodeName}
+• Debug node: oc debug node/${nodeName}
+• Pod logs: Use Pods tab for detailed container logs
+• Events: Check Events tab for node-related events
+
+💡 Note: This matches the same log access provided by the standard OpenShift Console node logs page.`,
+        timestamp: new Date().toISOString(),
+        level: 'info',
+      });
+
+      // Method 4: If no logs found, create a comprehensive node status log
+      if (debugData.logs.length === 0) {
+        try {
+          const nodeStatusResponse = await fetch(`/api/kubernetes/api/v1/nodes/${nodeName}`);
+          if (nodeStatusResponse.ok) {
+            const nodeStatusData = await nodeStatusResponse.json();
+            const statusLog = generateNodeStatusLog(nodeStatusData);
+
+            debugData.logs.push({
+              component: 'node-status-summary',
+              content: statusLog,
+              timestamp: new Date().toISOString(),
+              level: 'info',
+            });
+
+            console.log('📊 Generated comprehensive node status log as fallback');
+          }
+        } catch (statusErr) {
+          console.log('📋 Could not generate node status log:', statusErr);
+        }
+      }
+
+      console.log(
+        `🎯 Log fetch completed for ${nodeName}. Found ${debugData.logs.length} log sources.`,
+      );
+      debugData.logs.forEach((log: any, index: number) => {
+        console.log(`📋 Log ${index + 1}: ${log.component} (${log.content.length} chars)`);
+      });
 
       // Try to fetch system info
       try {
         const systemInfoResponse = await fetch(
-          `/api/kubernetes/api/v1/nodes/${nodeName}/proxy/stats/summary`
+          `/api/kubernetes/api/v1/nodes/${nodeName}/proxy/stats/summary`,
         );
         if (systemInfoResponse.ok) {
           const systemInfo = await systemInfoResponse.json();
           debugData.systemInfo = {
             filesystem: systemInfo.node?.fs || {},
             runtime: systemInfo.node?.runtime || {},
-            rlimit: systemInfo.node?.rlimit || {}
+            rlimit: systemInfo.node?.rlimit || {},
           };
         }
       } catch (err) {
         console.warn('Could not fetch system info:', err);
       }
-
     } catch (error) {
       console.warn('Error fetching debug data for node:', nodeName, error);
     }
@@ -721,44 +1097,50 @@ const NodesDashboard: React.FC = () => {
   }, []);
 
   const processNodeData = (
-    nodeData: any, 
-    nodePods: any[], 
-    nodeEvents: any[], 
-    nodeMetrics?: any, 
-    debugData?: any
+    nodeData: any,
+    nodePods: any[],
+    nodeEvents: any[],
+    nodeMetrics?: any,
+    debugData?: any,
   ): NodeDetail => {
     const name = nodeData.metadata.name;
     const labels = nodeData.metadata.labels || {};
     const annotations = nodeData.metadata.annotations || {};
-    
+
     // Extract role from labels
-    const role = labels['node-role.kubernetes.io/control-plane'] !== undefined ? 
-      'control-plane' : 'worker';
-    
+    const role =
+      labels['node-role.kubernetes.io/control-plane'] !== undefined ? 'control-plane' : 'worker';
+
     // Extract status
     const readyCondition = nodeData.status.conditions?.find((c: any) => c.type === 'Ready');
     const status = readyCondition?.status === 'True' ? 'Ready' : 'NotReady';
-    
+
     // Extract version
     const version = nodeData.status.nodeInfo?.kubeletVersion || 'Unknown';
-    
+
     // Calculate age
     const age = getAge(nodeData.metadata.creationTimestamp);
-    
+
     // Extract zone and instance type
-    const zone = labels['topology.kubernetes.io/zone'] || labels['failure-domain.beta.kubernetes.io/zone'] || 'Unknown';
-    const instanceType = labels['node.kubernetes.io/instance-type'] || labels['beta.kubernetes.io/instance-type'] || 'Unknown';
-    
+    const zone =
+      labels['topology.kubernetes.io/zone'] ||
+      labels['failure-domain.beta.kubernetes.io/zone'] ||
+      'Unknown';
+    const instanceType =
+      labels['node.kubernetes.io/instance-type'] ||
+      labels['beta.kubernetes.io/instance-type'] ||
+      'Unknown';
+
     // Extract system info
     const nodeInfo = nodeData.status.nodeInfo || {};
     const operatingSystem = nodeInfo.operatingSystem || 'Unknown';
     const architecture = nodeInfo.architecture || 'Unknown';
     const containerRuntime = nodeInfo.containerRuntimeVersion || 'Unknown';
-    
+
     // Check cordoned/drained status
     const cordoned = nodeData.spec.unschedulable === true;
     const drained = annotations['node.alpha.kubernetes.io/ttl'] === '0';
-    
+
     // Extract allocatable resources
     const allocatable = nodeData.status.allocatable || {};
     const allocatableResources = {
@@ -766,69 +1148,44 @@ const NodesDashboard: React.FC = () => {
       memory: allocatable.memory || '0Ki',
       pods: allocatable.pods || '0',
     };
-    
+
     // Process conditions
-    const conditions: NodeCondition[] = (nodeData.status.conditions || []).map((condition: any) => ({
-      type: condition.type,
-      status: condition.status,
-      lastTransitionTime: condition.lastTransitionTime,
-      reason: condition.reason || '',
-      message: condition.message || '',
-    }));
-    
+    const conditions: NodeCondition[] = (nodeData.status.conditions || []).map(
+      (condition: any) => ({
+        type: condition.type,
+        status: condition.status,
+        lastTransitionTime: condition.lastTransitionTime,
+        reason: condition.reason || '',
+        message: condition.message || '',
+      }),
+    );
+
     // Calculate metrics (simplified)
     const calculateNodeMetrics = (pods: any[], allocatable: any): NodeMetrics => {
-      const runningPods = pods.filter(p => p.status?.phase === 'Running').length;
-      
+      const runningPods = pods.filter((p) => p.status?.phase === 'Running').length;
+
       // Estimate CPU usage based on pod count and status
-      const cpuUsagePercent = Math.min(95, Math.max(5, 
-        (runningPods / parseInt(allocatable.pods || '110')) * 100 + 
-        Math.random() * 20 - 10
-      ));
-      
-      // Estimate memory usage 
-      const memoryUsagePercent = Math.min(90, Math.max(10, 
-        cpuUsagePercent * 0.8 + Math.random() * 15 - 7.5
-      ));
-      
+      const cpuUsagePercent = Math.min(
+        95,
+        Math.max(
+          5,
+          (runningPods / parseInt(allocatable.pods || '110')) * 100 + Math.random() * 20 - 10,
+        ),
+      );
+
+      // Estimate memory usage
+      const memoryUsagePercent = Math.min(
+        90,
+        Math.max(10, cpuUsagePercent * 0.8 + Math.random() * 15 - 7.5),
+      );
+
       const generateHistory = (currentValue: number) => {
         return Array.from({ length: 12 }, (_, i) => ({
           timestamp: Date.now() - (11 - i) * 5 * 60 * 1000, // 5-minute intervals
           value: Math.max(0, Math.min(100, currentValue + (Math.random() - 0.5) * 10)),
         }));
       };
-      
-      return {
-        cpu: {
-          current: Math.round(cpuUsagePercent),
-          history: generateHistory(cpuUsagePercent),
-        },
-        memory: {
-          current: Math.round(memoryUsagePercent),
-          history: generateHistory(memoryUsagePercent),
-        },
-      };
-    };
-    
-    const calculateNodeMetricsWithReal = (realMetrics: any, _pods: any[], allocatable: any): NodeMetrics => {
-      const cpuTotalMillicores = parseFloat(allocatable.cpu) * 1000; // Convert cores to millicores
-      const memoryTotalKi = parseFloat(allocatable.memory.replace('Ki', ''));
-      
-      // Parse real metrics from Kubernetes metrics API
-      const cpuUsageNanocores = parseFloat(realMetrics.usage?.cpu?.replace('n', '') || '0');
-      const memoryUsageKi = parseFloat(realMetrics.usage?.memory?.replace('Ki', '') || '0');
-      
-      // Calculate percentages based on real data
-      const cpuUsagePercent = Math.min(100, (cpuUsageNanocores / 1000000) / cpuTotalMillicores * 100);
-      const memoryUsagePercent = Math.min(100, (memoryUsageKi / memoryTotalKi) * 100);
-      
-      const generateHistory = (currentValue: number) => {
-        return Array.from({ length: 20 }, (_, i) => ({
-          timestamp: Date.now() - (20 - i) * 30000, // 30 second intervals
-          value: Math.max(0, Math.min(100, currentValue + (Math.random() - 0.5) * 5)), // Smaller variance for real data
-        }));
-      };
-      
+
       return {
         cpu: {
           current: Math.round(cpuUsagePercent),
@@ -841,24 +1198,65 @@ const NodesDashboard: React.FC = () => {
       };
     };
 
-    const metrics = nodeMetrics ? 
-      calculateNodeMetricsWithReal(nodeMetrics, nodePods, allocatable) : 
-      calculateNodeMetrics(nodePods, allocatable);
-    
+    const calculateNodeMetricsWithReal = (
+      realMetrics: any,
+      _pods: any[],
+      allocatable: any,
+    ): NodeMetrics => {
+      const cpuTotalMillicores = parseFloat(allocatable.cpu) * 1000; // Convert cores to millicores
+      const memoryTotalKi = parseFloat(allocatable.memory.replace('Ki', ''));
+
+      // Parse real metrics from Kubernetes metrics API
+      const cpuUsageNanocores = parseFloat(realMetrics.usage?.cpu?.replace('n', '') || '0');
+      const memoryUsageKi = parseFloat(realMetrics.usage?.memory?.replace('Ki', '') || '0');
+
+      // Calculate percentages based on real data
+      const cpuUsagePercent = Math.min(
+        100,
+        (cpuUsageNanocores / 1000000 / cpuTotalMillicores) * 100,
+      );
+      const memoryUsagePercent = Math.min(100, (memoryUsageKi / memoryTotalKi) * 100);
+
+      const generateHistory = (currentValue: number) => {
+        return Array.from({ length: 20 }, (_, i) => ({
+          timestamp: Date.now() - (20 - i) * 30000, // 30 second intervals
+          value: Math.max(0, Math.min(100, currentValue + (Math.random() - 0.5) * 5)), // Smaller variance for real data
+        }));
+      };
+
+      return {
+        cpu: {
+          current: Math.round(cpuUsagePercent),
+          history: generateHistory(cpuUsagePercent),
+        },
+        memory: {
+          current: Math.round(memoryUsagePercent),
+          history: generateHistory(memoryUsagePercent),
+        },
+      };
+    };
+
+    const metrics = nodeMetrics
+      ? calculateNodeMetricsWithReal(nodeMetrics, nodePods, allocatable)
+      : calculateNodeMetrics(nodePods, allocatable);
+
     // Process pods
     const pods: PodResource[] = nodePods.map((pod: any) => ({
       name: pod.metadata.name,
       namespace: pod.metadata.namespace,
       status: pod.status?.phase || 'Unknown',
       cpuUsage: Math.random() * 100, // Simplified
-      memoryUsage: Math.random() * 100, // Simplified  
-      restarts: pod.status?.containerStatuses?.reduce((sum: number, container: any) => 
-        sum + (container.restartCount || 0), 0) || 0,
+      memoryUsage: Math.random() * 100, // Simplified
+      restarts:
+        pod.status?.containerStatuses?.reduce(
+          (sum: number, container: any) => sum + (container.restartCount || 0),
+          0,
+        ) || 0,
       age: getAge(pod.metadata.creationTimestamp),
       containers: pod.spec?.containers?.length || 0,
       readyContainers: pod.status?.containerStatuses?.filter((c: any) => c.ready).length || 0,
     }));
-    
+
     // Process events
     const events: NodeEvent[] = nodeEvents.slice(0, 10).map((event: any) => ({
       type: event.type === 'Warning' ? 'Warning' : 'Normal',
@@ -867,11 +1265,13 @@ const NodesDashboard: React.FC = () => {
       timestamp: event.firstTimestamp || event.eventTime || new Date().toISOString(),
       count: event.count || 1,
     }));
-    
+
     // Extract network information
     const networkInfo = {
-      internalIP: nodeData.status.addresses?.find((addr: any) => addr.type === 'InternalIP')?.address,
-      externalIP: nodeData.status.addresses?.find((addr: any) => addr.type === 'ExternalIP')?.address,
+      internalIP: nodeData.status.addresses?.find((addr: any) => addr.type === 'InternalIP')
+        ?.address,
+      externalIP: nodeData.status.addresses?.find((addr: any) => addr.type === 'ExternalIP')
+        ?.address,
       hostname: nodeData.status.addresses?.find((addr: any) => addr.type === 'Hostname')?.address,
     };
 
@@ -885,9 +1285,9 @@ const NodesDashboard: React.FC = () => {
 
     // Determine resource pressure from conditions
     const resourcePressure = {
-      memory: conditions.some(c => c.type === 'MemoryPressure' && c.status === 'True'),
-      disk: conditions.some(c => c.type === 'DiskPressure' && c.status === 'True'),
-      pid: conditions.some(c => c.type === 'PIDPressure' && c.status === 'True'),
+      memory: conditions.some((c) => c.type === 'MemoryPressure' && c.status === 'True'),
+      disk: conditions.some((c) => c.type === 'DiskPressure' && c.status === 'True'),
+      pid: conditions.some((c) => c.type === 'PIDPressure' && c.status === 'True'),
     };
 
     return {
@@ -927,7 +1327,7 @@ const NodesDashboard: React.FC = () => {
     const diffMs = now.getTime() - created.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    
+
     if (diffDays > 0) {
       return `${diffDays}d`;
     } else if (diffHours > 0) {
@@ -939,7 +1339,7 @@ const NodesDashboard: React.FC = () => {
   };
 
   const getUptime = (conditions: any[]): string => {
-    const readyCondition = conditions.find(c => c.type === 'Ready');
+    const readyCondition = conditions.find((c) => c.type === 'Ready');
     if (readyCondition && readyCondition.lastTransitionTime) {
       return getAge(readyCondition.lastTransitionTime);
     }
@@ -961,26 +1361,41 @@ const NodesDashboard: React.FC = () => {
 
     try {
       setError(null);
-      
-      // Process data with enhanced debugging info
-      const nodesArray = watchedNodes ? (Array.isArray(watchedNodes) ? watchedNodes : [watchedNodes]) : [];
-      const podsArray = watchedPods ? (Array.isArray(watchedPods) ? watchedPods : [watchedPods]) : [];
-      const eventsArray = watchedEvents ? (Array.isArray(watchedEvents) ? watchedEvents : [watchedEvents]) : [];
-      
-      const processedNodes = await Promise.all(nodesArray.map(async (nodeData: any) => {
-        const nodePods = podsArray.filter((pod: any) => 
-          pod.spec.nodeName === nodeData.metadata.name
-        );
-        const nodeEvents = eventsArray.filter((event: any) => 
-          event.involvedObject?.name === nodeData.metadata.name &&
-          event.involvedObject?.kind === 'Node'
-        );
 
-        // Fetch additional debugging data for this node
-        const debugData = await fetchNodeDebugData(nodeData.metadata.name);
-        
-        return processNodeData(nodeData, nodePods, nodeEvents, undefined, debugData);
-      }));
+      // Process data with enhanced debugging info
+      const nodesArray = watchedNodes
+        ? Array.isArray(watchedNodes)
+          ? watchedNodes
+          : [watchedNodes]
+        : [];
+      const podsArray = watchedPods
+        ? Array.isArray(watchedPods)
+          ? watchedPods
+          : [watchedPods]
+        : [];
+      const eventsArray = watchedEvents
+        ? Array.isArray(watchedEvents)
+          ? watchedEvents
+          : [watchedEvents]
+        : [];
+
+      const processedNodes = await Promise.all(
+        nodesArray.map(async (nodeData: any) => {
+          const nodePods = podsArray.filter(
+            (pod: any) => pod.spec.nodeName === nodeData.metadata.name,
+          );
+          const nodeEvents = eventsArray.filter(
+            (event: any) =>
+              event.involvedObject?.name === nodeData.metadata.name &&
+              event.involvedObject?.kind === 'Node',
+          );
+
+          // Fetch additional debugging data for this node
+          const debugData = await fetchNodeDebugData(nodeData.metadata.name);
+
+          return processNodeData(nodeData, nodePods, nodeEvents, undefined, debugData);
+        }),
+      );
 
       setNodes(processedNodes);
       setLoading(false);
@@ -989,7 +1404,18 @@ const NodesDashboard: React.FC = () => {
       setError('Failed to process node data. Please check your connection.');
       setLoading(false);
     }
-  }, [watchedNodes, watchedPods, watchedEvents, nodesLoaded, podsLoaded, eventsLoaded, nodesError, podsError, eventsError, fetchNodeDebugData]);
+  }, [
+    watchedNodes,
+    watchedPods,
+    watchedEvents,
+    nodesLoaded,
+    podsLoaded,
+    eventsLoaded,
+    nodesError,
+    podsError,
+    eventsError,
+    fetchNodeDebugData,
+  ]);
 
   React.useEffect(() => {
     processWatchedData();
@@ -997,20 +1423,23 @@ const NodesDashboard: React.FC = () => {
 
   // Enhanced filtering and sorting
   const filteredAndSortedNodes = React.useMemo(() => {
-    let filtered = nodes.filter((node) => {
+    const filtered = nodes.filter((node) => {
       // Search filter
-      const matchesSearch = searchTerm === '' || 
+      const matchesSearch =
+        searchTerm === '' ||
         node.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         node.zone.toLowerCase().includes(searchTerm.toLowerCase()) ||
         node.instanceType.toLowerCase().includes(searchTerm.toLowerCase());
 
       // Status filter
-      const matchesStatus = statusFilter === 'all' ||
+      const matchesStatus =
+        statusFilter === 'all' ||
         (statusFilter === 'ready' && node.status === 'Ready') ||
         (statusFilter === 'notready' && node.status !== 'Ready');
 
       // Role filter
-      const matchesRole = roleFilter === 'all' ||
+      const matchesRole =
+        roleFilter === 'all' ||
         (roleFilter === 'control' && node.role.includes('control')) ||
         (roleFilter === 'worker' && !node.role.includes('control'));
 
@@ -1042,9 +1471,7 @@ const NodesDashboard: React.FC = () => {
               <Title headingLevel="h4" size="lg">
                 Loading Node Data
               </Title>
-              <EmptyStateBody>
-                Fetching real-time cluster node information...
-              </EmptyStateBody>
+              <EmptyStateBody>Fetching real-time cluster node information...</EmptyStateBody>
             </EmptyState>
           </CardBody>
         </Card>
@@ -1068,7 +1495,10 @@ const NodesDashboard: React.FC = () => {
       <Stack hasGutter>
         {/* Header */}
         <StackItem>
-          <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }} alignItems={{ default: 'alignItemsCenter' }}>
+          <Flex
+            justifyContent={{ default: 'justifyContentSpaceBetween' }}
+            alignItems={{ default: 'alignItemsCenter' }}
+          >
             <FlexItem>
               <Title headingLevel="h1" size="2xl">
                 <MonitoringIcon
@@ -1083,22 +1513,26 @@ const NodesDashboard: React.FC = () => {
             <FlexItem>
               <Flex alignItems={{ default: 'alignItemsCenter' }}>
                 <FlexItem>
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    padding: '8px 16px',
-                    backgroundColor: '#f0f8ff',
-                    borderRadius: '4px',
-                    border: '1px solid #bee1f4'
-                  }}>
-                    <div style={{ 
-                      width: '8px', 
-                      height: '8px', 
-                      backgroundColor: '#3e8635', 
-                      borderRadius: '50%', 
-                      marginRight: '8px',
-                      animation: 'pulse 2s infinite'
-                    }} />
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '8px 16px',
+                      backgroundColor: '#f0f8ff',
+                      borderRadius: '4px',
+                      border: '1px solid #bee1f4',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '8px',
+                        height: '8px',
+                        backgroundColor: '#3e8635',
+                        borderRadius: '50%',
+                        marginRight: '8px',
+                        animation: 'pulse 2s infinite',
+                      }}
+                    />
                     <span style={{ fontSize: '0.875rem', color: '#0066cc', fontWeight: 'bold' }}>
                       Real-time Data
                     </span>
@@ -1121,13 +1555,11 @@ const NodesDashboard: React.FC = () => {
                   <Title headingLevel="h2" size="xl" style={{ color: '#0066cc' }}>
                     {nodes.length}
                   </Title>
-                  <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>
-                    Total Nodes
-                  </div>
+                  <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>Total Nodes</div>
                 </CardBody>
               </Card>
             </GridItem>
-            
+
             <GridItem span={3}>
               <Card style={{ minHeight: '120px' }}>
                 <CardBody style={{ textAlign: 'center', padding: '16px' }}>
@@ -1135,15 +1567,13 @@ const NodesDashboard: React.FC = () => {
                     <CheckCircleIcon style={{ color: '#3e8635', fontSize: '2rem' }} />
                   </div>
                   <Title headingLevel="h2" size="xl" style={{ color: '#3e8635' }}>
-                    {nodes.filter(n => n.status === 'Ready').length}
+                    {nodes.filter((n) => n.status === 'Ready').length}
                   </Title>
-                  <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>
-                    Ready Nodes
-                  </div>
+                  <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>Ready Nodes</div>
                 </CardBody>
               </Card>
             </GridItem>
-            
+
             <GridItem span={3}>
               <Card style={{ minHeight: '120px' }}>
                 <CardBody style={{ textAlign: 'center', padding: '16px' }}>
@@ -1153,13 +1583,11 @@ const NodesDashboard: React.FC = () => {
                   <Title headingLevel="h2" size="xl" style={{ color: '#009639' }}>
                     {nodes.reduce((sum, node) => sum + node.pods.length, 0)}
                   </Title>
-                  <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>
-                    Running Pods
-                  </div>
+                  <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>Running Pods</div>
                 </CardBody>
               </Card>
             </GridItem>
-            
+
             <GridItem span={3}>
               <Card style={{ minHeight: '120px' }}>
                 <CardBody style={{ textAlign: 'center', padding: '16px' }}>
@@ -1167,11 +1595,9 @@ const NodesDashboard: React.FC = () => {
                     <ExclamationTriangleIcon style={{ color: '#f0ab00', fontSize: '2rem' }} />
                   </div>
                   <Title headingLevel="h2" size="xl" style={{ color: '#f0ab00' }}>
-                    {nodes.filter(n => n.cordoned || n.drained || n.status === 'NotReady').length}
+                    {nodes.filter((n) => n.cordoned || n.drained || n.status === 'NotReady').length}
                   </Title>
-                  <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>
-                    Needs Attention
-                  </div>
+                  <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>Needs Attention</div>
                 </CardBody>
               </Card>
             </GridItem>
@@ -1198,13 +1624,18 @@ const NodesDashboard: React.FC = () => {
                       isOpen={isStatusDropdownOpen}
                       onOpenChange={setIsStatusDropdownOpen}
                       toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                        <MenuToggle 
-                          ref={toggleRef} 
+                        <MenuToggle
+                          ref={toggleRef}
                           onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
                           isExpanded={isStatusDropdownOpen}
                         >
                           <FilterIcon style={{ marginRight: '8px' }} />
-                          Status: {statusFilter === 'all' ? 'All' : statusFilter === 'ready' ? 'Ready' : 'Not Ready'}
+                          Status:{' '}
+                          {statusFilter === 'all'
+                            ? 'All'
+                            : statusFilter === 'ready'
+                            ? 'Ready'
+                            : 'Not Ready'}
                         </MenuToggle>
                       )}
                       onSelect={(_event, value) => {
@@ -1223,13 +1654,18 @@ const NodesDashboard: React.FC = () => {
                       isOpen={isRoleDropdownOpen}
                       onOpenChange={setIsRoleDropdownOpen}
                       toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                        <MenuToggle 
-                          ref={toggleRef} 
+                        <MenuToggle
+                          ref={toggleRef}
                           onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
                           isExpanded={isRoleDropdownOpen}
                         >
                           <ServerIcon style={{ marginRight: '8px' }} />
-                          Role: {roleFilter === 'all' ? 'All' : roleFilter === 'control' ? 'Control Plane' : 'Worker'}
+                          Role:{' '}
+                          {roleFilter === 'all'
+                            ? 'All'
+                            : roleFilter === 'control'
+                            ? 'Control Plane'
+                            : 'Worker'}
                         </MenuToggle>
                       )}
                       onSelect={(_event, value) => {
@@ -1274,7 +1710,10 @@ const NodesDashboard: React.FC = () => {
           <StackItem>
             <Card style={{ minHeight: '600px' }}>
               <CardTitle>
-                <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }} alignItems={{ default: 'alignItemsCenter' }}>
+                <Flex
+                  justifyContent={{ default: 'justifyContentSpaceBetween' }}
+                  alignItems={{ default: 'alignItemsCenter' }}
+                >
                   <FlexItem>
                     <Title headingLevel="h3" size="lg">
                       <ServerIcon style={{ marginRight: '8px', color: '#0066cc' }} />
@@ -1298,8 +1737,10 @@ const NodesDashboard: React.FC = () => {
                 </Flex>
               </CardTitle>
               <CardBody>
-                <Tabs activeKey={activeTab} onSelect={(_event, tabIndex) => setActiveTab(tabIndex as string)}>
-                  
+                <Tabs
+                  activeKey={activeTab}
+                  onSelect={(_event, tabIndex) => setActiveTab(tabIndex as string)}
+                >
                   {/* Overview Tab */}
                   <Tab eventKey="overview" title={<TabTitleText>Overview</TabTitleText>}>
                     <Grid hasGutter style={{ marginTop: '16px' }}>
@@ -1315,33 +1756,45 @@ const NodesDashboard: React.FC = () => {
                             <DescriptionList isHorizontal>
                               <DescriptionListGroup>
                                 <DescriptionListTerm>Container Runtime</DescriptionListTerm>
-                                <DescriptionListDescription>{selectedNode.containerRuntime}</DescriptionListDescription>
+                                <DescriptionListDescription>
+                                  {selectedNode.containerRuntime}
+                                </DescriptionListDescription>
                               </DescriptionListGroup>
                               <DescriptionListGroup>
                                 <DescriptionListTerm>Kernel Version</DescriptionListTerm>
-                                <DescriptionListDescription>{selectedNode.version}</DescriptionListDescription>
+                                <DescriptionListDescription>
+                                  {selectedNode.version}
+                                </DescriptionListDescription>
                               </DescriptionListGroup>
                               <DescriptionListGroup>
                                 <DescriptionListTerm>Operating System</DescriptionListTerm>
-                                <DescriptionListDescription>{selectedNode.operatingSystem}</DescriptionListDescription>
+                                <DescriptionListDescription>
+                                  {selectedNode.operatingSystem}
+                                </DescriptionListDescription>
                               </DescriptionListGroup>
                               <DescriptionListGroup>
                                 <DescriptionListTerm>Architecture</DescriptionListTerm>
-                                <DescriptionListDescription>{selectedNode.architecture}</DescriptionListDescription>
+                                <DescriptionListDescription>
+                                  {selectedNode.architecture}
+                                </DescriptionListDescription>
                               </DescriptionListGroup>
                               <DescriptionListGroup>
                                 <DescriptionListTerm>Zone</DescriptionListTerm>
-                                <DescriptionListDescription>{selectedNode.zone}</DescriptionListDescription>
+                                <DescriptionListDescription>
+                                  {selectedNode.zone}
+                                </DescriptionListDescription>
                               </DescriptionListGroup>
                               <DescriptionListGroup>
                                 <DescriptionListTerm>Instance Type</DescriptionListTerm>
-                                <DescriptionListDescription>{selectedNode.instanceType}</DescriptionListDescription>
+                                <DescriptionListDescription>
+                                  {selectedNode.instanceType}
+                                </DescriptionListDescription>
                               </DescriptionListGroup>
                             </DescriptionList>
                           </CardBody>
                         </Card>
                       </GridItem>
-                      
+
                       <GridItem span={6}>
                         <Card isCompact>
                           <CardTitle>
@@ -1354,15 +1807,21 @@ const NodesDashboard: React.FC = () => {
                             <DescriptionList isHorizontal>
                               <DescriptionListGroup>
                                 <DescriptionListTerm>CPU Capacity</DescriptionListTerm>
-                                <DescriptionListDescription>{selectedNode.allocatableResources.cpu}</DescriptionListDescription>
+                                <DescriptionListDescription>
+                                  {selectedNode.allocatableResources.cpu}
+                                </DescriptionListDescription>
                               </DescriptionListGroup>
                               <DescriptionListGroup>
                                 <DescriptionListTerm>Memory Capacity</DescriptionListTerm>
-                                <DescriptionListDescription>{selectedNode.allocatableResources.memory}</DescriptionListDescription>
+                                <DescriptionListDescription>
+                                  {selectedNode.allocatableResources.memory}
+                                </DescriptionListDescription>
                               </DescriptionListGroup>
                               <DescriptionListGroup>
                                 <DescriptionListTerm>Max Pods</DescriptionListTerm>
-                                <DescriptionListDescription>{selectedNode.allocatableResources.pods}</DescriptionListDescription>
+                                <DescriptionListDescription>
+                                  {selectedNode.allocatableResources.pods}
+                                </DescriptionListDescription>
                               </DescriptionListGroup>
                               <DescriptionListGroup>
                                 <DescriptionListTerm>Current Pods</DescriptionListTerm>
@@ -1384,13 +1843,15 @@ const NodesDashboard: React.FC = () => {
                               </DescriptionListGroup>
                               <DescriptionListGroup>
                                 <DescriptionListTerm>Node Age</DescriptionListTerm>
-                                <DescriptionListDescription>{selectedNode.age}</DescriptionListDescription>
+                                <DescriptionListDescription>
+                                  {selectedNode.age}
+                                </DescriptionListDescription>
                               </DescriptionListGroup>
                             </DescriptionList>
                           </CardBody>
                         </Card>
                       </GridItem>
-                      
+
                       {/* Network & Debug Information */}
                       <GridItem span={12}>
                         <Grid hasGutter>
@@ -1398,7 +1859,9 @@ const NodesDashboard: React.FC = () => {
                             <Card isCompact>
                               <CardTitle>
                                 <Title headingLevel="h4" size="md">
-                                  <InfoCircleIcon style={{ marginRight: '8px', color: '#0066cc' }} />
+                                  <InfoCircleIcon
+                                    style={{ marginRight: '8px', color: '#0066cc' }}
+                                  />
                                   Network & Debug Info
                                 </Title>
                               </CardTitle>
@@ -1407,19 +1870,25 @@ const NodesDashboard: React.FC = () => {
                                   <DescriptionListGroup>
                                     <DescriptionListTerm>Internal IP</DescriptionListTerm>
                                     <DescriptionListDescription>
-                                      <Badge color="blue">{selectedNode.networkInfo.internalIP || 'N/A'}</Badge>
+                                      <Badge color="blue">
+                                        {selectedNode.networkInfo.internalIP || 'N/A'}
+                                      </Badge>
                                     </DescriptionListDescription>
                                   </DescriptionListGroup>
                                   <DescriptionListGroup>
                                     <DescriptionListTerm>External IP</DescriptionListTerm>
                                     <DescriptionListDescription>
-                                      <Badge color="green">{selectedNode.networkInfo.externalIP || 'N/A'}</Badge>
+                                      <Badge color="green">
+                                        {selectedNode.networkInfo.externalIP || 'N/A'}
+                                      </Badge>
                                     </DescriptionListDescription>
                                   </DescriptionListGroup>
                                   <DescriptionListGroup>
                                     <DescriptionListTerm>Alerts</DescriptionListTerm>
                                     <DescriptionListDescription>
-                                      <Badge color={selectedNode.alerts.length > 0 ? 'red' : 'green'}>
+                                      <Badge
+                                        color={selectedNode.alerts.length > 0 ? 'red' : 'green'}
+                                      >
                                         {selectedNode.alerts.length} alerts
                                       </Badge>
                                     </DescriptionListDescription>
@@ -1427,7 +1896,9 @@ const NodesDashboard: React.FC = () => {
                                   <DescriptionListGroup>
                                     <DescriptionListTerm>Taints</DescriptionListTerm>
                                     <DescriptionListDescription>
-                                      <Badge color={selectedNode.taints.length > 0 ? 'orange' : 'green'}>
+                                      <Badge
+                                        color={selectedNode.taints.length > 0 ? 'orange' : 'green'}
+                                      >
                                         {selectedNode.taints.length} taints
                                       </Badge>
                                     </DescriptionListDescription>
@@ -1449,7 +1920,11 @@ const NodesDashboard: React.FC = () => {
                                   <DescriptionListGroup>
                                     <DescriptionListTerm>Memory Pressure</DescriptionListTerm>
                                     <DescriptionListDescription>
-                                      <Badge color={selectedNode.resourcePressure.memory ? 'red' : 'green'}>
+                                      <Badge
+                                        color={
+                                          selectedNode.resourcePressure.memory ? 'red' : 'green'
+                                        }
+                                      >
                                         {selectedNode.resourcePressure.memory ? 'YES' : 'NO'}
                                       </Badge>
                                     </DescriptionListDescription>
@@ -1457,7 +1932,9 @@ const NodesDashboard: React.FC = () => {
                                   <DescriptionListGroup>
                                     <DescriptionListTerm>Disk Pressure</DescriptionListTerm>
                                     <DescriptionListDescription>
-                                      <Badge color={selectedNode.resourcePressure.disk ? 'red' : 'green'}>
+                                      <Badge
+                                        color={selectedNode.resourcePressure.disk ? 'red' : 'green'}
+                                      >
                                         {selectedNode.resourcePressure.disk ? 'YES' : 'NO'}
                                       </Badge>
                                     </DescriptionListDescription>
@@ -1465,7 +1942,9 @@ const NodesDashboard: React.FC = () => {
                                   <DescriptionListGroup>
                                     <DescriptionListTerm>PID Pressure</DescriptionListTerm>
                                     <DescriptionListDescription>
-                                      <Badge color={selectedNode.resourcePressure.pid ? 'red' : 'green'}>
+                                      <Badge
+                                        color={selectedNode.resourcePressure.pid ? 'red' : 'green'}
+                                      >
                                         {selectedNode.resourcePressure.pid ? 'YES' : 'NO'}
                                       </Badge>
                                     </DescriptionListDescription>
@@ -1473,18 +1952,24 @@ const NodesDashboard: React.FC = () => {
                                   <DescriptionListGroup>
                                     <DescriptionListTerm>Overall Health</DescriptionListTerm>
                                     <DescriptionListDescription>
-                                      <Badge color={
-                                        selectedNode.status === 'Ready' && 
-                                        !selectedNode.resourcePressure.memory && 
-                                        !selectedNode.resourcePressure.disk && 
-                                        !selectedNode.resourcePressure.pid && 
-                                        selectedNode.alerts.length === 0 ? 'green' : 'orange'
-                                      }>
-                                        {selectedNode.status === 'Ready' && 
-                                         !selectedNode.resourcePressure.memory && 
-                                         !selectedNode.resourcePressure.disk && 
-                                         !selectedNode.resourcePressure.pid && 
-                                         selectedNode.alerts.length === 0 ? 'Healthy' : 'Needs Attention'}
+                                      <Badge
+                                        color={
+                                          selectedNode.status === 'Ready' &&
+                                          !selectedNode.resourcePressure.memory &&
+                                          !selectedNode.resourcePressure.disk &&
+                                          !selectedNode.resourcePressure.pid &&
+                                          selectedNode.alerts.length === 0
+                                            ? 'green'
+                                            : 'orange'
+                                        }
+                                      >
+                                        {selectedNode.status === 'Ready' &&
+                                        !selectedNode.resourcePressure.memory &&
+                                        !selectedNode.resourcePressure.disk &&
+                                        !selectedNode.resourcePressure.pid &&
+                                        selectedNode.alerts.length === 0
+                                          ? 'Healthy'
+                                          : 'Needs Attention'}
                                       </Badge>
                                     </DescriptionListDescription>
                                   </DescriptionListGroup>
@@ -1508,29 +1993,47 @@ const NodesDashboard: React.FC = () => {
                             <Grid hasGutter>
                               <GridItem span={6}>
                                 <div style={{ marginBottom: '16px' }}>
-                                  <span style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>CPU Usage</span>
+                                  <span style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>
+                                    CPU Usage
+                                  </span>
                                   <Progress
                                     value={selectedNode.metrics.cpu.current}
                                     title="CPU"
                                     size={ProgressSize.lg}
-                                    variant={selectedNode.metrics.cpu.current > 80 ? 'danger' : selectedNode.metrics.cpu.current > 60 ? 'warning' : 'success'}
+                                    variant={
+                                      selectedNode.metrics.cpu.current > 80
+                                        ? 'danger'
+                                        : selectedNode.metrics.cpu.current > 60
+                                        ? 'warning'
+                                        : 'success'
+                                    }
                                   />
                                   <span style={{ fontSize: '0.75rem', color: '#6a6e73' }}>
-                                    {selectedNode.metrics.cpu.current}% of {selectedNode.allocatableResources.cpu}
+                                    {selectedNode.metrics.cpu.current}% of{' '}
+                                    {selectedNode.allocatableResources.cpu}
                                   </span>
                                 </div>
                               </GridItem>
                               <GridItem span={6}>
                                 <div style={{ marginBottom: '16px' }}>
-                                  <span style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>Memory Usage</span>
+                                  <span style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>
+                                    Memory Usage
+                                  </span>
                                   <Progress
                                     value={selectedNode.metrics.memory.current}
                                     title="Memory"
                                     size={ProgressSize.lg}
-                                    variant={selectedNode.metrics.memory.current > 80 ? 'danger' : selectedNode.metrics.memory.current > 60 ? 'warning' : 'success'}
+                                    variant={
+                                      selectedNode.metrics.memory.current > 80
+                                        ? 'danger'
+                                        : selectedNode.metrics.memory.current > 60
+                                        ? 'warning'
+                                        : 'success'
+                                    }
                                   />
                                   <span style={{ fontSize: '0.75rem', color: '#6a6e73' }}>
-                                    {selectedNode.metrics.memory.current}% of {selectedNode.allocatableResources.memory}
+                                    {selectedNode.metrics.memory.current}% of{' '}
+                                    {selectedNode.allocatableResources.memory}
                                   </span>
                                 </div>
                               </GridItem>
@@ -1542,7 +2045,10 @@ const NodesDashboard: React.FC = () => {
                   </Tab>
 
                   {/* Conditions Tab */}
-                  <Tab eventKey="conditions" title={<TabTitleText>Health & Conditions</TabTitleText>}>
+                  <Tab
+                    eventKey="conditions"
+                    title={<TabTitleText>Health & Conditions</TabTitleText>}
+                  >
                     <div style={{ marginTop: '16px' }}>
                       <Title headingLevel="h4" size="md" style={{ marginBottom: '16px' }}>
                         <BellIcon style={{ marginRight: '8px', color: '#0066cc' }} />
@@ -1562,14 +2068,20 @@ const NodesDashboard: React.FC = () => {
                           {selectedNode.conditions.map((condition, index) => (
                             <Tr key={index}>
                               <Td>
-                                <Badge color={condition.status === 'True' ? 'green' : condition.status === 'False' ? 'red' : 'orange'}>
+                                <Badge
+                                  color={
+                                    condition.status === 'True'
+                                      ? 'green'
+                                      : condition.status === 'False'
+                                      ? 'red'
+                                      : 'orange'
+                                  }
+                                >
                                   {condition.type}
                                 </Badge>
                               </Td>
                               <Td>{condition.status}</Td>
-                              <Td>
-                                                                          {new Date(condition.lastTransitionTime).toLocaleString()}
-                              </Td>
+                              <Td>{new Date(condition.lastTransitionTime).toLocaleString()}</Td>
                               <Td>{condition.reason}</Td>
                               <Td style={{ maxWidth: '300px', wordBreak: 'break-word' }}>
                                 {condition.message}
@@ -1582,7 +2094,10 @@ const NodesDashboard: React.FC = () => {
                   </Tab>
 
                   {/* Pods Tab */}
-                  <Tab eventKey="pods" title={<TabTitleText>Pods ({selectedNode.pods.length})</TabTitleText>}>
+                  <Tab
+                    eventKey="pods"
+                    title={<TabTitleText>Pods ({selectedNode.pods.length})</TabTitleText>}
+                  >
                     <div style={{ marginTop: '16px' }}>
                       <Title headingLevel="h4" size="md" style={{ marginBottom: '16px' }}>
                         <CubesIcon style={{ marginRight: '8px', color: '#0066cc' }} />
@@ -1607,14 +2122,26 @@ const NodesDashboard: React.FC = () => {
                                 <Badge>{pod.namespace}</Badge>
                               </Td>
                               <Td>
-                                <Badge color={pod.status === 'Running' ? 'green' : pod.status === 'Pending' ? 'orange' : 'red'}>
+                                <Badge
+                                  color={
+                                    pod.status === 'Running'
+                                      ? 'green'
+                                      : pod.status === 'Pending'
+                                      ? 'orange'
+                                      : 'red'
+                                  }
+                                >
                                   {pod.status}
                                 </Badge>
                               </Td>
-                              <Td>{pod.readyContainers}/{pod.containers}</Td>
+                              <Td>
+                                {pod.readyContainers}/{pod.containers}
+                              </Td>
                               <Td>
                                 {pod.restarts > 0 ? (
-                                  <Badge color={pod.restarts > 5 ? 'red' : 'orange'}>{pod.restarts}</Badge>
+                                  <Badge color={pod.restarts > 5 ? 'red' : 'orange'}>
+                                    {pod.restarts}
+                                  </Badge>
                                 ) : (
                                   <Badge color="green">0</Badge>
                                 )}
@@ -1665,25 +2192,29 @@ const NodesDashboard: React.FC = () => {
                                 <Td>
                                   <Badge>{event.count}</Badge>
                                 </Td>
-                                <Td>
-                                                                            {new Date(event.timestamp).toLocaleString()}
-                                </Td>
+                                <Td>{new Date(event.timestamp).toLocaleString()}</Td>
                               </Tr>
                             ))}
                           </Tbody>
                         </Table>
                       ) : (
                         <EmptyState>
-                          <EmptyStateBody>
-                            No recent events found for this node.
-                          </EmptyStateBody>
+                          <EmptyStateBody>No recent events found for this node.</EmptyStateBody>
                         </EmptyState>
                       )}
                     </div>
                   </Tab>
 
                   {/* Alerts Tab */}
-                  <Tab eventKey="alerts" title={<TabTitleText><BellIcon style={{ marginRight: '8px' }} />Alerts ({selectedNode.alerts.length})</TabTitleText>}>
+                  <Tab
+                    eventKey="alerts"
+                    title={
+                      <TabTitleText>
+                        <BellIcon style={{ marginRight: '8px' }} />
+                        Alerts ({selectedNode.alerts.length})
+                      </TabTitleText>
+                    }
+                  >
                     <div style={{ marginTop: '16px' }}>
                       <Title headingLevel="h4" size="md" style={{ marginBottom: '16px' }}>
                         <BellIcon style={{ marginRight: '8px', color: '#d73502' }} />
@@ -1691,8 +2222,12 @@ const NodesDashboard: React.FC = () => {
                       </Title>
                       {selectedNode.alerts.length === 0 ? (
                         <EmptyState>
-                          <Title headingLevel="h4" size="lg">No Alerts</Title>
-                          <EmptyStateBody>No alerts found for this node. This is a good thing!</EmptyStateBody>
+                          <Title headingLevel="h4" size="lg">
+                            No Alerts
+                          </Title>
+                          <EmptyStateBody>
+                            No alerts found for this node. This is a good thing!
+                          </EmptyStateBody>
                         </EmptyState>
                       ) : (
                         <Table aria-label="Alerts table">
@@ -1710,7 +2245,15 @@ const NodesDashboard: React.FC = () => {
                             {selectedNode.alerts.map((alert, index) => (
                               <Tr key={index}>
                                 <Td>
-                                  <Badge color={alert.severity === 'critical' ? 'red' : alert.severity === 'warning' ? 'orange' : 'blue'}>
+                                  <Badge
+                                    color={
+                                      alert.severity === 'critical'
+                                        ? 'red'
+                                        : alert.severity === 'warning'
+                                        ? 'orange'
+                                        : 'blue'
+                                    }
+                                  >
                                     {alert.severity.toUpperCase()}
                                   </Badge>
                                 </Td>
@@ -1722,9 +2265,7 @@ const NodesDashboard: React.FC = () => {
                                 <Td>
                                   <Badge>{alert.count}</Badge>
                                 </Td>
-                                <Td>
-                                                                            {new Date(alert.timestamp).toLocaleString()}
-                                </Td>
+                                <Td>{new Date(alert.timestamp).toLocaleString()}</Td>
                               </Tr>
                             ))}
                           </Tbody>
@@ -1734,49 +2275,436 @@ const NodesDashboard: React.FC = () => {
                   </Tab>
 
                   {/* Logs Tab */}
-                  <Tab eventKey="logs" title={<TabTitleText><ListIcon style={{ marginRight: '8px' }} />Logs ({selectedNode.logs.length})</TabTitleText>}>
+                  <Tab
+                    eventKey="logs"
+                    title={
+                      <TabTitleText>
+                        <MonitoringIcon style={{ marginRight: '8px' }} />
+                        Logs ({selectedNode.logs.length})
+                      </TabTitleText>
+                    }
+                  >
                     <div style={{ marginTop: '16px' }}>
-                      <Title headingLevel="h4" size="md" style={{ marginBottom: '16px' }}>
-                        <ListIcon style={{ marginRight: '8px', color: '#0066cc' }} />
-                        System Component Logs
-                      </Title>
+                      <Flex
+                        justifyContent={{ default: 'justifyContentSpaceBetween' }}
+                        alignItems={{ default: 'alignItemsCenter' }}
+                        style={{ marginBottom: '20px' }}
+                      >
+                        <FlexItem>
+                          <Title headingLevel="h4" size="md">
+                            <MonitoringIcon style={{ marginRight: '8px', color: '#0066cc' }} />
+                            Node System Logs
+                          </Title>
+                        </FlexItem>
+                        {selectedNode.logs.length > 0 && (
+                          <FlexItem>
+                            <Flex alignItems={{ default: 'alignItemsCenter' }}>
+                              <FlexItem style={{ marginRight: '8px' }}>
+                                <Badge color="green">
+                                  {selectedNode.logs.length} log source
+                                  {selectedNode.logs.length !== 1 ? 's' : ''}
+                                </Badge>
+                              </FlexItem>
+                              {selectedNode.logs.some((log) =>
+                                log.component.includes('systemd-journal'),
+                              ) && (
+                                <FlexItem>
+                                  <Badge color="blue">📋 Journal Available</Badge>
+                                </FlexItem>
+                              )}
+                            </Flex>
+                          </FlexItem>
+                        )}
+                      </Flex>
+
+                      {selectedNode.logs.length > 0 &&
+                        selectedNode.logs.some((log) =>
+                          log.component.includes('systemd-journal'),
+                        ) && (
+                          <Alert
+                            variant="info"
+                            title="systemd Journal Logs Available"
+                            style={{ marginBottom: '20px' }}
+                          >
+                            <p>
+                              This node's systemd journal logs are accessible! Journal logs provide
+                              detailed system service information including:
+                            </p>
+                            <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
+                              <li>
+                                <strong>Service Status:</strong> kubelet, crio, NetworkManager, and
+                                more
+                              </li>
+                              <li>
+                                <strong>System Events:</strong> Boot processes, service
+                                starts/stops, errors
+                              </li>
+                              <li>
+                                <strong>Detailed Timing:</strong> Precise timestamps for all system
+                                events
+                              </li>
+                              <li>
+                                <strong>Structured Data:</strong> Machine-readable log format with
+                                metadata
+                              </li>
+                            </ul>
+                          </Alert>
+                        )}
+
                       {selectedNode.logs.length === 0 ? (
-                        <EmptyState>
-                          <Title headingLevel="h4" size="lg">No Logs Available</Title>
-                          <EmptyStateBody>
-                            Logs are not available for this node. This may be due to permissions or proxy configuration.
-                            Logs require node proxy access which may not be available in all OpenShift environments.
-                          </EmptyStateBody>
-                        </EmptyState>
-                      ) : (
-                        selectedNode.logs.map((log, index) => (
-                          <Card key={index} style={{ marginBottom: '16px' }}>
-                            <CardTitle>
-                              <Title headingLevel="h5" size="md">
-                                {log.component} - {new Date(log.timestamp).toLocaleString()}
+                        <Card>
+                          <CardBody>
+                            <EmptyState>
+                              <div
+                                style={{ fontSize: '48px', color: '#6a6e73', marginBottom: '16px' }}
+                              >
+                                🔒
+                              </div>
+                              <Title headingLevel="h4" size="lg">
+                                Node Logs Restricted
                               </Title>
-                            </CardTitle>
-                            <CardBody>
-                              <pre style={{ 
-                                fontSize: '0.75rem', 
-                                backgroundColor: '#f5f5f5', 
-                                padding: '12px', 
-                                borderRadius: '4px',
-                                maxHeight: '400px',
-                                overflow: 'auto',
-                                lineHeight: '1.4'
-                              }}>
-                                {log.content}
-                              </pre>
-                            </CardBody>
-                          </Card>
-                        ))
+                              <EmptyStateBody>
+                                <p style={{ fontSize: '1rem', marginBottom: '20px' }}>
+                                  Direct node log access is restricted in this OpenShift cluster for
+                                  security reasons.
+                                </p>
+                                <Card
+                                  isCompact
+                                  style={{ textAlign: 'left', backgroundColor: '#f8f9fa' }}
+                                >
+                                  <CardTitle>
+                                    <Title headingLevel="h6" size="md">
+                                      💡 Alternative Ways to Access Node Logs & Journal
+                                    </Title>
+                                  </CardTitle>
+                                  <CardBody>
+                                    <Stack hasGutter>
+                                      <StackItem>
+                                        <strong>📟 Command Line Access (systemd journal):</strong>
+                                        <div
+                                          style={{
+                                            fontFamily: 'monospace',
+                                            fontSize: '0.85rem',
+                                            marginTop: '8px',
+                                            padding: '8px',
+                                            backgroundColor: '#2d3748',
+                                            color: '#e2e8f0',
+                                            borderRadius: '4px',
+                                          }}
+                                        >
+                                          <div># General node logs</div>
+                                          <div>oc adm node-logs {selectedNode.name}</div>
+                                          <div></div>
+                                          <div># Specific systemd journal units</div>
+                                          <div>oc adm node-logs {selectedNode.name} -u kubelet</div>
+                                          <div>oc adm node-logs {selectedNode.name} -u crio</div>
+                                          <div>
+                                            oc adm node-logs {selectedNode.name} -u NetworkManager
+                                          </div>
+                                          <div>
+                                            oc adm node-logs {selectedNode.name} -u systemd-resolved
+                                          </div>
+                                          <div></div>
+                                          <div># Follow logs in real-time</div>
+                                          <div>
+                                            oc adm node-logs {selectedNode.name} -u kubelet -f
+                                          </div>
+                                          <div></div>
+                                          <div># Get last 100 lines from journal</div>
+                                          <div>oc adm node-logs {selectedNode.name} --tail=100</div>
+                                        </div>
+                                      </StackItem>
+                                      <StackItem>
+                                        <strong>📋 Journal Log Units Available:</strong>
+                                        <div
+                                          style={{
+                                            marginTop: '8px',
+                                            padding: '8px',
+                                            backgroundColor: '#e8f4f8',
+                                            borderRadius: '4px',
+                                          }}
+                                        >
+                                          <ul
+                                            style={{
+                                              marginTop: '4px',
+                                              paddingLeft: '20px',
+                                              fontSize: '0.9rem',
+                                            }}
+                                          >
+                                            <li>
+                                              <strong>kubelet</strong> - Kubernetes node agent
+                                            </li>
+                                            <li>
+                                              <strong>crio</strong> - Container runtime
+                                            </li>
+                                            <li>
+                                              <strong>NetworkManager</strong> - Network management
+                                            </li>
+                                            <li>
+                                              <strong>systemd-resolved</strong> - DNS resolution
+                                            </li>
+                                            <li>
+                                              <strong>dbus</strong> - System message bus
+                                            </li>
+                                            <li>
+                                              <strong>sshd</strong> - SSH daemon
+                                            </li>
+                                            <li>
+                                              <strong>chronyd</strong> - NTP time sync
+                                            </li>
+                                          </ul>
+                                        </div>
+                                      </StackItem>
+                                      <StackItem>
+                                        <strong>📊 Alternative Data Sources:</strong>
+                                        <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
+                                          <li>
+                                            Check the <strong>Events</strong> tab for recent node
+                                            activity
+                                          </li>
+                                          <li>
+                                            Monitor the <strong>Alerts</strong> tab for health
+                                            warnings
+                                          </li>
+                                          <li>
+                                            View the <strong>Conditions</strong> tab for system
+                                            status
+                                          </li>
+                                        </ul>
+                                      </StackItem>
+                                    </Stack>
+                                  </CardBody>
+                                </Card>
+                              </EmptyStateBody>
+                            </EmptyState>
+                          </CardBody>
+                        </Card>
+                      ) : (
+                        <Stack hasGutter>
+                          {selectedNode.logs.map((log, index) => {
+                            const getLogLevelIcon = (level?: string) => {
+                              switch (level?.toLowerCase()) {
+                                case 'error':
+                                case 'fatal':
+                                  return { icon: '🔴', color: '#c9190b', bgColor: '#fdf2f2' };
+                                case 'warn':
+                                case 'warning':
+                                  return { icon: '🟡', color: '#f0ab00', bgColor: '#fdf7e7' };
+                                case 'info':
+                                case 'information':
+                                  return { icon: '🔵', color: '#0066cc', bgColor: '#e7f1fa' };
+                                case 'debug':
+                                  return { icon: '🟣', color: '#8476d1', bgColor: '#f4f1ff' };
+                                default:
+                                  return { icon: '📄', color: '#72767b', bgColor: '#f8f9fa' };
+                              }
+                            };
+
+                            const getLogTypeIcon = (component: string) => {
+                              if (component === 'journal-logs-info') {
+                                return { icon: '💡', description: 'Journal Access Guide' };
+                              }
+                              if (component.includes('systemd-journal')) {
+                                return { icon: '📋', description: 'systemd Journal' };
+                              }
+                              if (component.includes('kubelet')) {
+                                return { icon: '⚙️', description: 'Kubelet Service' };
+                              }
+                              if (component.includes('crio')) {
+                                return { icon: '🐳', description: 'Container Runtime' };
+                              }
+                              if (component.includes('network')) {
+                                return { icon: '🌐', description: 'Network Service' };
+                              }
+                              if (component.includes('kernel') || component.includes('dmesg')) {
+                                return { icon: '🔧', description: 'Kernel/System' };
+                              }
+                              if (component.includes('audit')) {
+                                return { icon: '🔍', description: 'Audit Logs' };
+                              }
+                              return { icon: '📄', description: 'System Log' };
+                            };
+
+                            const logStyle = getLogLevelIcon(log.level);
+                            const logType = getLogTypeIcon(log.component);
+                            const logLines = log.content.split('\n').filter((line) => line.trim());
+                            const isJournalLog = log.component.includes('systemd-journal');
+                            const isInfoLog = log.component === 'journal-logs-info';
+
+                            return (
+                              <StackItem key={index}>
+                                <Card
+                                  style={{
+                                    border: isInfoLog
+                                      ? '2px solid #17a2b8'
+                                      : isJournalLog
+                                      ? '2px solid #28a745'
+                                      : `2px solid ${logStyle.color}20`,
+                                    boxShadow: isInfoLog
+                                      ? '0 6px 16px rgba(23, 162, 184, 0.3)'
+                                      : isJournalLog
+                                      ? '0 4px 12px rgba(40, 167, 69, 0.2)'
+                                      : '0 2px 8px rgba(0, 0, 0, 0.1)',
+                                    background: isInfoLog
+                                      ? 'linear-gradient(135deg, #d1ecf1 0%, #ffffff 50%)'
+                                      : isJournalLog
+                                      ? 'linear-gradient(135deg, #d4edda 0%, #ffffff 50%)'
+                                      : `linear-gradient(135deg, ${logStyle.bgColor} 0%, #ffffff 50%)`,
+                                  }}
+                                >
+                                  <CardTitle>
+                                    <Flex
+                                      justifyContent={{ default: 'justifyContentSpaceBetween' }}
+                                      alignItems={{ default: 'alignItemsCenter' }}
+                                    >
+                                      <FlexItem>
+                                        <Flex alignItems={{ default: 'alignItemsCenter' }}>
+                                          <FlexItem
+                                            style={{ fontSize: '1.2rem', marginRight: '8px' }}
+                                          >
+                                            {logType.icon}
+                                          </FlexItem>
+                                          <FlexItem>
+                                            <Title
+                                              headingLevel="h5"
+                                              size="md"
+                                              style={{
+                                                color: isInfoLog
+                                                  ? '#17a2b8'
+                                                  : isJournalLog
+                                                  ? '#28a745'
+                                                  : logStyle.color,
+                                              }}
+                                            >
+                                              {log.component}
+                                            </Title>
+                                          </FlexItem>
+                                          <FlexItem style={{ marginLeft: '8px' }}>
+                                            <Badge
+                                              color={
+                                                isInfoLog ? 'cyan' : isJournalLog ? 'green' : 'blue'
+                                              }
+                                              style={{ fontSize: '0.7rem' }}
+                                            >
+                                              {isInfoLog
+                                                ? 'Info Guide'
+                                                : isJournalLog
+                                                ? 'Journal'
+                                                : logType.description}
+                                            </Badge>
+                                          </FlexItem>
+                                          <FlexItem style={{ marginLeft: '8px' }}>
+                                            <Badge color="blue" style={{ fontSize: '0.7rem' }}>
+                                              #{String(index + 1).padStart(2, '0')}
+                                            </Badge>
+                                          </FlexItem>
+                                          <FlexItem style={{ fontSize: '1rem', marginLeft: '8px' }}>
+                                            {logStyle.icon}
+                                          </FlexItem>
+                                        </Flex>
+                                      </FlexItem>
+                                      <FlexItem>
+                                        <Flex alignItems={{ default: 'alignItemsCenter' }}>
+                                          <FlexItem style={{ marginRight: '12px' }}>
+                                            <Badge color="green">
+                                              {logLines.length} line
+                                              {logLines.length !== 1 ? 's' : ''}
+                                            </Badge>
+                                          </FlexItem>
+                                          <FlexItem>
+                                            <Badge color="blue">
+                                              {new Date(log.timestamp).toLocaleString()}
+                                            </Badge>
+                                          </FlexItem>
+                                        </Flex>
+                                      </FlexItem>
+                                    </Flex>
+                                  </CardTitle>
+                                  <CardBody>
+                                    <div
+                                      style={{
+                                        border: '1px solid #e3e4e6',
+                                        borderRadius: '8px',
+                                        backgroundColor: '#1e1e1e',
+                                        color: '#f8f8f2',
+                                        overflow: 'hidden',
+                                      }}
+                                    >
+                                      {/* Log Header */}
+                                      <div
+                                        style={{
+                                          padding: '8px 16px',
+                                          backgroundColor: '#2d3748',
+                                          borderBottom: '1px solid #4a5568',
+                                          fontSize: '0.75rem',
+                                          fontFamily: 'monospace',
+                                          color: '#a0aec0',
+                                        }}
+                                      >
+                                        📂 {log.component} • {new Date(log.timestamp).toISOString()}
+                                      </div>
+
+                                      {/* Log Content */}
+                                      <pre
+                                        style={{
+                                          margin: 0,
+                                          padding: '16px',
+                                          fontSize: '0.8rem',
+                                          backgroundColor: 'transparent',
+                                          border: 'none',
+                                          maxHeight: '400px',
+                                          overflow: 'auto',
+                                          lineHeight: '1.5',
+                                          fontFamily:
+                                            '"SF Mono", "Monaco", "Inconsolata", "Roboto Mono", "Source Code Pro", monospace',
+                                          whiteSpace: 'pre-wrap',
+                                          wordBreak: 'break-word',
+                                          color: '#f8f8f2',
+                                        }}
+                                      >
+                                        {log.content}
+                                      </pre>
+
+                                      {/* Log Footer with Stats */}
+                                      <div
+                                        style={{
+                                          padding: '8px 16px',
+                                          backgroundColor: '#2d3748',
+                                          borderTop: '1px solid #4a5568',
+                                          fontSize: '0.7rem',
+                                          fontFamily: 'monospace',
+                                          color: '#a0aec0',
+                                          display: 'flex',
+                                          justifyContent: 'space-between',
+                                        }}
+                                      >
+                                        <span>📊 {logLines.length} total lines</span>
+                                        <span>
+                                          🕒 Last updated:{' '}
+                                          {new Date(log.timestamp).toLocaleTimeString()}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </CardBody>
+                                </Card>
+                              </StackItem>
+                            );
+                          })}
+                        </Stack>
                       )}
                     </div>
                   </Tab>
 
                   {/* System Info Tab */}
-                  <Tab eventKey="system" title={<TabTitleText><ServerIcon style={{ marginRight: '8px' }} />System Info</TabTitleText>}>
+                  <Tab
+                    eventKey="system"
+                    title={
+                      <TabTitleText>
+                        <ServerIcon style={{ marginRight: '8px' }} />
+                        System Info
+                      </TabTitleText>
+                    }
+                  >
                     <div style={{ marginTop: '16px' }}>
                       <Title headingLevel="h4" size="md" style={{ marginBottom: '16px' }}>
                         <ServerIcon style={{ marginRight: '8px', color: '#0066cc' }} />
@@ -1793,7 +2721,11 @@ const NodesDashboard: React.FC = () => {
                                     <DescriptionListTerm>Total Capacity</DescriptionListTerm>
                                     <DescriptionListDescription>
                                       <Badge color="blue">
-                                        {(selectedNode.systemInfo.filesystem.capacityBytes / (1024 * 1024 * 1024)).toFixed(2)} GB
+                                        {(
+                                          selectedNode.systemInfo.filesystem.capacityBytes /
+                                          (1024 * 1024 * 1024)
+                                        ).toFixed(2)}{' '}
+                                        GB
                                       </Badge>
                                     </DescriptionListDescription>
                                   </DescriptionListGroup>
@@ -1810,7 +2742,11 @@ const NodesDashboard: React.FC = () => {
                                     <DescriptionListTerm>Available Space</DescriptionListTerm>
                                     <DescriptionListDescription>
                                       <Badge color="green">
-                                        {(selectedNode.systemInfo.filesystem.availableBytes / (1024 * 1024 * 1024)).toFixed(2)} GB
+                                        {(
+                                          selectedNode.systemInfo.filesystem.availableBytes /
+                                          (1024 * 1024 * 1024)
+                                        ).toFixed(2)}{' '}
+                                        GB
                                       </Badge>
                                     </DescriptionListDescription>
                                   </DescriptionListGroup>
@@ -1820,7 +2756,11 @@ const NodesDashboard: React.FC = () => {
                                     <DescriptionListTerm>Used Space</DescriptionListTerm>
                                     <DescriptionListDescription>
                                       <Badge color="orange">
-                                        {(selectedNode.systemInfo.filesystem.usedBytes / (1024 * 1024 * 1024)).toFixed(2)} GB
+                                        {(
+                                          selectedNode.systemInfo.filesystem.usedBytes /
+                                          (1024 * 1024 * 1024)
+                                        ).toFixed(2)}{' '}
+                                        GB
                                       </Badge>
                                     </DescriptionListDescription>
                                   </DescriptionListGroup>
@@ -1830,7 +2770,8 @@ const NodesDashboard: React.FC = () => {
                                     <DescriptionListTerm>Inodes Usage</DescriptionListTerm>
                                     <DescriptionListDescription>
                                       <Badge>
-                                        {selectedNode.systemInfo.filesystem.inodesUsed || 0} / {selectedNode.systemInfo.filesystem.inodes}
+                                        {selectedNode.systemInfo.filesystem.inodesUsed || 0} /{' '}
+                                        {selectedNode.systemInfo.filesystem.inodes}
                                       </Badge>
                                     </DescriptionListDescription>
                                   </DescriptionListGroup>
@@ -1849,7 +2790,11 @@ const NodesDashboard: React.FC = () => {
                                     <DescriptionListTerm>Image FS Capacity</DescriptionListTerm>
                                     <DescriptionListDescription>
                                       <Badge color="blue">
-                                        {(selectedNode.systemInfo.runtime.imageFs.capacityBytes / (1024 * 1024 * 1024)).toFixed(2)} GB
+                                        {(
+                                          selectedNode.systemInfo.runtime.imageFs.capacityBytes /
+                                          (1024 * 1024 * 1024)
+                                        ).toFixed(2)}{' '}
+                                        GB
                                       </Badge>
                                     </DescriptionListDescription>
                                   </DescriptionListGroup>
@@ -1866,7 +2811,11 @@ const NodesDashboard: React.FC = () => {
                                     <DescriptionListTerm>Image FS Available</DescriptionListTerm>
                                     <DescriptionListDescription>
                                       <Badge color="green">
-                                        {(selectedNode.systemInfo.runtime.imageFs.availableBytes / (1024 * 1024 * 1024)).toFixed(2)} GB
+                                        {(
+                                          selectedNode.systemInfo.runtime.imageFs.availableBytes /
+                                          (1024 * 1024 * 1024)
+                                        ).toFixed(2)}{' '}
+                                        GB
                                       </Badge>
                                     </DescriptionListDescription>
                                   </DescriptionListGroup>
@@ -1899,13 +2848,17 @@ const NodesDashboard: React.FC = () => {
                                 <DescriptionListGroup>
                                   <DescriptionListTerm>Internal IP</DescriptionListTerm>
                                   <DescriptionListDescription>
-                                    <Badge color="blue">{selectedNode.networkInfo.internalIP || 'N/A'}</Badge>
+                                    <Badge color="blue">
+                                      {selectedNode.networkInfo.internalIP || 'N/A'}
+                                    </Badge>
                                   </DescriptionListDescription>
                                 </DescriptionListGroup>
                                 <DescriptionListGroup>
                                   <DescriptionListTerm>External IP</DescriptionListTerm>
                                   <DescriptionListDescription>
-                                    <Badge color="green">{selectedNode.networkInfo.externalIP || 'N/A'}</Badge>
+                                    <Badge color="green">
+                                      {selectedNode.networkInfo.externalIP || 'N/A'}
+                                    </Badge>
                                   </DescriptionListDescription>
                                 </DescriptionListGroup>
                                 <DescriptionListGroup>
@@ -1918,13 +2871,22 @@ const NodesDashboard: React.FC = () => {
                                   <DescriptionListTerm>Resource Pressure</DescriptionListTerm>
                                   <DescriptionListDescription>
                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                      <Badge color={selectedNode.resourcePressure.memory ? 'red' : 'green'}>
-                                        Memory: {selectedNode.resourcePressure.memory ? 'YES' : 'NO'}
+                                      <Badge
+                                        color={
+                                          selectedNode.resourcePressure.memory ? 'red' : 'green'
+                                        }
+                                      >
+                                        Memory:{' '}
+                                        {selectedNode.resourcePressure.memory ? 'YES' : 'NO'}
                                       </Badge>
-                                      <Badge color={selectedNode.resourcePressure.disk ? 'red' : 'green'}>
+                                      <Badge
+                                        color={selectedNode.resourcePressure.disk ? 'red' : 'green'}
+                                      >
                                         Disk: {selectedNode.resourcePressure.disk ? 'YES' : 'NO'}
                                       </Badge>
-                                      <Badge color={selectedNode.resourcePressure.pid ? 'red' : 'green'}>
+                                      <Badge
+                                        color={selectedNode.resourcePressure.pid ? 'red' : 'green'}
+                                      >
                                         PID: {selectedNode.resourcePressure.pid ? 'YES' : 'NO'}
                                       </Badge>
                                     </div>
@@ -1939,7 +2901,15 @@ const NodesDashboard: React.FC = () => {
                   </Tab>
 
                   {/* Taints Tab */}
-                  <Tab eventKey="taints" title={<TabTitleText><TagIcon style={{ marginRight: '8px' }} />Taints ({selectedNode.taints.length})</TabTitleText>}>
+                  <Tab
+                    eventKey="taints"
+                    title={
+                      <TabTitleText>
+                        <TagIcon style={{ marginRight: '8px' }} />
+                        Taints ({selectedNode.taints.length})
+                      </TabTitleText>
+                    }
+                  >
                     <div style={{ marginTop: '16px' }}>
                       <Title headingLevel="h4" size="md" style={{ marginBottom: '16px' }}>
                         <TagIcon style={{ marginRight: '8px', color: '#ec7a08' }} />
@@ -1947,9 +2917,12 @@ const NodesDashboard: React.FC = () => {
                       </Title>
                       {selectedNode.taints.length === 0 ? (
                         <EmptyState>
-                          <Title headingLevel="h4" size="lg">No Taints</Title>
+                          <Title headingLevel="h4" size="lg">
+                            No Taints
+                          </Title>
                           <EmptyStateBody>
-                            This node has no taints configured. All pods that tolerate the node's constraints can be scheduled here.
+                            This node has no taints configured. All pods that tolerate the node's
+                            constraints can be scheduled here.
                           </EmptyStateBody>
                         </EmptyState>
                       ) : (
@@ -1971,15 +2944,30 @@ const NodesDashboard: React.FC = () => {
                                 </Td>
                                 <Td>{taint.value || 'N/A'}</Td>
                                 <Td>
-                                  <Badge color={taint.effect === 'NoSchedule' ? 'orange' : taint.effect === 'NoExecute' ? 'red' : 'purple'}>
+                                  <Badge
+                                    color={
+                                      taint.effect === 'NoSchedule'
+                                        ? 'orange'
+                                        : taint.effect === 'NoExecute'
+                                        ? 'red'
+                                        : 'purple'
+                                    }
+                                  >
                                     {taint.effect}
                                   </Badge>
                                 </Td>
-                                <Td>{taint.timeAdded ? new Date(taint.timeAdded).toLocaleString() : 'N/A'}</Td>
+                                <Td>
+                                  {taint.timeAdded
+                                    ? new Date(taint.timeAdded).toLocaleString()
+                                    : 'N/A'}
+                                </Td>
                                 <Td style={{ fontSize: '0.875rem', color: '#6a6e73' }}>
-                                  {taint.effect === 'NoSchedule' && 'Prevents new pods from being scheduled'}
-                                  {taint.effect === 'NoExecute' && 'Evicts existing pods and prevents new scheduling'}
-                                  {taint.effect === 'PreferNoSchedule' && 'Prefers not to schedule new pods'}
+                                  {taint.effect === 'NoSchedule' &&
+                                    'Prevents new pods from being scheduled'}
+                                  {taint.effect === 'NoExecute' &&
+                                    'Evicts existing pods and prevents new scheduling'}
+                                  {taint.effect === 'PreferNoSchedule' &&
+                                    'Prefers not to schedule new pods'}
                                 </Td>
                               </Tr>
                             ))}
@@ -1990,7 +2978,10 @@ const NodesDashboard: React.FC = () => {
                   </Tab>
 
                   {/* Labels & Annotations Tab */}
-                  <Tab eventKey="metadata" title={<TabTitleText>Labels & Annotations</TabTitleText>}>
+                  <Tab
+                    eventKey="metadata"
+                    title={<TabTitleText>Labels & Annotations</TabTitleText>}
+                  >
                     <Grid hasGutter style={{ marginTop: '16px' }}>
                       <GridItem span={6}>
                         <Card isCompact>
@@ -2022,7 +3013,7 @@ const NodesDashboard: React.FC = () => {
                           </CardBody>
                         </Card>
                       </GridItem>
-                      
+
                       <GridItem span={6}>
                         <Card isCompact>
                           <CardTitle>
@@ -2034,19 +3025,32 @@ const NodesDashboard: React.FC = () => {
                           <CardBody>
                             {Object.keys(selectedNode.annotations).length > 0 ? (
                               <DescriptionList>
-                                {Object.entries(selectedNode.annotations).slice(0, 10).map(([key, value]) => (
-                                  <DescriptionListGroup key={key}>
-                                    <DescriptionListTerm style={{ fontSize: '0.875rem' }}>
-                                      {key}
-                                    </DescriptionListTerm>
-                                    <DescriptionListDescription style={{ fontSize: '0.875rem', wordBreak: 'break-all' }}>
-                                      {value.length > 100 ? `${value.substring(0, 100)}...` : value}
-                                    </DescriptionListDescription>
-                                  </DescriptionListGroup>
-                                ))}
+                                {Object.entries(selectedNode.annotations)
+                                  .slice(0, 10)
+                                  .map(([key, value]) => (
+                                    <DescriptionListGroup key={key}>
+                                      <DescriptionListTerm style={{ fontSize: '0.875rem' }}>
+                                        {key}
+                                      </DescriptionListTerm>
+                                      <DescriptionListDescription
+                                        style={{ fontSize: '0.875rem', wordBreak: 'break-all' }}
+                                      >
+                                        {value.length > 100
+                                          ? `${value.substring(0, 100)}...`
+                                          : value}
+                                      </DescriptionListDescription>
+                                    </DescriptionListGroup>
+                                  ))}
                                 {Object.keys(selectedNode.annotations).length > 10 && (
-                                  <div style={{ marginTop: '8px', color: '#6a6e73', fontSize: '0.75rem' }}>
-                                    Showing first 10 of {Object.keys(selectedNode.annotations).length} annotations
+                                  <div
+                                    style={{
+                                      marginTop: '8px',
+                                      color: '#6a6e73',
+                                      fontSize: '0.75rem',
+                                    }}
+                                  >
+                                    Showing first 10 of{' '}
+                                    {Object.keys(selectedNode.annotations).length} annotations
                                   </div>
                                 )}
                               </DescriptionList>
@@ -2070,4 +3074,4 @@ const NodesDashboard: React.FC = () => {
   );
 };
 
-export default NodesDashboard; 
+export default NodesDashboard;
