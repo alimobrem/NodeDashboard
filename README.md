@@ -42,6 +42,14 @@ A comprehensive OpenShift Console dynamic plugin for real-time monitoring and ma
 
 ## 🔧 Technical Implementation
 
+### Modular Architecture
+- **Component Organization**: Modular structure with dedicated directories:
+  - `src/components/nodes/` - Node-specific components (NodeCard, NodeFilters, etc.)
+  - `src/components/errors/` - Error handling components (ErrorBoundary)
+  - `src/hooks/` - Custom React hooks (useNodeData, useNodeFilters, useNodeSelection)
+  - `src/types/` - Comprehensive TypeScript type definitions
+  - `src/utils/` - Utility functions (formatUtils, timeUtils)
+
 ### Real-Time Data Architecture
 - **WebSocket Connections**: Direct integration with OpenShift API watch endpoints
 - **Component State Management**: React hooks with optimized re-rendering
@@ -55,8 +63,6 @@ A comprehensive OpenShift Console dynamic plugin for real-time monitoring and ma
 - **Events API**: System event streaming and notifications
 - **Metrics API**: Resource usage data with proper unit conversion
 - **Custom Resource Definitions**: Extended metadata and configuration
-
-
 
 ## 🚀 Getting Started
 
@@ -73,7 +79,78 @@ This plugin requires OpenShift 4.12+ for the `v1` API version of `ConsolePlugin`
 
 ## 💻 Development
 
-### Option 1: Local Development
+### Quick Start (Recommended)
+
+We've created comprehensive development scripts for a smooth development experience:
+
+```bash
+# Complete environment restart (recommended)
+yarn restart
+
+# Or use individual scripts:
+yarn cleanup    # Clean up ports and processes
+yarn start      # Start plugin development server
+yarn start-console  # Start OpenShift console
+
+# For troubleshooting persistent issues:
+yarn nuclear   # Aggressive cleanup for stubborn processes
+```
+
+### Development Scripts
+
+The project includes powerful development management scripts in the `scripts/` directory:
+
+#### **🔄 Complete Restart (`yarn restart`)**
+```bash
+./scripts/restart-all.sh
+```
+- **Complete cleanup** of ports, processes, and containers
+- **Podman machine restart** for fresh container environment
+- **Automatic plugin startup** with retry logic and health checks
+- **Console startup** with validation and error handling
+- **Real-time monitoring** of both services with status updates
+
+#### **🧹 Cleanup (`yarn cleanup`)**
+```bash
+./scripts/cleanup.sh
+```
+- **Port cleanup** (9000, 9001) with verification
+- **Process termination** (webpack, yarn, node processes)
+- **Container cleanup** with podman integration
+- **Verification** that all resources are properly released
+
+#### **🚀 Plugin Startup (`yarn start:plugin`)**
+```bash
+./scripts/start-plugin.sh
+```
+- **Intelligent startup** with retry logic (3 attempts)
+- **Health checking** with plugin manifest validation
+- **Process management** with automatic cleanup on failure
+- **Status monitoring** with real-time feedback
+
+#### **🖥️ Console Startup (`yarn start:console`)**
+```bash
+./scripts/start-console.sh
+```
+- **Pre-flight checks** for plugin availability and cluster access
+- **Podman machine management** with automatic startup
+- **Environment validation** for proper console configuration
+- **Error handling** with detailed diagnostic information
+
+#### **💥 Nuclear Cleanup (`yarn nuclear`)**
+```bash
+./scripts/nuclear-cleanup.sh
+```
+- **Aggressive process termination** for stubborn processes
+- **Force port cleanup** with multiple kill methods
+- **Cache clearing** (webpack, yarn, node_modules)
+- **Complete environment reset** for troubleshooting
+
+### Manual Development (Alternative)
+
+If you prefer manual control:
+
+#### Option 1: Local Development
 
 In one terminal window:
 
@@ -100,7 +177,7 @@ rpm-ostree install qemu-user-static
 systemctl reboot
 ```
 
-### Option 2: Docker + VSCode Remote Container
+#### Option 2: Docker + VSCode Remote Container
 
 Using the [Remote Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension:
 
@@ -124,8 +201,70 @@ OC_PASS=<password>
 - **ESLint Integration**: Code quality and style enforcement
 - **Prettier Formatting**: Automatic code formatting
 - **Source Maps**: Easy debugging in browser dev tools
+- **Modular Architecture**: Well-organized component structure
+- **Error Boundaries**: Comprehensive error handling
+- **Custom Hooks**: Reusable logic patterns
 
+### 🐛 Troubleshooting
 
+#### Common Issues and Solutions
+
+**Port Already in Use (EADDRINUSE)**
+```bash
+yarn cleanup  # Clean up ports and processes
+# Or for persistent issues:
+yarn nuclear  # Nuclear option for stubborn processes
+```
+
+**Plugin Manifest 404 Errors**
+```bash
+# Usually resolved by clearing webpack cache:
+rm -rf node_modules/.cache .webpack_cache dist
+yarn cache clean
+yarn start
+```
+
+**Podman Connection Issues**
+```bash
+podman machine stop
+podman machine start
+# Then restart console:
+yarn start-console
+```
+
+**Webpack Configuration Errors**
+```bash
+# Clear all caches and restart:
+yarn nuclear
+yarn restart
+```
+
+**Console Authentication Issues**
+```bash
+# Re-login to OpenShift cluster:
+oc login --token=<your-token> --server=<your-server>
+yarn start-console
+```
+
+#### Debug Commands
+
+```bash
+# Check current service status
+curl http://localhost:9001/plugin-manifest.json  # Plugin
+curl http://localhost:9000/                      # Console
+
+# Check process status
+ps aux | grep webpack
+ps aux | grep podman
+
+# Check port usage
+lsof -i :9001
+lsof -i :9000
+
+# Podman diagnostics
+podman machine list
+podman system connection list
+```
 
 ## 🐳 Docker Image
 
@@ -190,9 +329,11 @@ The plugin registers with OpenShift Console as:
 ### Core Components
 
 - **NodesDashboard**: Comprehensive dashboard with real-time node monitoring, interactive selection, and live resource tracking
-- **WebSocket Manager**: Handles real-time data streaming and connection management
-- **Alert System**: Live node health monitoring and issue detection
-- **Log Streaming**: Real-time log viewer with WebSocket connectivity
+- **NodeCard**: Individual node display component with status and metrics
+- **NodeFilters**: Advanced filtering and search capabilities
+- **NodeSummaryMetrics**: Aggregated cluster statistics
+- **NodeErrorBoundary**: Robust error handling with graceful fallbacks
+- **Custom Hooks**: Reusable logic for data management and state
 
 ### Data Flow Architecture
 
@@ -210,6 +351,15 @@ The plugin registers with OpenShift Console as:
 - **Memory Management**: Proper cleanup of timers and event listeners
 - **Lazy Loading**: Components load on demand for better performance
 - **Debounced Updates**: Prevents excessive re-renders during rapid data changes
+- **Modular Architecture**: Code splitting and tree shaking for smaller bundles
+
+### TypeScript Integration
+
+- **Comprehensive Type Definitions**: Full type coverage in `src/types/`
+- **Kubernetes API Types**: Strongly typed OpenShift/Kubernetes resources
+- **Component Props**: Type-safe component interfaces
+- **Hook Types**: Typed custom hooks with proper return types
+- **Utility Functions**: Typed helper functions with input validation
 
 ## 🌐 Internationalization (i18n)
 
@@ -273,6 +423,9 @@ yarn run lint
 # Build verification
 yarn run build
 
+# Unit tests
+yarn test
+
 # Integration tests
 yarn run test:integration
 ```
@@ -299,10 +452,24 @@ yarn run test:integration
 - Write comprehensive tests for new features
 - Update documentation for any API changes
 - Follow OpenShift Console design patterns
+- Use the provided development scripts for consistent environment setup
 
 ## 📋 Changelog
 
-### Latest Changes
+### Latest Changes (v0.2.0)
+
+- 🏗️ **Modular Architecture**: Refactored to component-based structure with dedicated directories
+- 🔧 **Development Scripts**: Comprehensive automation for development environment management
+- 📝 **TypeScript Improvements**: Enhanced type definitions and error handling
+- 🧹 **Cleanup Automation**: Robust process and port management scripts
+- 🚀 **Startup Optimization**: Intelligent retry logic and health checking
+- 🐛 **Error Handling**: Improved error boundaries and debugging capabilities
+- 🔄 **Restart Workflows**: One-command environment reset and monitoring
+- 📊 **Enhanced Monitoring**: Real-time status tracking for development services
+- 🛠️ **Development Tools**: Nuclear cleanup options for troubleshooting
+- 📖 **Documentation**: Comprehensive troubleshooting and development guides
+
+### Previous Changes
 
 - ✨ **Real-time monitoring**: Added WebSocket connectivity for live data streaming
 - 🔄 **Interactive node selection**: Click-to-select nodes with instant updates
@@ -311,7 +478,6 @@ yarn run test:integration
 - ⚠️ **Real-time alerts**: Live health monitoring and status updates
 - 🎨 **Enhanced UI**: Improved visual hierarchy and responsive design
 - 🔧 **Performance optimization**: Efficient state management and memory usage
-- 🐛 **Bug fixes**: Resolved TypeScript compilation errors and edge cases
 
 ## 📝 License
 
@@ -323,6 +489,13 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 - **Issues**: Report bugs and feature requests in GitHub Issues
 - **OpenShift Console**: [Official Documentation](https://docs.openshift.com/container-platform/latest/web_console/web-console.html)
 - **Dynamic Plugins**: [Plugin Development Guide](https://github.com/openshift/console/tree/master/frontend/packages/console-dynamic-plugin-sdk)
+
+### Getting Help
+
+1. **Check the troubleshooting section** above for common issues
+2. **Use the development scripts** for automated problem resolution
+3. **Check GitHub Issues** for similar problems and solutions
+4. **Review the OpenShift Console documentation** for plugin development best practices
 
 ---
 
