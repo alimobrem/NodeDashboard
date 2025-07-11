@@ -45,15 +45,17 @@ interface NodeDetailsDrawerProps {
   node: NodeDetail | null;
   isOpen: boolean;
   onClose: () => void;
+  onWidthChange?: (width: number) => void;
 }
 
 const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ 
   node, 
   isOpen, 
-  onClose 
+  onClose,
+  onWidthChange 
 }) => {
   const [activeTab, setActiveTab] = useState<string>('overview');
-  const [drawerWidth, setDrawerWidth] = useState<number>(window.innerWidth * 0.75); // 75% of viewport width
+  const [drawerWidth, setDrawerWidth] = useState<number>(window.innerWidth * 0.5); // 50% of viewport width
   const [isResizing, setIsResizing] = useState<boolean>(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
@@ -69,11 +71,12 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
     
     const newWidth = window.innerWidth - e.clientX; // Distance from cursor to right edge
     const minWidth = 300; // Minimum width
-    const maxWidth = window.innerWidth * 0.9; // Maximum 90% of viewport width
+    const maxWidth = window.innerWidth * 0.8; // Maximum 80% of viewport width
     
     const constrainedWidth = Math.min(Math.max(newWidth, minWidth), maxWidth);
     setDrawerWidth(constrainedWidth);
-  }, [isResizing]);
+    onWidthChange?.(constrainedWidth);
+  }, [isResizing, onWidthChange]);
 
   const handleMouseUp = useCallback(() => {
     setIsResizing(false);
@@ -95,6 +98,13 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
     }
     return undefined;
   }, [isResizing, handleMouseMove, handleMouseUp]);
+
+  // Notify parent of width changes when drawer opens
+  useEffect(() => {
+    if (isOpen && onWidthChange) {
+      onWidthChange(drawerWidth);
+    }
+  }, [isOpen, drawerWidth, onWidthChange]);
 
   if (!node) return null;
 
@@ -177,10 +187,13 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
     return 'debug';
   };
 
-  // Custom side drawer styles - positioned from right edge
+  // Calculate sticky header height to position drawer below summary cards
+  const stickyHeaderHeight = 240; // Height of the sticky summary cards section
+
+  // Custom side drawer styles - positioned below sticky header
   const drawerStyles: React.CSSProperties = {
     position: 'fixed',
-    top: 0,
+    top: `${stickyHeaderHeight}px`,
     right: 0,
     bottom: 0,
     width: `${drawerWidth}px`,

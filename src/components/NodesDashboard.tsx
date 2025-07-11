@@ -736,6 +736,7 @@ const NodesDashboard: React.FC = () => {
   const [nodes, setNodes] = useState<NodeDetail[]>([]);
   const [selectedNode, setSelectedNode] = useState<NodeDetail | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [drawerWidth, setDrawerWidth] = useState<number>(window.innerWidth * 0.5); // Track drawer width
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -1482,6 +1483,10 @@ This view shows the same Kubernetes component logs available in the built-in Ope
     setSelectedNode(null);
   };
 
+  const handleDrawerWidthChange = (width: number) => {
+    setDrawerWidth(width);
+  };
+
 
 
   // Loading state
@@ -1651,6 +1656,8 @@ This view shows the same Kubernetes component logs available in the built-in Ope
         style={{ 
           paddingTop: '24px',
           minHeight: `calc(100vh - ${stickyHeaderHeight}px)`,
+          marginRight: isDrawerOpen ? `${drawerWidth}px` : '0', // Push content when drawer is open
+          transition: 'margin-right 0.3s ease-in-out',
         }}
       >
         <Stack hasGutter>
@@ -1761,6 +1768,7 @@ This view shows the same Kubernetes component logs available in the built-in Ope
           node={selectedNode} 
           isOpen={isDrawerOpen} 
           onClose={handleDrawerClose}
+          onWidthChange={handleDrawerWidthChange}
         />
 
         {/* Removed inline panel - now using drawer */}
