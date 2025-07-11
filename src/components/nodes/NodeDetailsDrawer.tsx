@@ -53,7 +53,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
   onClose 
 }) => {
   const [activeTab, setActiveTab] = useState<string>('overview');
-  const [drawerHeight, setDrawerHeight] = useState<number>(window.innerHeight * 0.75); // 75% of viewport
+  const [drawerWidth, setDrawerWidth] = useState<number>(window.innerWidth * 0.75); // 75% of viewport width
   const [isResizing, setIsResizing] = useState<boolean>(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
@@ -67,12 +67,12 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isResizing) return;
     
-    const newHeight = e.clientY;
-    const minHeight = 200; // Minimum height
-    const maxHeight = window.innerHeight - 100; // Leave some space at bottom
+    const newWidth = window.innerWidth - e.clientX; // Distance from cursor to right edge
+    const minWidth = 300; // Minimum width
+    const maxWidth = window.innerWidth * 0.9; // Maximum 90% of viewport width
     
-    const constrainedHeight = Math.min(Math.max(newHeight, minHeight), maxHeight);
-    setDrawerHeight(constrainedHeight);
+    const constrainedWidth = Math.min(Math.max(newWidth, minWidth), maxWidth);
+    setDrawerWidth(constrainedWidth);
   }, [isResizing]);
 
   const handleMouseUp = useCallback(() => {
@@ -177,33 +177,31 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
     return 'debug';
   };
 
-  // Calculate sticky header height to position drawer below it
-  const stickyHeaderHeight = 240; // Should match the height calculation in NodesDashboard
-
-  // Custom drawer styles - positioned below sticky header
+  // Custom side drawer styles - positioned from right edge
   const drawerStyles: React.CSSProperties = {
     position: 'fixed',
-    top: `${stickyHeaderHeight}px`,
-    left: 0,
+    top: 0,
     right: 0,
-    height: `${drawerHeight}px`,
+    bottom: 0,
+    width: `${drawerWidth}px`,
     backgroundColor: '#fff',
-    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+    boxShadow: '-4px 0 16px rgba(0, 0, 0, 0.1)',
     zIndex: 998, // Below sticky header (999) but above content
     display: isOpen ? 'flex' : 'none',
     flexDirection: 'column',
-    transition: isResizing ? 'none' : 'height 0.3s ease-in-out',
+    transition: isResizing ? 'none' : 'width 0.3s ease-in-out',
+    transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
   };
 
   const resizeHandleStyles: React.CSSProperties = {
     position: 'absolute',
-    bottom: 0,
     left: 0,
-    right: 0,
-    height: '12px',
+    top: 0,
+    bottom: 0,
+    width: '12px',
     backgroundColor: '#f1f1f1',
-    cursor: 'ns-resize',
-    borderTop: '1px solid #d2d2d2',
+    cursor: 'ew-resize',
+    borderRight: '1px solid #d2d2d2',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -758,27 +756,28 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({
         </Tabs>
       </div>
 
-      {/* Resize Handle */}
+      {/* Horizontal Resize Handle */}
       <div 
         ref={resizeHandleRef}
         style={resizeHandleStyles}
         onMouseDown={handleMouseDown}
       >
         <div style={{
-          width: '48px',
-          height: '3px',
+          width: '3px',
+          height: '48px',
           backgroundColor: '#999',
           borderRadius: '2px',
           transition: 'all 0.2s ease',
           position: 'relative',
         }}>
-          {/* Drag dots indicator */}
+          {/* Vertical drag lines indicator */}
           <div style={{
             position: 'absolute',
-            top: '-2px',
-            left: '50%',
-            transform: 'translateX(-50%)',
+            left: '-2px',
+            top: '50%',
+            transform: 'translateY(-50%)',
             display: 'flex',
+            flexDirection: 'column',
             gap: '3px',
           }}>
             <div style={{
