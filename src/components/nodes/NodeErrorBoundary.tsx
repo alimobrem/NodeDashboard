@@ -86,9 +86,13 @@ class NodeErrorBoundary extends React.Component<NodeErrorBoundaryProps, NodeErro
             <Alert
               variant="danger"
               title="Development Error Details"
-              actionClose={<AlertActionCloseButton onClose={() => {
-                // Handle close if needed - for now just no-op
-              }} />}
+              actionClose={
+                <AlertActionCloseButton
+                  onClose={() => {
+                    // Handle close if needed - for now just no-op
+                  }}
+                />
+              }
               style={{ marginTop: '1rem', textAlign: 'left' }}
             >
               <pre style={{ fontSize: '0.8rem', overflow: 'auto' }}>

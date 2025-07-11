@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { useState } from 'react';
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
+import { K8sResourceKind } from '@openshift-console/dynamic-plugin-sdk';
+import { NodeAddress } from '../types/kubernetes';
 
 // PatternFly Core Components
 import {
@@ -685,7 +687,7 @@ const detectLogLevel = (logContent: string): string => {
   return 'info';
 };
 
-const generateNodeStatusLog = (nodeData: any): string => {
+const generateNodeStatusLog = (nodeData: K8sResourceKind): string => {
   const nodeName = nodeData.metadata?.name || 'Unknown';
   const conditions = nodeData.status?.conditions || [];
   const nodeInfo = nodeData.status?.nodeInfo || {};
@@ -706,7 +708,7 @@ const generateNodeStatusLog = (nodeData: any): string => {
   // Network addresses
   if (addresses.length > 0) {
     statusLog += `Network Addresses:\n`;
-    addresses.forEach((addr: any) => {
+    addresses.forEach((addr: NodeAddress) => {
       statusLog += `  ${addr.type}: ${addr.address}\n`;
     });
     statusLog += `\n`;
@@ -715,7 +717,7 @@ const generateNodeStatusLog = (nodeData: any): string => {
   // Node conditions
   if (conditions.length > 0) {
     statusLog += `Node Conditions:\n`;
-    conditions.forEach((condition: any) => {
+    conditions.forEach((condition: NodeCondition) => {
       const status = condition.status === 'True' ? '✓' : '✗';
       statusLog += `  ${status} ${condition.type}: ${condition.status}\n`;
       if (condition.message) {
@@ -1097,29 +1099,31 @@ This view shows the same Kubernetes component logs available in the built-in Ope
   }, []);
 
   const processNodeData = (
-    nodeData: any,
-    nodePods: any[],
-    nodeEvents: any[],
-    nodeMetrics?: any,
+    nodeData: K8sResourceKind,
+    nodePods: K8sResourceKind[],
+    nodeEvents: K8sResourceKind[],
+    nodeMetrics?: K8sResourceKind,
     debugData?: any,
   ): NodeDetail => {
-    const name = nodeData.metadata.name;
-    const labels = nodeData.metadata.labels || {};
-    const annotations = nodeData.metadata.annotations || {};
+    const name = nodeData.metadata?.name || 'Unknown';
+    const labels = nodeData.metadata?.labels || {};
+    const annotations = nodeData.metadata?.annotations || {};
 
     // Extract role from labels
     const role =
       labels['node-role.kubernetes.io/control-plane'] !== undefined ? 'control-plane' : 'worker';
 
     // Extract status
-    const readyCondition = nodeData.status.conditions?.find((c: any) => c.type === 'Ready');
+    const readyCondition = nodeData.status?.conditions?.find(
+      (c: NodeCondition) => c.type === 'Ready',
+    );
     const status = readyCondition?.status === 'True' ? 'Ready' : 'NotReady';
 
     // Extract version
-    const version = nodeData.status.nodeInfo?.kubeletVersion || 'Unknown';
+    const version = nodeData.status?.nodeInfo?.kubeletVersion || 'Unknown';
 
     // Calculate age
-    const age = getAge(nodeData.metadata.creationTimestamp);
+    const age = getAge(nodeData.metadata?.creationTimestamp || new Date().toISOString());
 
     // Extract zone and instance type
     const zone =
@@ -1132,17 +1136,17 @@ This view shows the same Kubernetes component logs available in the built-in Ope
       'Unknown';
 
     // Extract system info
-    const nodeInfo = nodeData.status.nodeInfo || {};
+    const nodeInfo = nodeData.status?.nodeInfo || {};
     const operatingSystem = nodeInfo.operatingSystem || 'Unknown';
     const architecture = nodeInfo.architecture || 'Unknown';
     const containerRuntime = nodeInfo.containerRuntimeVersion || 'Unknown';
 
     // Check cordoned/drained status
-    const cordoned = nodeData.spec.unschedulable === true;
+    const cordoned = nodeData.spec?.unschedulable === true;
     const drained = annotations['node.alpha.kubernetes.io/ttl'] === '0';
 
     // Extract allocatable resources
-    const allocatable = nodeData.status.allocatable || {};
+    const allocatable = nodeData.status?.allocatable || {};
     const allocatableResources = {
       cpu: allocatable.cpu || '0',
       memory: allocatable.memory || '0Ki',
@@ -1150,8 +1154,8 @@ This view shows the same Kubernetes component logs available in the built-in Ope
     };
 
     // Process conditions
-    const conditions: NodeCondition[] = (nodeData.status.conditions || []).map(
-      (condition: any) => ({
+    const conditions: NodeCondition[] = (nodeData.status?.conditions || []).map(
+      (condition: NodeCondition) => ({
         type: condition.type,
         status: condition.status,
         lastTransitionTime: condition.lastTransitionTime,
@@ -1161,7 +1165,10 @@ This view shows the same Kubernetes component logs available in the built-in Ope
     );
 
     // Calculate metrics (simplified)
-    const calculateNodeMetrics = (pods: any[], allocatable: any): NodeMetrics => {
+    const calculateNodeMetrics = (
+      pods: K8sResourceKind[],
+      allocatable: Record<string, string>,
+    ): NodeMetrics => {
       const runningPods = pods.filter((p) => p.status?.phase === 'Running').length;
 
       // Estimate CPU usage based on pod count and status
@@ -1199,16 +1206,17 @@ This view shows the same Kubernetes component logs available in the built-in Ope
     };
 
     const calculateNodeMetricsWithReal = (
-      realMetrics: any,
-      _pods: any[],
-      allocatable: any,
+      realMetrics: K8sResourceKind,
+      _pods: K8sResourceKind[],
+      allocatable: Record<string, string>,
     ): NodeMetrics => {
       const cpuTotalMillicores = parseFloat(allocatable.cpu) * 1000; // Convert cores to millicores
       const memoryTotalKi = parseFloat(allocatable.memory.replace('Ki', ''));
 
-      // Parse real metrics from Kubernetes metrics API
-      const cpuUsageNanocores = parseFloat(realMetrics.usage?.cpu?.replace('n', '') || '0');
-      const memoryUsageKi = parseFloat(realMetrics.usage?.memory?.replace('Ki', '') || '0');
+      // Parse real metrics from Kubernetes metrics API - handle generic K8sResourceKind
+      const usage = (realMetrics as any).usage || {};
+      const cpuUsageNanocores = parseFloat(usage.cpu?.replace('n', '') || '0');
+      const memoryUsageKi = parseFloat(usage.memory?.replace('Ki', '') || '0');
 
       // Calculate percentages based on real data
       const cpuUsagePercent = Math.min(
@@ -1241,42 +1249,47 @@ This view shows the same Kubernetes component logs available in the built-in Ope
       : calculateNodeMetrics(nodePods, allocatable);
 
     // Process pods
-    const pods: PodResource[] = nodePods.map((pod: any) => ({
-      name: pod.metadata.name,
-      namespace: pod.metadata.namespace,
-      status: pod.status?.phase || 'Unknown',
+    const pods: PodResource[] = nodePods.map((pod: K8sResourceKind) => ({
+      name: pod.metadata?.name || 'Unknown',
+      namespace: pod.metadata?.namespace || 'Unknown',
+      status: (pod.status as any)?.phase || 'Unknown',
       cpuUsage: Math.random() * 100, // Simplified
       memoryUsage: Math.random() * 100, // Simplified
       restarts:
-        pod.status?.containerStatuses?.reduce(
+        (pod.status as any)?.containerStatuses?.reduce(
           (sum: number, container: any) => sum + (container.restartCount || 0),
           0,
         ) || 0,
-      age: getAge(pod.metadata.creationTimestamp),
-      containers: pod.spec?.containers?.length || 0,
-      readyContainers: pod.status?.containerStatuses?.filter((c: any) => c.ready).length || 0,
+      age: getAge(pod.metadata?.creationTimestamp || new Date().toISOString()),
+      containers: (pod.spec as any)?.containers?.length || 0,
+      readyContainers:
+        (pod.status as any)?.containerStatuses?.filter((c: any) => c.ready).length || 0,
     }));
 
     // Process events
-    const events: NodeEvent[] = nodeEvents.slice(0, 10).map((event: any) => ({
-      type: event.type === 'Warning' ? 'Warning' : 'Normal',
-      reason: event.reason || 'Unknown',
-      message: event.message || '',
-      timestamp: event.firstTimestamp || event.eventTime || new Date().toISOString(),
-      count: event.count || 1,
+    const events: NodeEvent[] = nodeEvents.slice(0, 10).map((event: K8sResourceKind) => ({
+      type: (event as any).type === 'Warning' ? 'Warning' : 'Normal',
+      reason: (event as any).reason || 'Unknown',
+      message: (event as any).message || '',
+      timestamp:
+        (event as any).firstTimestamp || (event as any).eventTime || new Date().toISOString(),
+      count: (event as any).count || 1,
     }));
 
     // Extract network information
     const networkInfo = {
-      internalIP: nodeData.status.addresses?.find((addr: any) => addr.type === 'InternalIP')
+      internalIP: nodeData.status?.addresses?.find(
+        (addr: NodeAddress) => addr.type === 'InternalIP',
+      )?.address,
+      externalIP: nodeData.status?.addresses?.find(
+        (addr: NodeAddress) => addr.type === 'ExternalIP',
+      )?.address,
+      hostname: nodeData.status?.addresses?.find((addr: NodeAddress) => addr.type === 'Hostname')
         ?.address,
-      externalIP: nodeData.status.addresses?.find((addr: any) => addr.type === 'ExternalIP')
-        ?.address,
-      hostname: nodeData.status.addresses?.find((addr: any) => addr.type === 'Hostname')?.address,
     };
 
     // Extract taints
-    const taints = (nodeData.spec.taints || []).map((taint: any) => ({
+    const taints = (nodeData.spec?.taints || []).map((taint: any) => ({
       key: taint.key,
       value: taint.value,
       effect: taint.effect,
