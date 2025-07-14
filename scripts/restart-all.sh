@@ -46,20 +46,59 @@ echo ""
 echo "🐳 Step 2: Restart Podman Machine"
 echo "-----------------------------------"
 if command -v podman >/dev/null 2>&1; then
-    echo "  Stopping podman machines..."
-    podman machine stop --all 2>/dev/null || true
-    sleep 3
+    echo "  Checking current podman status..."
     
-    echo "  Starting podman machine..."
-    if podman machine start 2>/dev/null; then
-        echo "  ✅ Podman machine restarted successfully"
-        sleep 5  # Give it time to fully initialize
+    # Test current connection
+    if podman ps >/dev/null 2>&1; then
+        echo "  ✅ Podman connection is working"
     else
-        echo "  ❌ Failed to restart podman machine"
-        echo "  Continuing anyway..."
+        echo "  ❌ Podman connection is broken, fixing..."
+        
+        # Kill any stuck processes first
+        echo "  Cleaning up stuck podman processes..."
+        pkill -f "podman machine" 2>/dev/null || true
+        pkill -f "vfkit" 2>/dev/null || true
+        pkill -f "gvproxy" 2>/dev/null || true
+        sleep 3
+        
+        # Stop all machines
+        echo "  Stopping podman machines..."
+        podman machine stop --all 2>/dev/null || true
+        sleep 5
+        
+        # Start podman machine
+        echo "  Starting podman machine..."
+        if podman machine start 2>/dev/null; then
+            echo "  ✅ Podman machine started"
+            sleep 8  # Give it more time to fully initialize
+            
+            # Verify connection works
+            echo "  Verifying podman connection..."
+            max_retries=10
+            retry_count=0
+            
+            while [ $retry_count -lt $max_retries ]; do
+                if podman ps >/dev/null 2>&1; then
+                    echo "  ✅ Podman connection verified!"
+                    break
+                fi
+                echo "  ⏳ Waiting for podman connection... ($((retry_count + 1))/$max_retries)"
+                sleep 3
+                retry_count=$((retry_count + 1))
+            done
+            
+            if [ $retry_count -ge $max_retries ]; then
+                echo "  ❌ Podman connection failed after $max_retries attempts"
+                echo "  This may cause console startup issues..."
+            fi
+        else
+            echo "  ❌ Failed to start podman machine"
+            echo "  This may cause console startup issues..."
+        fi
     fi
 else
     echo "  ❌ Podman not found, skipping..."
+    echo "  Console may not work without podman!"
 fi
 
 echo ""
@@ -121,6 +160,17 @@ echo ""
 # Step 5: Start console
 echo "🖥️  Step 5: Start OpenShift Console"
 echo "------------------------------------"
+
+# Pre-flight check for podman (console dependency)
+if command -v podman >/dev/null 2>&1; then
+    if ! podman ps >/dev/null 2>&1; then
+        echo "  ⚠️  Warning: Podman connection is not working!"
+        echo "  Console startup may fail. Consider running this script again."
+    else
+        echo "  ✅ Podman dependency check passed"
+    fi
+fi
+
 if [ -f "$SCRIPT_DIR/start-console.sh" ]; then
     echo "  Using improved startup script..."
     bash "$SCRIPT_DIR/start-console.sh" &
@@ -152,6 +202,20 @@ if [ "$console_status" = "200" ]; then
     echo "  ✅ Console: http://localhost:9000 (Status: $console_status)"
 else
     echo "  ❌ Console: http://localhost:9000 (Status: $console_status)"
+    
+    # Additional troubleshooting for console issues
+    if command -v podman >/dev/null 2>&1; then
+        if ! podman ps >/dev/null 2>&1; then
+            echo "      💡 Troubleshooting: Podman connection is broken"
+            echo "      💡 Try: podman machine restart && ./scripts/restart-all.sh"
+        fi
+    fi
+    
+    # Check if port is in use
+    if lsof -ti:9000 >/dev/null 2>&1; then
+        echo "      💡 Troubleshooting: Port 9000 is in use by another process"
+        echo "      💡 Try: ./scripts/cleanup.sh && ./scripts/restart-all.sh"
+    fi
 fi
 
 echo ""
