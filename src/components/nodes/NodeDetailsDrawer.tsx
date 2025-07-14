@@ -54,12 +54,29 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
   const [drawerWidth, setDrawerWidth] = useState<number>(600);
   const [isResizing, setIsResizing] = useState<boolean>(false);
 
-  if (!node || !isOpen) return null;
+  // Always call hooks first, then handle conditional rendering at the end
+
+  // Helper function to safely format dates
+  const formatDate = (dateValue: string | number | Date | null | undefined): string => {
+    if (!dateValue) return 'N/A';
+    try {
+      const date = new Date(dateValue);
+      if (isNaN(date.getTime())) return 'N/A';
+      return date.toLocaleString();
+    } catch {
+      return 'N/A';
+    }
+  };
+
+  // Reset tab when node changes
+  useEffect(() => {
+    if (node && isOpen) {
+      setActiveTab('overview');
+    }
+  }, [node?.name, isOpen]);
 
   // Resize handlers with proper cleanup
   useEffect(() => {
-    if (!isResizing) return;
-
     const handleResize = (e: MouseEvent) => {
       const newWidth = window.innerWidth - e.clientX;
       setDrawerWidth(Math.max(400, Math.min(1200, newWidth)));
@@ -69,14 +86,17 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
       setIsResizing(false);
     };
 
-    document.addEventListener('mousemove', handleResize);
-    document.addEventListener('mouseup', handleResizeEnd);
+    // Only set up event listeners if the component is active and user is resizing
+    if (node && isOpen && isResizing) {
+      document.addEventListener('mousemove', handleResize);
+      document.addEventListener('mouseup', handleResizeEnd);
+    }
 
     return () => {
       document.removeEventListener('mousemove', handleResize);
       document.removeEventListener('mouseup', handleResizeEnd);
     };
-  }, [isResizing]);
+  }, [isResizing, node, isOpen]);
 
   const handleResizeStart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -161,6 +181,11 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
     }
     return 'debug';
   };
+
+  // Conditional rendering at the end - after all hooks have been called
+  if (!node || !isOpen) {
+    return null;
+  }
 
   // Side drawer styles - slides in from the right
   // OpenShift Console masthead height is typically 56px
@@ -323,15 +348,21 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                           </DescriptionListGroup>
                           <DescriptionListGroup>
                             <DescriptionListTerm>Kubernetes Version</DescriptionListTerm>
-                            <DescriptionListDescription>{node?.version || 'N/A'}</DescriptionListDescription>
+                            <DescriptionListDescription>
+                              {node?.version || 'N/A'}
+                            </DescriptionListDescription>
                           </DescriptionListGroup>
                           <DescriptionListGroup>
                             <DescriptionListTerm>Node Age</DescriptionListTerm>
-                            <DescriptionListDescription>{node?.age || 'N/A'}</DescriptionListDescription>
+                            <DescriptionListDescription>
+                              {node?.age || 'N/A'}
+                            </DescriptionListDescription>
                           </DescriptionListGroup>
                           <DescriptionListGroup>
                             <DescriptionListTerm>Uptime</DescriptionListTerm>
-                            <DescriptionListDescription>{node?.uptime || 'N/A'}</DescriptionListDescription>
+                            <DescriptionListDescription>
+                              {node?.uptime || 'N/A'}
+                            </DescriptionListDescription>
                           </DescriptionListGroup>
                         </DescriptionList>
                       </CardBody>
@@ -351,31 +382,33 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                           <DescriptionListGroup>
                             <DescriptionListTerm>CPU</DescriptionListTerm>
                             <DescriptionListDescription>
-                              {node.allocatableResources?.cpu || 'N/A'}
+                              {node?.allocatableResources?.cpu || 'N/A'}
                             </DescriptionListDescription>
                           </DescriptionListGroup>
                           <DescriptionListGroup>
                             <DescriptionListTerm>Memory</DescriptionListTerm>
                             <DescriptionListDescription>
-                              {node.allocatableResources?.memory ? formatMemoryForDisplay(node.allocatableResources.memory) : 'N/A'}
+                              {node?.allocatableResources?.memory
+                                ? formatMemoryForDisplay(node?.allocatableResources?.memory || '')
+                                : 'N/A'}
                             </DescriptionListDescription>
                           </DescriptionListGroup>
                           <DescriptionListGroup>
                             <DescriptionListTerm>Pods</DescriptionListTerm>
                             <DescriptionListDescription>
-                              {node.allocatableResources?.pods || 'N/A'}
+                              {node?.allocatableResources?.pods || 'N/A'}
                             </DescriptionListDescription>
                           </DescriptionListGroup>
                           <DescriptionListGroup>
                             <DescriptionListTerm>Current CPU Usage</DescriptionListTerm>
                             <DescriptionListDescription>
-                              {node.metrics?.cpu?.current?.toFixed(1) || 'N/A'}%
+                              {node?.metrics?.cpu?.current?.toFixed(1) || 'N/A'}%
                             </DescriptionListDescription>
                           </DescriptionListGroup>
                           <DescriptionListGroup>
                             <DescriptionListTerm>Current Memory Usage</DescriptionListTerm>
                             <DescriptionListDescription>
-                              {node.metrics?.memory?.current?.toFixed(1) || 'N/A'}%
+                              {node?.metrics?.memory?.current?.toFixed(1) || 'N/A'}%
                             </DescriptionListDescription>
                           </DescriptionListGroup>
                           <DescriptionListGroup>
@@ -405,7 +438,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                               <DescriptionListGroup>
                                 <DescriptionListTerm>Internal IP</DescriptionListTerm>
                                 <DescriptionListDescription>
-                                  {node.networkInfo?.internalIP || 'Not available'}
+                                  {node?.networkInfo?.internalIP || 'Not available'}
                                 </DescriptionListDescription>
                               </DescriptionListGroup>
                             </DescriptionList>
@@ -415,7 +448,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                               <DescriptionListGroup>
                                 <DescriptionListTerm>External IP</DescriptionListTerm>
                                 <DescriptionListDescription>
-                                  {node.networkInfo?.externalIP || 'Not available'}
+                                  {node?.networkInfo?.externalIP || 'Not available'}
                                 </DescriptionListDescription>
                               </DescriptionListGroup>
                             </DescriptionList>
@@ -425,7 +458,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                               <DescriptionListGroup>
                                 <DescriptionListTerm>Hostname</DescriptionListTerm>
                                 <DescriptionListDescription>
-                                  {node.networkInfo?.hostname || 'Not available'}
+                                  {node?.networkInfo?.hostname || 'Not available'}
                                 </DescriptionListDescription>
                               </DescriptionListGroup>
                             </DescriptionList>
@@ -472,7 +505,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                           <DescriptionListGroup>
                             <DescriptionListTerm>Last Transition</DescriptionListTerm>
                             <DescriptionListDescription>
-                              {new Date(condition.lastTransitionTime).toLocaleString()}
+                              {formatDate(condition.lastTransitionTime)}
                             </DescriptionListDescription>
                           </DescriptionListGroup>
                         </DescriptionList>
@@ -484,7 +517,10 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
             </Tab>
 
             {/* Pods Tab */}
-            <Tab eventKey="pods" title={<TabTitleText>Pods ({(node?.pods || []).length})</TabTitleText>}>
+            <Tab
+              eventKey="pods"
+              title={<TabTitleText>Pods ({(node?.pods || []).length})</TabTitleText>}
+            >
               <div style={tabContentStyles}>
                 <Card>
                   <CardTitle>
@@ -520,7 +556,9 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                                 <Badge color="blue">{pod?.namespace || 'N/A'}</Badge>
                               </Td>
                               <Td>
-                                <Badge color={getPodStatusColor(pod?.status || 'Unknown')}>{pod?.status || 'Unknown'}</Badge>
+                                <Badge color={getPodStatusColor(pod?.status || 'Unknown')}>
+                                  {pod?.status || 'Unknown'}
+                                </Badge>
                               </Td>
                               <Td>{pod?.cpuUsage?.toFixed(2) || 'N/A'}%</Td>
                               <Td>{pod?.memoryUsage?.toFixed(2) || 'N/A'}%</Td>
@@ -528,7 +566,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                                 {pod?.readyContainers || 0}/{pod?.containers || 0}
                               </Td>
                               <Td>{pod?.restarts || 0}</Td>
-                              <Td>{pod?.age || 'N/A'}</Td>
+                              <Td>{formatDate(pod?.age)}</Td>
                             </Tr>
                           ))}
                         </Tbody>
@@ -578,7 +616,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                             <Td>
                               <Badge>{event?.count || 0}</Badge>
                             </Td>
-                            <Td>{event?.timestamp ? new Date(event.timestamp).toLocaleString() : 'N/A'}</Td>
+                            <Td>{formatDate(event?.timestamp)}</Td>
                           </Tr>
                         ))}
                       </Tbody>
@@ -630,7 +668,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                                       <DescriptionListGroup>
                                         <DescriptionListTerm>Time Added</DescriptionListTerm>
                                         <DescriptionListDescription>
-                                          {new Date(taint.timeAdded).toLocaleString()}
+                                          {formatDate(taint.timeAdded)}
                                         </DescriptionListDescription>
                                       </DescriptionListGroup>
                                     )}
@@ -696,7 +734,9 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                                       ? AlertVariant.warning
                                       : AlertVariant.info
                                   }
-                                  title={`${alert?.reason || 'Unknown'} (${alert?.severity || 'Unknown'})`}
+                                  title={`${alert?.reason || 'Unknown'} (${
+                                    alert?.severity || 'Unknown'
+                                  })`}
                                 >
                                   <p>{alert?.message || 'N/A'}</p>
                                   <DescriptionList>
@@ -715,7 +755,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                                     <DescriptionListGroup>
                                       <DescriptionListTerm>Time</DescriptionListTerm>
                                       <DescriptionListDescription>
-                                        {alert?.timestamp ? new Date(alert.timestamp).toLocaleString() : 'N/A'}
+                                        {formatDate(alert?.timestamp)}
                                       </DescriptionListDescription>
                                     </DescriptionListGroup>
                                   </DescriptionList>
@@ -750,12 +790,14 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                                 <Flex alignItems={{ default: 'alignItemsFlexStart' }}>
                                   <FlexItem>{getLogTypeIcon(log?.component || 'unknown')}</FlexItem>
                                   <FlexItem>
-                                    {getLogLevelIcon(log?.level || detectLogLevel(log?.content || ''))}
+                                    {getLogLevelIcon(
+                                      log?.level || detectLogLevel(log?.content || ''),
+                                    )}
                                   </FlexItem>
                                   <FlexItem flex={{ default: 'flex_1' }}>
                                     <div style={{ fontSize: '0.875rem' }}>
                                       <strong>{log?.component || 'Unknown'}</strong> -{' '}
-                                      {log?.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A'}
+                                      {formatDate(log?.timestamp)}
                                     </div>
                                     <div
                                       style={{
