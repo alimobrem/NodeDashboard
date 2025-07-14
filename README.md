@@ -114,10 +114,15 @@ The project includes powerful development management scripts in the `scripts/` d
 ./scripts/restart-all.sh
 ```
 - **Complete cleanup** of ports, processes, and containers
-- **Podman machine restart** for fresh container environment
+- **Enhanced podman machine management** with intelligent connection testing
+- **Robust connection verification** with retry logic (10 attempts)
+- **Stuck process cleanup** (vfkit, gvproxy) for reliable container startup
 - **Automatic plugin startup** with retry logic and health checks
-- **Console startup** with validation and error handling
+- **Console startup** with pre-flight dependency checks
+- **Smart troubleshooting** with specific guidance for common issues
 - **Real-time monitoring** of both services with status updates
+
+**New in v3.0.0**: Enhanced podman machine reliability fixes console startup failures due to broken container connections.
 
 #### **🧹 Cleanup (`yarn cleanup`)**
 ```bash
@@ -556,13 +561,16 @@ yarn type-check --pretty
 
 ## 📋 Changelog
 
-### Latest Changes (v3.0.0) - Enhanced Metrics System
+### Latest Changes (v3.0.0) - Enhanced Metrics & Development
 
 - 🎯 **Real-Time Metrics API**: Integrated Kubernetes `metrics.k8s.io/v1beta1` API for live node metrics
 - 📊 **Dual Metrics Sources**: Real-time metrics with intelligent fallback to estimated data
 - 🔍 **Metrics Status Indicator**: Visual badge showing "Real-time" vs "Estimated" metrics availability
 - ⚡ **Precision Parsing**: Enhanced CPU (nanocores/millicores) and memory (Ki/Mi/Gi) format support
 - 📈 **Historical Data**: 30-second intervals for real metrics, 1-minute for estimated data
+- 🐳 **Robust Podman Management**: Enhanced restart script with intelligent connection testing
+- 🔧 **Container Reliability**: Automatic cleanup of stuck processes (vfkit, gvproxy) preventing console startup failures
+- 🛠️ **Smart Troubleshooting**: Pre-flight dependency checks with specific guidance for common issues
 - 🏗️ **Architecture Refactoring**: Consolidated data processing in useNodeData hook
 - 🧹 **Code Cleanup**: Removed 915 lines of duplicate code, eliminated unused functions
 - ✅ **Build Success**: 100% TypeScript compilation, zero linting errors
