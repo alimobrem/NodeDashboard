@@ -47,6 +47,7 @@ import {
 } from '@patternfly/react-icons';
 import type { NodeDetail, NodeCondition } from '../../types';
 import { useNodeLogs, type NodeLogEntry } from '../../hooks';
+import '../NodesDashboard.css';
 
 interface NodeDetailsDrawerProps {
   node: NodeDetail | null;
@@ -144,11 +145,11 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
   const getConditionIcon = (condition: NodeCondition) => {
     switch (condition.status) {
       case 'True':
-        return <CheckCircleIcon style={{ color: '#3e8635' }} />;
+        return <CheckCircleIcon className="status-icon--ready" />;
       case 'False':
-        return <TimesCircleIcon style={{ color: '#c9190b' }} />;
+        return <TimesCircleIcon className="status-icon--not-ready" />;
       default:
-        return <ExclamationTriangleIcon style={{ color: '#f0ab00' }} />;
+        return <ExclamationTriangleIcon className="status-icon--warning" />;
     }
   };
 
@@ -167,13 +168,13 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
   const getLogLevelIcon = (level?: string) => {
     switch (level?.toLowerCase()) {
       case 'error':
-        return <TimesCircleIcon style={{ color: '#c9190b' }} />;
+        return <TimesCircleIcon className="event-icon--normal" />;
       case 'warning':
-        return <ExclamationTriangleIcon style={{ color: '#f0ab00' }} />;
+        return <ExclamationTriangleIcon className="event-icon--warning" />;
       case 'info':
-        return <InfoCircleIcon style={{ color: '#0066cc' }} />;
+        return <InfoCircleIcon className="event-icon--default" />;
       default:
-        return <InfoCircleIcon style={{ color: '#6a6e73' }} />;
+        return <InfoCircleIcon className="status-icon--default" />;
     }
   };
 

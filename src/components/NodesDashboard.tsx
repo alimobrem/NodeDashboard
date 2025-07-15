@@ -50,6 +50,9 @@ import {
   BellIcon,
 } from '@patternfly/react-icons';
 
+// CSS Styles
+import './NodesDashboard.css';
+
 // Interfaces
 interface NodeMetrics {
   cpu: {
@@ -209,7 +212,7 @@ const MiniLineChart: React.FC<MiniChartProps> = ({ data, color, width = 200, hei
     .join(' ');
 
   return (
-    <svg width={width} height={height} style={{ display: 'block' }}>
+            <svg width={width} height={height} className="dashboard-chart">
       <defs>
         <linearGradient id={`gradient-${color.replace('#', '')}`} x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor={color} stopOpacity="0.6" />
@@ -362,30 +365,16 @@ const EnhancedNodeCard: React.FC<EnhancedNodeCardProps> = ({ node, onClick, isSe
         </Flex>
       </CardTitle>
 
-      <CardBody style={{ padding: '16px', overflow: 'visible' }}>
+      <CardBody className="node-card-body">
         <Stack hasGutter>
           {/* Resource Usage Section */}
           <StackItem>
             <Grid hasGutter>
               <GridItem span={6}>
-                <div
-                  style={{
-                    textAlign: 'center',
-                    padding: '12px',
-                    backgroundColor: '#f8f9fa',
-                    borderRadius: '4px',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginBottom: '6px',
-                    }}
-                  >
-                    <CpuIcon style={{ marginRight: '6px', color: '#0066cc' }} />
-                    <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>CPU</span>
+                <div className="node-card-metric">
+                  <div className="node-card-metric-header">
+                    <CpuIcon className="node-card-metric-icon node-card-metric-icon--cpu" />
+                    <span className="node-card-metric-label">CPU</span>
                   </div>
                   <div
                     style={{
@@ -397,7 +386,7 @@ const EnhancedNodeCard: React.FC<EnhancedNodeCardProps> = ({ node, onClick, isSe
                   >
                     {node.metrics?.cpu?.current || 0}%
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#6a6e73', marginBottom: '6px' }}>
+                  <div className="node-card-metric-text">
                     {cpu.value} {cpu.unit}
                   </div>
                   {node.metrics?.cpu?.history && (
@@ -411,24 +400,10 @@ const EnhancedNodeCard: React.FC<EnhancedNodeCardProps> = ({ node, onClick, isSe
                 </div>
               </GridItem>
               <GridItem span={6}>
-                <div
-                  style={{
-                    textAlign: 'center',
-                    padding: '12px',
-                    backgroundColor: '#f8f9fa',
-                    borderRadius: '4px',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginBottom: '6px',
-                    }}
-                  >
-                    <MemoryIcon style={{ marginRight: '6px', color: '#ff6b35' }} />
-                    <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>Memory</span>
+                <div className="node-card-metric">
+                  <div className="node-card-metric-header">
+                    <MemoryIcon className="node-card-metric-icon node-card-metric-icon--memory" />
+                    <span className="node-card-metric-label">Memory</span>
                   </div>
                   <div
                     style={{
@@ -440,7 +415,7 @@ const EnhancedNodeCard: React.FC<EnhancedNodeCardProps> = ({ node, onClick, isSe
                   >
                     {node.metrics?.memory?.current || 0}%
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#6a6e73', marginBottom: '6px' }}>
+                  <div className="node-card-metric-text">
                     {memory}
                   </div>
                   {node.metrics?.memory?.history && (
@@ -458,20 +433,13 @@ const EnhancedNodeCard: React.FC<EnhancedNodeCardProps> = ({ node, onClick, isSe
 
           {/* Pod Visualization Section */}
           <StackItem>
-            <div style={{ backgroundColor: '#f8f9fa', padding: '12px', borderRadius: '4px' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: '10px',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <CubesIcon style={{ color: '#009639', fontSize: '1rem' }} />
-                  <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>Pods</span>
+            <div className="node-card-info-section">
+              <div className="node-card-pods">
+                <div className="node-card-pods-header">
+                  <CubesIcon className="node-card-pods-icon" />
+                  <span className="node-card-pods-label">Pods</span>
                 </div>
-                <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#009639' }}>
+                <span className="node-card-pods-count">
                   {totalPods}/{node.allocatableResources.pods}
                 </span>
               </div>
@@ -809,7 +777,7 @@ const NodesDashboard: React.FC = () => {
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
         }}
       >
-        <PageSection style={{ paddingBottom: '16px' }}>
+        <PageSection className="dashboard-header">
           <Stack hasGutter>
             {/* Header */}
             <StackItem>
@@ -820,7 +788,7 @@ const NodesDashboard: React.FC = () => {
                 <FlexItem>
                   <Title headingLevel="h1" size="2xl">
                     <MonitoringIcon
-                      style={{ marginRight: 'var(--pf-v5-global--spacer--sm)', color: '#0066cc' }}
+                      className="dashboard-title-section"
                     />
                     Enhanced Node Dashboard
                   </Title>
@@ -871,40 +839,40 @@ const NodesDashboard: React.FC = () => {
             <StackItem>
               <Grid hasGutter>
                 <GridItem span={2}>
-                  <Card style={{ minHeight: '120px' }}>
-                    <CardBody style={{ textAlign: 'center', padding: '16px' }}>
-                      <div style={{ marginBottom: '8px' }}>
-                        <ServerIcon style={{ color: '#0066cc', fontSize: '2rem' }} />
+                  <Card className="summary-card">
+                    <CardBody className="summary-card-body">
+                      <div className="summary-card-icon-container">
+                        <ServerIcon className="summary-card-icon summary-card-icon--primary" />
                       </div>
-                      <Title headingLevel="h2" size="xl" style={{ color: '#0066cc' }}>
+                      <Title headingLevel="h2" size="xl" className="summary-card-title--primary">
                         {nodes.length}
                       </Title>
-                      <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>Total Nodes</div>
+                      <div className="summary-card-subtitle">Total Nodes</div>
                     </CardBody>
                   </Card>
                 </GridItem>
 
                 <GridItem span={2}>
-                  <Card style={{ minHeight: '120px' }}>
-                    <CardBody style={{ textAlign: 'center', padding: '16px' }}>
-                      <div style={{ marginBottom: '8px' }}>
-                        <CheckCircleIcon style={{ color: '#3e8635', fontSize: '2rem' }} />
+                  <Card className="summary-card">
+                    <CardBody className="summary-card-body">
+                      <div className="summary-card-icon-container">
+                        <CheckCircleIcon className="summary-card-icon summary-card-icon--success" />
                       </div>
-                      <Title headingLevel="h2" size="xl" style={{ color: '#3e8635' }}>
+                      <Title headingLevel="h2" size="xl" className="summary-card-title--success">
                         {nodes.filter((n) => n.status === 'Ready').length}
                       </Title>
-                      <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>Ready Nodes</div>
+                      <div className="summary-card-subtitle">Ready Nodes</div>
                     </CardBody>
                   </Card>
                 </GridItem>
 
                 <GridItem span={2}>
-                  <Card style={{ minHeight: '120px' }}>
-                    <CardBody style={{ textAlign: 'center', padding: '16px' }}>
-                      <div style={{ marginBottom: '8px' }}>
-                        <CpuIcon style={{ color: '#ff6b35', fontSize: '2rem' }} />
+                  <Card className="summary-card">
+                    <CardBody className="summary-card-body">
+                      <div className="summary-card-icon-container">
+                        <CpuIcon className="summary-card-icon summary-card-icon--cpu-orange" />
                       </div>
-                      <Title headingLevel="h2" size="xl" style={{ color: '#ff6b35' }}>
+                      <Title headingLevel="h2" size="xl" className="summary-card-title--cpu-orange">
                         {(() => {
                           const readyNodes = nodes.filter((n) => n.status === 'Ready');
                           if (readyNodes.length === 0) return 'N/A';
@@ -916,18 +884,18 @@ const NodesDashboard: React.FC = () => {
                           return `${avgCpu.toFixed(1)}%`;
                         })()}
                       </Title>
-                      <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>Cluster CPU</div>
+                      <div className="summary-card-subtitle">Cluster CPU</div>
                     </CardBody>
                   </Card>
                 </GridItem>
 
                 <GridItem span={2}>
-                  <Card style={{ minHeight: '120px' }}>
-                    <CardBody style={{ textAlign: 'center', padding: '16px' }}>
-                      <div style={{ marginBottom: '8px' }}>
-                        <MemoryIcon style={{ color: '#7b68ee', fontSize: '2rem' }} />
+                  <Card className="summary-card">
+                    <CardBody className="summary-card-body">
+                      <div className="summary-card-icon-container">
+                        <MemoryIcon className="summary-card-icon summary-card-icon--memory" />
                       </div>
-                      <Title headingLevel="h2" size="xl" style={{ color: '#7b68ee' }}>
+                      <Title headingLevel="h2" size="xl" className="summary-card-title--memory">
                         {(() => {
                           const readyNodes = nodes.filter((n) => n.status === 'Ready');
                           if (readyNodes.length === 0) return 'N/A';
@@ -939,38 +907,38 @@ const NodesDashboard: React.FC = () => {
                           return `${avgMemory.toFixed(1)}%`;
                         })()}
                       </Title>
-                      <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>Cluster Memory</div>
+                      <div className="summary-card-subtitle">Cluster Memory</div>
                     </CardBody>
                   </Card>
                 </GridItem>
 
                 <GridItem span={2}>
-                  <Card style={{ minHeight: '120px' }}>
-                    <CardBody style={{ textAlign: 'center', padding: '16px' }}>
-                      <div style={{ marginBottom: '8px' }}>
-                        <CubesIcon style={{ color: '#009639', fontSize: '2rem' }} />
+                  <Card className="summary-card">
+                    <CardBody className="summary-card-body">
+                      <div className="summary-card-icon-container">
+                        <CubesIcon className="summary-card-icon summary-card-icon--running" />
                       </div>
-                      <Title headingLevel="h2" size="xl" style={{ color: '#009639' }}>
+                      <Title headingLevel="h2" size="xl" className="summary-card-title--running">
                         {nodes.reduce((sum, node) => sum + node.pods.length, 0)}
                       </Title>
-                      <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>Running Pods</div>
+                      <div className="summary-card-subtitle">Running Pods</div>
                     </CardBody>
                   </Card>
                 </GridItem>
 
                 <GridItem span={2}>
-                  <Card style={{ minHeight: '120px' }}>
-                    <CardBody style={{ textAlign: 'center', padding: '16px' }}>
-                      <div style={{ marginBottom: '8px' }}>
-                        <ExclamationTriangleIcon style={{ color: '#f0ab00', fontSize: '2rem' }} />
+                  <Card className="summary-card">
+                    <CardBody className="summary-card-body">
+                      <div className="summary-card-icon-container">
+                        <ExclamationTriangleIcon className="summary-card-icon summary-card-icon--warning" />
                       </div>
-                      <Title headingLevel="h2" size="xl" style={{ color: '#f0ab00' }}>
+                      <Title headingLevel="h2" size="xl" className="summary-card-title--warning">
                         {
                           nodes.filter((n) => n.cordoned || n.drained || n.status === 'NotReady')
                             .length
                         }
                       </Title>
-                      <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>Needs Attention</div>
+                      <div className="summary-card-subtitle">Needs Attention</div>
                     </CardBody>
                   </Card>
                 </GridItem>

@@ -8,6 +8,7 @@ import {
   AlertActionCloseButton,
 } from '@patternfly/react-core';
 import { ExclamationTriangleIcon } from '@patternfly/react-icons';
+import '../NodesDashboard.css';
 
 interface NodeErrorBoundaryState {
   hasError: boolean;
@@ -65,13 +66,13 @@ class NodeErrorBoundary extends React.Component<NodeErrorBoundaryProps, NodeErro
 
       return (
         <EmptyState>
-          <ExclamationTriangleIcon size={24} style={{ marginBottom: '1rem' }} />
+          <ExclamationTriangleIcon size={24} className="error-icon" />
           <Title headingLevel="h4" size="lg">
             Something went wrong
           </Title>
           <EmptyStateBody>
             An error occurred while loading the node dashboard. This might be due to:
-            <ul style={{ textAlign: 'left', marginTop: '1rem' }}>
+            <ul className="error-details-list">
               <li>Network connectivity issues</li>
               <li>Kubernetes API server problems</li>
               <li>Invalid cluster configuration</li>
@@ -95,7 +96,7 @@ class NodeErrorBoundary extends React.Component<NodeErrorBoundaryProps, NodeErro
               }
               style={{ marginTop: '1rem', textAlign: 'left' }}
             >
-              <pre style={{ fontSize: '0.8rem', overflow: 'auto' }}>
+              <pre className="error-stack-trace">
                 {this.state.error.message}
                 {this.state.errorInfo?.componentStack}
               </pre>
