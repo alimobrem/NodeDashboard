@@ -748,9 +748,15 @@ const NodesDashboard: React.FC = () => {
   React.useEffect(() => {
     if (selectedNode && nodes.length > 0) {
       // Find the updated version of the selected node
-      const updatedNode = nodes.find(node => node.name === selectedNode.name);
+      const updatedNode = nodes.find((node) => node.name === selectedNode.name);
       if (updatedNode) {
-        console.log(`🔄 Updating selected node ${updatedNode.name} with fresh metrics: CPU ${updatedNode?.metrics?.cpu?.current?.toFixed(1)}%, Memory ${updatedNode?.metrics?.memory?.current?.toFixed(1)}%`);
+        console.log(
+          `🔄 Updating selected node ${
+            updatedNode.name
+          } with fresh metrics: CPU ${updatedNode?.metrics?.cpu?.current?.toFixed(
+            1,
+          )}%, Memory ${updatedNode?.metrics?.memory?.current?.toFixed(1)}%`,
+        );
         setSelectedNode(updatedNode);
       }
     }
@@ -902,7 +908,11 @@ const NodesDashboard: React.FC = () => {
                         {(() => {
                           const readyNodes = nodes.filter((n) => n.status === 'Ready');
                           if (readyNodes.length === 0) return 'N/A';
-                          const avgCpu = readyNodes.reduce((sum, node) => sum + (node.metrics?.cpu?.current || 0), 0) / readyNodes.length;
+                          const avgCpu =
+                            readyNodes.reduce(
+                              (sum, node) => sum + (node.metrics?.cpu?.current || 0),
+                              0,
+                            ) / readyNodes.length;
                           return `${avgCpu.toFixed(1)}%`;
                         })()}
                       </Title>
@@ -921,7 +931,11 @@ const NodesDashboard: React.FC = () => {
                         {(() => {
                           const readyNodes = nodes.filter((n) => n.status === 'Ready');
                           if (readyNodes.length === 0) return 'N/A';
-                          const avgMemory = readyNodes.reduce((sum, node) => sum + (node.metrics?.memory?.current || 0), 0) / readyNodes.length;
+                          const avgMemory =
+                            readyNodes.reduce(
+                              (sum, node) => sum + (node.metrics?.memory?.current || 0),
+                              0,
+                            ) / readyNodes.length;
                           return `${avgMemory.toFixed(1)}%`;
                         })()}
                       </Title>

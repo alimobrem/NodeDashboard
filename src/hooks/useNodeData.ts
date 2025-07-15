@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import { K8sResourceKind } from '@openshift-console/dynamic-plugin-sdk';
-import { NodeDetail, NodeCondition, NodeMetrics, NodeEvent, NodeTaint } from '../types';
+import { NodeDetail, NodeCondition, NodeMetrics, NodeEvent, NodeTaint, NodeLog } from '../types';
 import { NodeAddress } from '../types/kubernetes';
 
 // Interface for Kubernetes Pod Status
@@ -65,7 +65,7 @@ export const useNodeData = (): UseNodeDataReturn => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [metricsAvailable, setMetricsAvailable] = useState(false);
-  
+
   // Metrics polling state
   const [polledMetrics, setPolledMetrics] = useState<K8sResourceKind[]>([]);
   const [polledMetricsLoaded, setPolledMetricsLoaded] = useState(false);
@@ -104,23 +104,23 @@ export const useNodeData = (): UseNodeDataReturn => {
   const pollMetrics = useCallback(async () => {
     try {
       console.log('🔄 Polling NodeMetrics API...');
-      
+
       // Use console's built-in API proxy to access metrics
       const response = await fetch('/api/kubernetes/apis/metrics.k8s.io/v1beta1/nodes', {
         method: 'GET',
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
           'Content-Type': 'application/json',
         },
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       const metricsItems = data.items || [];
-      
+
       setPolledMetrics(metricsItems);
       setPolledMetricsLoaded(true);
       setPolledMetricsError(null);
@@ -135,13 +135,13 @@ export const useNodeData = (): UseNodeDataReturn => {
   // Start metrics polling on mount
   useEffect(() => {
     console.log('🚀 Starting metrics polling every 3 seconds...');
-    
+
     // Poll immediately
     pollMetrics();
-    
+
     // Set up interval for every 3 seconds
     metricsPollingRef.current = setInterval(pollMetrics, 3000);
-    
+
     // Cleanup on unmount
     return () => {
       if (metricsPollingRef.current) {
@@ -156,7 +156,11 @@ export const useNodeData = (): UseNodeDataReturn => {
   const [watchedNodes, nodesLoaded, nodesError] = nodesWatch || [null, false, null];
   const [watchedPods, podsLoaded, podsError] = podsWatch || [null, false, null];
   const [watchedEvents, eventsLoaded, eventsError] = eventsWatch || [null, false, null];
-  const [watchedMetrics, metricsLoaded, metricsError] = [polledMetrics, polledMetricsLoaded, polledMetricsError];
+  const [watchedMetrics, metricsLoaded, metricsError] = [
+    polledMetrics,
+    polledMetricsLoaded,
+    polledMetricsError,
+  ];
 
   // Utility function to parse CPU from various formats
   const parseCpuValue = (cpu: string): number => {
@@ -185,21 +189,19 @@ export const useNodeData = (): UseNodeDataReturn => {
     return parseInt(memory);
   };
 
-
-
   // Generate comprehensive logs from node events and pod activities
-  const generateNodeLogs = (nodeName: string, events: NodeEvent[], pods: any[]) => {
-    const logEntries: any[] = [];
+  const generateNodeLogs = (nodeName: string, events: NodeEvent[], pods: SimplePodResource[]) => {
+    const logEntries: NodeLog[] = [];
 
     // 1. Add logs from node events (like OpenShift Console does)
-    events.forEach(event => {
+    events.forEach((event) => {
       const logLevel = event.type === 'Warning' ? 'WARNING' : 'INFO';
-      
+
       // Smart component detection based on event content
       let component = 'kubernetes';
       const reason = event.reason.toLowerCase();
       const message = event.message.toLowerCase();
-      
+
       if (reason.includes('kubelet') || message.includes('kubelet')) {
         component = 'kubelet';
       } else if (reason.includes('scheduler') || message.includes('scheduling')) {
@@ -211,25 +213,27 @@ export const useNodeData = (): UseNodeDataReturn => {
       } else if (reason.includes('image') || reason.includes('pull')) {
         component = 'containerd';
       }
-      
+
       logEntries.push({
         component,
-        content: `${event.reason}: ${event.message}${event.count > 1 ? ` (${event.count} times)` : ''}`,
+        content: `${event.reason}: ${event.message}${
+          event.count > 1 ? ` (${event.count} times)` : ''
+        }`,
         timestamp: event.timestamp,
-        level: logLevel
+        level: logLevel,
       });
     });
 
     // 2. Add pod lifecycle logs for this node (using simplified pod data)
-    const nodePods = pods.filter(pod => pod.nodeName === nodeName);
-
-    nodePods.slice(0, 10).forEach(pod => { // Limit to recent 10 pods
+    // Note: pods should already be filtered for this node
+    pods.slice(0, 10).forEach((pod) => {
+      // Limit to recent 10 pods
       if (pod.status && pod.status !== 'Running') {
         logEntries.push({
           component: 'kubelet',
           content: `Pod ${pod.name} is in ${pod.status} state`,
           timestamp: new Date(Date.now() - Math.random() * 3600000).toISOString(), // Within last hour
-          level: pod.status === 'Failed' ? 'ERROR' : 'WARNING'
+          level: pod.status === 'Failed' ? 'ERROR' : 'WARNING',
         });
       }
 
@@ -237,9 +241,11 @@ export const useNodeData = (): UseNodeDataReturn => {
       if (pod.restarts && pod.restarts > 0) {
         logEntries.push({
           component: 'kubelet',
-          content: `Pod ${pod.name} has ${pod.restarts} container restart${pod.restarts > 1 ? 's' : ''}`,
+          content: `Pod ${pod.name} has ${pod.restarts} container restart${
+            pod.restarts > 1 ? 's' : ''
+          }`,
           timestamp: new Date(Date.now() - Math.random() * 1800000).toISOString(), // Within last 30 min
-          level: 'WARNING'
+          level: 'WARNING',
         });
       }
     });
@@ -251,47 +257,47 @@ export const useNodeData = (): UseNodeDataReturn => {
       new Date(now.getTime() - 240000).toISOString(), // 4 minutes ago
       new Date(now.getTime() - 180000).toISOString(), // 3 minutes ago
       new Date(now.getTime() - 120000).toISOString(), // 2 minutes ago
-      new Date(now.getTime() - 60000).toISOString(),  // 1 minute ago
+      new Date(now.getTime() - 60000).toISOString(), // 1 minute ago
     ];
-    
+
     // Add diverse log types for filtering demonstration
     const systemLogs = [
       {
         component: 'systemd',
         content: `Node ${nodeName} health check completed`,
         timestamp: recentTimes[0],
-        level: 'INFO'
+        level: 'INFO',
       },
       {
         component: 'kubelet',
         content: `Node ${nodeName} successfully registered with the API server`,
         timestamp: recentTimes[1],
-        level: 'INFO'
+        level: 'INFO',
       },
       {
         component: 'containerd',
         content: 'Container runtime daemon started and ready to serve requests',
         timestamp: recentTimes[2],
-        level: 'INFO'
+        level: 'INFO',
       },
       {
         component: 'kube-scheduler',
         content: 'Successfully processed scheduling queue',
         timestamp: recentTimes[3],
-        level: 'INFO'
+        level: 'INFO',
       },
       {
         component: 'controller-manager',
         content: 'Node controller sync completed successfully',
         timestamp: recentTimes[4],
-        level: 'INFO'
+        level: 'INFO',
       },
       {
         component: 'network',
         content: 'CNI plugin initialized and network interfaces configured',
         timestamp: recentTimes[0],
-        level: 'INFO'
-      }
+        level: 'INFO',
+      },
     ];
 
     logEntries.push(...systemLogs);
@@ -338,8 +344,8 @@ export const useNodeData = (): UseNodeDataReturn => {
         parsedUsedMemory: usedMemoryBytes,
         parsedAllocCpu: allocatableCpuCores,
         parsedAllocMemory: allocatableMemoryBytes,
-        cpuPercent: (cpuUsagePercent).toFixed(2),
-        memoryPercent: (memoryUsagePercent).toFixed(2)
+        cpuPercent: cpuUsagePercent.toFixed(2),
+        memoryPercent: memoryUsagePercent.toFixed(2),
       });
 
       // Cap at reasonable values to avoid display issues
@@ -658,7 +664,7 @@ export const useNodeData = (): UseNodeDataReturn => {
           hasRealMetrics: !!nodeMetrics,
           finalCpuPercent: result.metrics?.cpu?.current,
           finalMemoryPercent: result.metrics?.memory?.current,
-          metricsAvailable: result.metrics ? 'yes' : 'no'
+          metricsAvailable: result.metrics ? 'yes' : 'no',
         });
         return result;
       });
@@ -678,11 +684,20 @@ export const useNodeData = (): UseNodeDataReturn => {
     console.log('🔍 Metrics Watch Update:', {
       metricsLoaded,
       metricsError: metricsError?.toString(),
-      metricsData: watchedMetrics ? (Array.isArray(watchedMetrics) ? watchedMetrics.length : 'single item') : null,
-      sampleMetric: watchedMetrics && Array.isArray(watchedMetrics) && watchedMetrics[0] ? 
-        { name: watchedMetrics[0].metadata?.name, usage: (watchedMetrics[0] as any).usage } : null
+      metricsData: watchedMetrics
+        ? Array.isArray(watchedMetrics)
+          ? watchedMetrics.length
+          : 'single item'
+        : null,
+      sampleMetric:
+        watchedMetrics && Array.isArray(watchedMetrics) && watchedMetrics[0]
+          ? {
+              name: watchedMetrics[0].metadata?.name,
+              usage: (watchedMetrics[0] as KubernetesNodeMetrics).usage,
+            }
+          : null,
     });
-    
+
     processWatchedData();
   }, [
     watchedNodes,

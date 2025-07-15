@@ -20,7 +20,6 @@ import {
   FlexItem,
   Stack,
   StackItem,
-
   Button,
   FormSelect,
   FormSelectOption,
@@ -28,7 +27,6 @@ import {
   EmptyState,
   EmptyStateVariant,
   EmptyStateBody,
-
 } from '@patternfly/react-core';
 import { Table, Thead, Tbody, Tr, Th, Td } from '@patternfly/react-table';
 import {
@@ -73,15 +71,10 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
     availableLogFiles,
     selectedLogFile,
     setSelectedLogFile,
-    refetchLogs
+    refetchLogs,
   } = useNodeLogs(node?.name || '', node?.labels || {});
 
-  // Debug: Track node prop changes (simplified)
-  React.useEffect(() => {
-    if (node && isOpen) {
-      console.log(`🔍 Drawer Node Updated: ${node.name} - CPU: ${node?.metrics?.cpu?.current?.toFixed(1)}%, Memory: ${node?.metrics?.memory?.current?.toFixed(1)}%`);
-    }
-  }, [node?.metrics?.cpu?.current, node?.metrics?.memory?.current, node?.name, isOpen]);
+  // Production: Track node changes for real-time updates without debug logging
 
   // Always call hooks first, then handle conditional rendering at the end
 
@@ -206,12 +199,13 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
     }
   };
 
-
-
   // Filter real logs based on selected log type (for compatibility with old filtering)
-  const filteredLogs = selectedLogType === 'all' 
-    ? realLogs
-    : realLogs.filter((log: NodeLogEntry) => log?.component?.toLowerCase() === selectedLogType.toLowerCase());
+  const filteredLogs =
+    selectedLogType === 'all'
+      ? realLogs
+      : realLogs.filter(
+          (log: NodeLogEntry) => log?.component?.toLowerCase() === selectedLogType.toLowerCase(),
+        );
 
   // Conditional rendering at the end - after all hooks have been called
   if (!node || !isOpen) {
@@ -802,7 +796,10 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                   <GridItem span={6}>
                     <Card style={{ height: '500px', display: 'flex', flexDirection: 'column' }}>
                       <CardTitle>
-                        <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }} alignItems={{ default: 'alignItemsCenter' }}>
+                        <Flex
+                          justifyContent={{ default: 'justifyContentSpaceBetween' }}
+                          alignItems={{ default: 'alignItemsCenter' }}
+                        >
                           <FlexItem>
                             <Title headingLevel="h3" size="lg">
                               <MonitoringIcon style={{ marginRight: '8px', color: '#0066cc' }} />
@@ -810,11 +807,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                             </Title>
                           </FlexItem>
                           <FlexItem>
-                            <Button 
-                              variant="link" 
-                              onClick={refetchLogs}
-                              isDisabled={isLogsLoading}
-                            >
+                            <Button variant="link" onClick={refetchLogs} isDisabled={isLogsLoading}>
                               {isLogsLoading ? <Spinner size="sm" /> : '↻ Refresh'}
                             </Button>
                           </FlexItem>
@@ -832,15 +825,19 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                               aria-label="Select log path"
                             >
                               {availablePaths.map((path) => (
-                                <FormSelectOption 
-                                  key={path} 
-                                  value={path} 
-                                  label={path === 'journal' ? 'Journal' : path.charAt(0).toUpperCase() + path.slice(1)} 
+                                <FormSelectOption
+                                  key={path}
+                                  value={path}
+                                  label={
+                                    path === 'journal'
+                                      ? 'Journal'
+                                      : path.charAt(0).toUpperCase() + path.slice(1)
+                                  }
                                 />
                               ))}
                             </FormSelect>
                           </FlexItem>
-                          
+
                           {availableLogFiles.length > 0 && (
                             <FlexItem>
                               <FormSelect
@@ -869,7 +866,10 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                               <FormSelectOption value="containerd" label="Container Runtime" />
                               <FormSelectOption value="journal" label="System Journal" />
                               <FormSelectOption value="kube-scheduler" label="Scheduler" />
-                              <FormSelectOption value="controller-manager" label="Controller Manager" />
+                              <FormSelectOption
+                                value="controller-manager"
+                                label="Controller Manager"
+                              />
                               <FormSelectOption value="network" label="Network" />
                             </FormSelect>
                           </FlexItem>
@@ -878,37 +878,56 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
 
                       <CardBody style={{ flex: 1, overflow: 'auto', padding: '0' }}>
                         {isLogsLoading ? (
-                          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              height: '200px',
+                            }}
+                          >
                             <Spinner size="lg" />
                           </div>
                         ) : logsError ? (
-                          <Alert variant={AlertVariant.danger} title="Error fetching logs" style={{ margin: '16px' }}>
+                          <Alert
+                            variant={AlertVariant.danger}
+                            title="Error fetching logs"
+                            style={{ margin: '16px' }}
+                          >
                             {logsError}
                           </Alert>
                         ) : selectedPath !== 'journal' && !selectedLogFile ? (
                           <EmptyState
                             headingLevel="h4"
-                            titleText={availableLogFiles.length === 0 ? 'No log files exist' : 'No log file selected'}
+                            titleText={
+                              availableLogFiles.length === 0
+                                ? 'No log files exist'
+                                : 'No log file selected'
+                            }
                             variant={EmptyStateVariant.sm}
                           >
                             <EmptyStateBody>
-                              {availableLogFiles.length === 0 
+                              {availableLogFiles.length === 0
                                 ? `No log files are available for ${selectedPath}.`
-                                : 'Select a log file from the dropdown above.'
-                              }
+                                : 'Select a log file from the dropdown above.'}
                             </EmptyStateBody>
                           </EmptyState>
                         ) : filteredLogs.length === 0 ? (
-                          <Alert variant={AlertVariant.info} title="No logs available" style={{ margin: '16px' }}>
-                            {selectedPath === 'journal' 
+                          <Alert
+                            variant={AlertVariant.info}
+                            title="No logs available"
+                            style={{ margin: '16px' }}
+                          >
+                            {selectedPath === 'journal'
                               ? "This node's journal logs are currently empty or not accessible."
-                              : `No logs are currently available for ${selectedPath}${selectedLogFile ? `/${selectedLogFile}` : ''}.`
-                            }
+                              : `No logs are currently available for ${selectedPath}${
+                                  selectedLogFile ? `/${selectedLogFile}` : ''
+                                }.`}
                           </Alert>
                         ) : (
                           <div style={{ padding: '8px' }}>
                             {filteredLogs.slice(-100).map((log, index) => (
-                              <div 
+                              <div
                                 key={index}
                                 style={{
                                   padding: '4px 8px',
@@ -917,11 +936,25 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                                   fontFamily: 'monospace',
                                 }}
                               >
-                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '2px' }}>
-                                  <span style={{ marginRight: '8px' }}>{getLogTypeIcon(log?.component || 'unknown')}</span>
-                                  <span style={{ marginRight: '8px' }}>{getLogLevelIcon(log?.level || 'INFO')}</span>
-                                  <span style={{ fontWeight: 'bold', marginRight: '8px' }}>{log?.component || 'Unknown'}</span>
-                                  <span style={{ color: '#6a6e73', fontSize: '0.8rem' }}>{formatDate(log?.timestamp)}</span>
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    marginBottom: '2px',
+                                  }}
+                                >
+                                  <span style={{ marginRight: '8px' }}>
+                                    {getLogTypeIcon(log?.component || 'unknown')}
+                                  </span>
+                                  <span style={{ marginRight: '8px' }}>
+                                    {getLogLevelIcon(log?.level || 'INFO')}
+                                  </span>
+                                  <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                                    {log?.component || 'Unknown'}
+                                  </span>
+                                  <span style={{ color: '#6a6e73', fontSize: '0.8rem' }}>
+                                    {formatDate(log?.timestamp)}
+                                  </span>
                                 </div>
                                 <div
                                   style={{
