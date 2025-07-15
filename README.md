@@ -6,6 +6,7 @@ A comprehensive OpenShift Console dynamic plugin for real-time monitoring and ma
 
 ### 🏠 **Real-Time Cluster Overview Dashboard**
 - **Live Node Status**: Real-time view of all cluster nodes with ready/not ready status
+- **Cluster-Wide Resource Metrics**: Summary cards showing cluster CPU and Memory usage averages across all ready nodes
 - **Resource Monitoring**: Live CPU and memory usage with auto-refresh every 3 seconds
 - **Pod Statistics**: Running pod counts with dynamic updates
 - **System Information**: Kubernetes version, cluster uptime, and infrastructure details
@@ -13,8 +14,10 @@ A comprehensive OpenShift Console dynamic plugin for real-time monitoring and ma
 
 ### 🖥️ **Advanced Node Management**
 - **Interactive Node Selection**: Click-to-select nodes with instant detail updates
+- **Real-Time Drawer Updates**: Node detail drawer refreshes with live metrics every 3 seconds
 - **Comprehensive Node Details**: Full configuration, status, and resource information
 - **Tabbed Interface**: Organized across Overview, Logs, and Alerts tabs
+- **Live Resource Allocation**: Real-time CPU and memory usage updates in drawer overview
 - **Resource Capacity**: CPU cores, memory (GB), max pods, and infrastructure details
 - **System Information**: OS details, container runtime, zone, instance type, kernel version
 
@@ -561,7 +564,18 @@ yarn type-check --pretty
 
 ## 📋 Changelog
 
-### Latest Changes (v3.0.0) - Enhanced Metrics & Development
+### Latest Changes (v3.1.0) - Enhanced Dashboard & Real-Time Drawer Updates
+
+- 🎯 **Cluster-Wide Resource Allocation Cards**: Added CPU and Memory summary cards to main dashboard showing average usage across all ready nodes
+- 🔄 **Fixed Real-Time Drawer Updates**: Resolved issue where NodeDetailsDrawer resource allocation card showed static values instead of live metrics
+- ⚡ **Enhanced Selected Node Management**: selectedNode now automatically updates when nodes array receives fresh metrics every 3 seconds
+- 📊 **Improved Dashboard Layout**: Extended summary cards row to include 6 cards: Total Nodes, Ready Nodes, Cluster CPU, Cluster Memory, Running Pods, and Needs Attention
+- 🎨 **Color-Coded Metrics**: Orange CPU and purple Memory cards with appropriate icons for better visual distinction
+- 🔧 **Drawer State Synchronization**: Fixed selectedNode prop updates to ensure drawer Overview tab shows real-time resource allocation data
+- ✅ **Zero Static Values**: All drawer metrics now update every 3 seconds with live cluster data
+- 🎯 **Performance Optimized**: Efficient node data synchronization without impacting main dashboard performance
+
+### Previous Changes (v3.0.0) - Enhanced Metrics & Development
 
 - 🎯 **Real-Time Metrics API**: Integrated Kubernetes `metrics.k8s.io/v1beta1` API for live node metrics
 - 📊 **Dual Metrics Sources**: Real-time metrics with intelligent fallback to estimated data
