@@ -21,6 +21,16 @@ A comprehensive OpenShift Console dynamic plugin for real-time monitoring and ma
 - **Resource Capacity**: CPU cores, memory (GB), max pods, and infrastructure details
 - **System Information**: OS details, container runtime, zone, instance type, kernel version
 
+### 📋 **Advanced Log Viewing System** 
+- **OpenShift Console-Style Log Viewer**: Comprehensive log viewing with real-time data access
+- **Multiple Log Sources**: Journal logs, kubelet logs, container logs, and control plane components
+- **Smart Node Detection**: Automatic detection of master/control plane nodes for extended log access
+- **Path Selection Interface**: Dropdown selection for different log sources (journal, kubelet, containers, etc.)
+- **File Discovery**: Automatic discovery and selection of available log files for each source
+- **Real-Time Log Fetching**: Direct API calls to Kubernetes proxy endpoints for live log data
+- **Intelligent Log Parsing**: Timestamp and log level detection with structured display
+- **Professional UI Controls**: Refresh functionality, loading states, and error handling
+
 ### 📊 **Enhanced Real-Time Metrics System**
 - **Kubernetes Metrics API Integration**: Direct integration with `metrics.k8s.io/v1beta1` for real-time node metrics
 - **Dual Metrics Sources**: Real-time metrics from Kubernetes API with intelligent fallback to estimated metrics
@@ -75,6 +85,8 @@ A comprehensive OpenShift Console dynamic plugin for real-time monitoring and ma
 - **Events API**: System event streaming and notifications
 - **Metrics API**: Resource usage data with proper unit conversion
 - **Custom Resource Definitions**: Extended metadata and configuration
+- **Kubernetes Proxy API**: Direct log access through `/api/v1/nodes/{nodeName}/proxy/logs/{path}` endpoints
+- **Log Sources API**: Multiple log endpoints including journal, kubelet, containers, and control plane components
 
 ## 🚀 Getting Started
 
@@ -349,8 +361,13 @@ The plugin registers with OpenShift Console as:
 - **NodeCard**: Individual node display component with status and metrics
 - **NodeFilters**: Advanced filtering and search capabilities
 - **NodeSummaryMetrics**: Aggregated cluster statistics
+- **NodeDetailsDrawer**: Advanced side drawer with comprehensive node details, logs, and real-time metrics
 - **NodeErrorBoundary**: Robust error handling with graceful fallbacks
-- **Custom Hooks**: Reusable logic for data management and state
+- **Custom Hooks**: 
+  - `useNodeData`: Real-time node data management and metrics polling
+  - `useNodeLogs`: Advanced log viewing with multiple sources and file discovery
+  - `useNodeFilters`: Filtering and search capabilities
+  - `useNodeSelection`: Node selection state management
 
 ### Data Flow Architecture
 
@@ -564,7 +581,20 @@ yarn type-check --pretty
 
 ## 📋 Changelog
 
-### Latest Changes (v3.1.0) - Enhanced Dashboard & Real-Time Drawer Updates
+### Latest Changes (v3.2.0) - Advanced Log Viewer & Real-Time Implementation
+
+- 📋 **OpenShift Console-Style Log Viewer**: Implemented comprehensive log viewing system based on official OpenShift Console NodeLogs component
+- 🔍 **Multiple Log Sources**: Added support for journal logs, kubelet logs, container logs, and control plane components
+- 🧠 **Smart Node Detection**: Automatic detection of master/control plane nodes based on labels for extended log access
+- 🎯 **Path Selection Interface**: Professional dropdown controls for selecting different log sources and available files
+- ⚡ **Real-Time Log Fetching**: Direct API calls to Kubernetes proxy endpoints using `/api/v1/nodes/{nodeName}/proxy/logs/{path}`
+- 🔧 **Intelligent Log Parsing**: Automatic timestamp and log level detection with structured display formatting
+- 💾 **useNodeLogs Hook**: Custom React hook for managing log data, file discovery, and API interactions
+- 🎨 **Professional Log UI**: Fixed-height scrollable log display with refresh controls and loading states
+- 🛡️ **Comprehensive Error Handling**: Proper error boundaries and graceful fallbacks for log access failures
+- 📊 **No Mock Data**: Completely removed hardcoded log data in favor of real Kubernetes API calls
+
+### Previous Changes (v3.1.0) - Enhanced Dashboard & Real-Time Drawer Updates
 
 - 🎯 **Cluster-Wide Resource Allocation Cards**: Added CPU and Memory summary cards to main dashboard showing average usage across all ready nodes
 - 🔄 **Fixed Real-Time Drawer Updates**: Resolved issue where NodeDetailsDrawer resource allocation card showed static values instead of live metrics

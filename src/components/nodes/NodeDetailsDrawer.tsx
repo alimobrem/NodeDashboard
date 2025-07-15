@@ -20,9 +20,15 @@ import {
   FlexItem,
   Stack,
   StackItem,
-  List,
-  ListItem,
+
   Button,
+  FormSelect,
+  FormSelectOption,
+  Spinner,
+  EmptyState,
+  EmptyStateVariant,
+  EmptyStateBody,
+
 } from '@patternfly/react-core';
 import { Table, Thead, Tbody, Tr, Th, Td } from '@patternfly/react-table';
 import {
@@ -42,6 +48,7 @@ import {
   TimesIcon,
 } from '@patternfly/react-icons';
 import type { NodeDetail, NodeCondition } from '../../types';
+import { useNodeLogs, type NodeLogEntry } from '../../hooks';
 
 interface NodeDetailsDrawerProps {
   node: NodeDetail | null;
@@ -53,6 +60,21 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [drawerWidth, setDrawerWidth] = useState<number>(600);
   const [isResizing, setIsResizing] = useState<boolean>(false);
+  const [selectedLogType, setSelectedLogType] = useState<string>('all');
+
+  // Real-time logs fetching
+  const {
+    logs: realLogs,
+    isLoading: isLogsLoading,
+    error: logsError,
+    availablePaths,
+    selectedPath,
+    setSelectedPath,
+    availableLogFiles,
+    selectedLogFile,
+    setSelectedLogFile,
+    refetchLogs
+  } = useNodeLogs(node?.name || '', node?.labels || {});
 
   // Debug: Track node prop changes (simplified)
   React.useEffect(() => {
@@ -166,8 +188,17 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
     switch (component.toLowerCase()) {
       case 'kubelet':
         return <ServerIcon style={{ color: '#0066cc' }} />;
+      case 'containerd':
       case 'container-runtime':
         return <CubesIcon style={{ color: '#0066cc' }} />;
+      case 'systemd':
+        return <MonitoringIcon style={{ color: '#0066cc' }} />;
+      case 'kube-scheduler':
+        return <FilterIcon style={{ color: '#0066cc' }} />;
+      case 'controller-manager':
+        return <TagIcon style={{ color: '#0066cc' }} />;
+      case 'network':
+        return <NetworkIcon style={{ color: '#0066cc' }} />;
       case 'kernel':
         return <MonitoringIcon style={{ color: '#0066cc' }} />;
       default:
@@ -175,19 +206,12 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
     }
   };
 
-  const detectLogLevel = (logContent: string): string => {
-    const content = logContent.toLowerCase();
-    if (content.includes('error') || content.includes('failed') || content.includes('critical')) {
-      return 'error';
-    }
-    if (content.includes('warning') || content.includes('warn')) {
-      return 'warning';
-    }
-    if (content.includes('info')) {
-      return 'info';
-    }
-    return 'debug';
-  };
+
+
+  // Filter real logs based on selected log type (for compatibility with old filtering)
+  const filteredLogs = selectedLogType === 'all' 
+    ? realLogs
+    : realLogs.filter((log: NodeLogEntry) => log?.component?.toLowerCase() === selectedLogType.toLowerCase());
 
   // Conditional rendering at the end - after all hooks have been called
   if (!node || !isOpen) {
@@ -776,53 +800,142 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                   </GridItem>
 
                   <GridItem span={6}>
-                    <Card>
+                    <Card style={{ height: '500px', display: 'flex', flexDirection: 'column' }}>
                       <CardTitle>
-                        <Title headingLevel="h3" size="lg">
-                          <MonitoringIcon style={{ marginRight: '8px', color: '#0066cc' }} />
-                          System Logs ({(node?.logs || []).length})
-                        </Title>
+                        <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }} alignItems={{ default: 'alignItemsCenter' }}>
+                          <FlexItem>
+                            <Title headingLevel="h3" size="lg">
+                              <MonitoringIcon style={{ marginRight: '8px', color: '#0066cc' }} />
+                              Node Logs ({realLogs.length})
+                            </Title>
+                          </FlexItem>
+                          <FlexItem>
+                            <Button 
+                              variant="link" 
+                              onClick={refetchLogs}
+                              isDisabled={isLogsLoading}
+                            >
+                              {isLogsLoading ? <Spinner size="sm" /> : '↻ Refresh'}
+                            </Button>
+                          </FlexItem>
+                        </Flex>
                       </CardTitle>
-                      <CardBody>
-                        {(node?.logs || []).length === 0 ? (
-                          <Alert variant={AlertVariant.info} title="No System Logs">
-                            This node&apos;s systemd journal logs are accessible! Journal logs
-                            provide detailed information about system services, kernel messages, and
-                            container runtime events.
+
+                      {/* Log Controls - Similar to OpenShift Console */}
+                      <div style={{ padding: '16px', borderBottom: '1px solid #d2d2d2' }}>
+                        <Flex>
+                          <FlexItem>
+                            <FormSelect
+                              value={selectedPath}
+                              onChange={(_event, value) => setSelectedPath(value as string)}
+                              style={{ minWidth: '150px' }}
+                              aria-label="Select log path"
+                            >
+                              {availablePaths.map((path) => (
+                                <FormSelectOption 
+                                  key={path} 
+                                  value={path} 
+                                  label={path === 'journal' ? 'Journal' : path.charAt(0).toUpperCase() + path.slice(1)} 
+                                />
+                              ))}
+                            </FormSelect>
+                          </FlexItem>
+                          
+                          {availableLogFiles.length > 0 && (
+                            <FlexItem>
+                              <FormSelect
+                                value={selectedLogFile}
+                                onChange={(_event, value) => setSelectedLogFile(value as string)}
+                                style={{ minWidth: '200px', marginLeft: '8px' }}
+                                aria-label="Select log file"
+                              >
+                                <FormSelectOption value="" label="Select a log file" isDisabled />
+                                {availableLogFiles.map((file) => (
+                                  <FormSelectOption key={file} value={file} label={file} />
+                                ))}
+                              </FormSelect>
+                            </FlexItem>
+                          )}
+
+                          <FlexItem>
+                            <FormSelect
+                              value={selectedLogType}
+                              onChange={(_event, value) => setSelectedLogType(value as string)}
+                              style={{ minWidth: '120px', marginLeft: '8px' }}
+                              aria-label="Filter log types"
+                            >
+                              <FormSelectOption value="all" label="All Types" />
+                              <FormSelectOption value="kubelet" label="Kubelet" />
+                              <FormSelectOption value="containerd" label="Container Runtime" />
+                              <FormSelectOption value="journal" label="System Journal" />
+                              <FormSelectOption value="kube-scheduler" label="Scheduler" />
+                              <FormSelectOption value="controller-manager" label="Controller Manager" />
+                              <FormSelectOption value="network" label="Network" />
+                            </FormSelect>
+                          </FlexItem>
+                        </Flex>
+                      </div>
+
+                      <CardBody style={{ flex: 1, overflow: 'auto', padding: '0' }}>
+                        {isLogsLoading ? (
+                          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
+                            <Spinner size="lg" />
+                          </div>
+                        ) : logsError ? (
+                          <Alert variant={AlertVariant.danger} title="Error fetching logs" style={{ margin: '16px' }}>
+                            {logsError}
+                          </Alert>
+                        ) : selectedPath !== 'journal' && !selectedLogFile ? (
+                          <EmptyState
+                            headingLevel="h4"
+                            titleText={availableLogFiles.length === 0 ? 'No log files exist' : 'No log file selected'}
+                            variant={EmptyStateVariant.sm}
+                          >
+                            <EmptyStateBody>
+                              {availableLogFiles.length === 0 
+                                ? `No log files are available for ${selectedPath}.`
+                                : 'Select a log file from the dropdown above.'
+                              }
+                            </EmptyStateBody>
+                          </EmptyState>
+                        ) : filteredLogs.length === 0 ? (
+                          <Alert variant={AlertVariant.info} title="No logs available" style={{ margin: '16px' }}>
+                            {selectedPath === 'journal' 
+                              ? "This node's journal logs are currently empty or not accessible."
+                              : `No logs are currently available for ${selectedPath}${selectedLogFile ? `/${selectedLogFile}` : ''}.`
+                            }
                           </Alert>
                         ) : (
-                          <List>
-                            {(node?.logs || []).slice(0, 20).map((log, index) => (
-                              <ListItem key={index}>
-                                <Flex alignItems={{ default: 'alignItemsFlexStart' }}>
-                                  <FlexItem>{getLogTypeIcon(log?.component || 'unknown')}</FlexItem>
-                                  <FlexItem>
-                                    {getLogLevelIcon(
-                                      log?.level || detectLogLevel(log?.content || ''),
-                                    )}
-                                  </FlexItem>
-                                  <FlexItem flex={{ default: 'flex_1' }}>
-                                    <div style={{ fontSize: '0.875rem' }}>
-                                      <strong>{log?.component || 'Unknown'}</strong> -{' '}
-                                      {formatDate(log?.timestamp)}
-                                    </div>
-                                    <div
-                                      style={{
-                                        fontSize: '0.8rem',
-                                        color: '#6a6e73',
-                                        marginTop: '4px',
-                                        fontFamily: 'monospace',
-                                        whiteSpace: 'pre-wrap',
-                                        wordBreak: 'break-word',
-                                      }}
-                                    >
-                                      {log?.content || 'N/A'}
-                                    </div>
-                                  </FlexItem>
-                                </Flex>
-                              </ListItem>
+                          <div style={{ padding: '8px' }}>
+                            {filteredLogs.slice(-100).map((log, index) => (
+                              <div 
+                                key={index}
+                                style={{
+                                  padding: '4px 8px',
+                                  borderBottom: '1px solid #f0f0f0',
+                                  fontSize: '0.875rem',
+                                  fontFamily: 'monospace',
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '2px' }}>
+                                  <span style={{ marginRight: '8px' }}>{getLogTypeIcon(log?.component || 'unknown')}</span>
+                                  <span style={{ marginRight: '8px' }}>{getLogLevelIcon(log?.level || 'INFO')}</span>
+                                  <span style={{ fontWeight: 'bold', marginRight: '8px' }}>{log?.component || 'Unknown'}</span>
+                                  <span style={{ color: '#6a6e73', fontSize: '0.8rem' }}>{formatDate(log?.timestamp)}</span>
+                                </div>
+                                <div
+                                  style={{
+                                    color: '#151515',
+                                    whiteSpace: 'pre-wrap',
+                                    wordBreak: 'break-word',
+                                    marginLeft: '60px',
+                                  }}
+                                >
+                                  {log?.content || 'N/A'}
+                                </div>
+                              </div>
                             ))}
-                          </List>
+                          </div>
                         )}
                       </CardBody>
                     </Card>
