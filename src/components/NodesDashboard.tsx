@@ -744,6 +744,18 @@ const NodesDashboard: React.FC = () => {
     setIsDrawerOpen(false);
   };
 
+  // Update selectedNode when nodes data changes (for real-time metrics in drawer)
+  React.useEffect(() => {
+    if (selectedNode && nodes.length > 0) {
+      // Find the updated version of the selected node
+      const updatedNode = nodes.find(node => node.name === selectedNode.name);
+      if (updatedNode) {
+        console.log(`🔄 Updating selected node ${updatedNode.name} with fresh metrics: CPU ${updatedNode?.metrics?.cpu?.current?.toFixed(1)}%, Memory ${updatedNode?.metrics?.memory?.current?.toFixed(1)}%`);
+        setSelectedNode(updatedNode);
+      }
+    }
+  }, [nodes, selectedNode?.name]); // Only depend on nodes and selected node name
+
   // Loading state
   if (loading) {
     return (
@@ -852,7 +864,7 @@ const NodesDashboard: React.FC = () => {
             {/* Summary Metrics Cards */}
             <StackItem>
               <Grid hasGutter>
-                <GridItem span={3}>
+                <GridItem span={2}>
                   <Card style={{ minHeight: '120px' }}>
                     <CardBody style={{ textAlign: 'center', padding: '16px' }}>
                       <div style={{ marginBottom: '8px' }}>
@@ -866,7 +878,7 @@ const NodesDashboard: React.FC = () => {
                   </Card>
                 </GridItem>
 
-                <GridItem span={3}>
+                <GridItem span={2}>
                   <Card style={{ minHeight: '120px' }}>
                     <CardBody style={{ textAlign: 'center', padding: '16px' }}>
                       <div style={{ marginBottom: '8px' }}>
@@ -880,7 +892,45 @@ const NodesDashboard: React.FC = () => {
                   </Card>
                 </GridItem>
 
-                <GridItem span={3}>
+                <GridItem span={2}>
+                  <Card style={{ minHeight: '120px' }}>
+                    <CardBody style={{ textAlign: 'center', padding: '16px' }}>
+                      <div style={{ marginBottom: '8px' }}>
+                        <CpuIcon style={{ color: '#ff6b35', fontSize: '2rem' }} />
+                      </div>
+                      <Title headingLevel="h2" size="xl" style={{ color: '#ff6b35' }}>
+                        {(() => {
+                          const readyNodes = nodes.filter((n) => n.status === 'Ready');
+                          if (readyNodes.length === 0) return 'N/A';
+                          const avgCpu = readyNodes.reduce((sum, node) => sum + (node.metrics?.cpu?.current || 0), 0) / readyNodes.length;
+                          return `${avgCpu.toFixed(1)}%`;
+                        })()}
+                      </Title>
+                      <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>Cluster CPU</div>
+                    </CardBody>
+                  </Card>
+                </GridItem>
+
+                <GridItem span={2}>
+                  <Card style={{ minHeight: '120px' }}>
+                    <CardBody style={{ textAlign: 'center', padding: '16px' }}>
+                      <div style={{ marginBottom: '8px' }}>
+                        <MemoryIcon style={{ color: '#7b68ee', fontSize: '2rem' }} />
+                      </div>
+                      <Title headingLevel="h2" size="xl" style={{ color: '#7b68ee' }}>
+                        {(() => {
+                          const readyNodes = nodes.filter((n) => n.status === 'Ready');
+                          if (readyNodes.length === 0) return 'N/A';
+                          const avgMemory = readyNodes.reduce((sum, node) => sum + (node.metrics?.memory?.current || 0), 0) / readyNodes.length;
+                          return `${avgMemory.toFixed(1)}%`;
+                        })()}
+                      </Title>
+                      <div style={{ fontSize: '0.875rem', color: '#6a6e73' }}>Cluster Memory</div>
+                    </CardBody>
+                  </Card>
+                </GridItem>
+
+                <GridItem span={2}>
                   <Card style={{ minHeight: '120px' }}>
                     <CardBody style={{ textAlign: 'center', padding: '16px' }}>
                       <div style={{ marginBottom: '8px' }}>
@@ -894,7 +944,7 @@ const NodesDashboard: React.FC = () => {
                   </Card>
                 </GridItem>
 
-                <GridItem span={3}>
+                <GridItem span={2}>
                   <Card style={{ minHeight: '120px' }}>
                     <CardBody style={{ textAlign: 'center', padding: '16px' }}>
                       <div style={{ marginBottom: '8px' }}>

@@ -54,6 +54,13 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
   const [drawerWidth, setDrawerWidth] = useState<number>(600);
   const [isResizing, setIsResizing] = useState<boolean>(false);
 
+  // Debug: Track node prop changes (simplified)
+  React.useEffect(() => {
+    if (node && isOpen) {
+      console.log(`🔍 Drawer Node Updated: ${node.name} - CPU: ${node?.metrics?.cpu?.current?.toFixed(1)}%, Memory: ${node?.metrics?.memory?.current?.toFixed(1)}%`);
+    }
+  }, [node?.metrics?.cpu?.current, node?.metrics?.memory?.current, node?.name, isOpen]);
+
   // Always call hooks first, then handle conditional rendering at the end
 
   // Helper function to safely format dates
@@ -234,7 +241,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
 
   const headerStyles: React.CSSProperties = {
     borderBottom: '1px solid #e8e8e8',
-    padding: '20px 32px',
+    padding: '32px 32px 20px 32px',
     backgroundColor: '#f8f9fa',
     flexShrink: 0,
   };
@@ -242,7 +249,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
   const contentStyles: React.CSSProperties = {
     flex: 1,
     overflow: 'auto',
-    padding: '0 32px 32px 32px',
+    padding: '24px 32px 32px 32px',
   };
 
   const tabContentStyles: React.CSSProperties = {
