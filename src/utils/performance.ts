@@ -9,7 +9,7 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
   delay: number = config.performance.debounceDelay,
 ): (...args: Parameters<T>) => void {
   let timeoutId: NodeJS.Timeout;
-  
+
   return (...args: Parameters<T>) => {
     clearTimeout(timeoutId);
     timeoutId = setTimeout(() => func(...args), delay);
@@ -22,7 +22,7 @@ export function throttle<T extends (...args: unknown[]) => unknown>(
   limit: number,
 ): (...args: Parameters<T>) => void {
   let inThrottle: boolean;
-  
+
   return (...args: Parameters<T>) => {
     if (!inThrottle) {
       func(...args);
@@ -39,13 +39,14 @@ export class MemoCache<T> {
   private cache = new Map<string, { value: T; expiry: number }>();
   private defaultTTL: number;
 
-  constructor(defaultTTL: number = 300000) { // 5 minutes default
+  constructor(defaultTTL = 300000) {
+    // 5 minutes default
     this.defaultTTL = defaultTTL;
   }
 
   get(key: string): T | undefined {
     const item = this.cache.get(key);
-    
+
     if (!item) {
       return undefined;
     }
@@ -122,7 +123,7 @@ export function useMemoizedApiCall<T>(
 
   const fetchData = useCallback(async () => {
     const key = cacheKey || JSON.stringify(dependencies);
-    
+
     // Check cache first
     if (config.performance.enableMemoization) {
       const cachedData = globalCache.get(key);
@@ -135,10 +136,10 @@ export function useMemoizedApiCall<T>(
     try {
       setLoading(true);
       setError(undefined);
-      
+
       const result = await memoizedApiCall();
       setData(result);
-      
+
       // Cache the result
       if (config.performance.enableMemoization) {
         globalCache.set(key, result, ttl);
@@ -162,10 +163,7 @@ export function useThrottledCallback<T extends (...args: unknown[]) => unknown>(
   callback: T,
   limit: number,
 ): (...args: Parameters<T>) => void {
-  const throttledCallback = useMemo(
-    () => throttle(callback, limit),
-    [callback, limit],
-  );
+  const throttledCallback = useMemo(() => throttle(callback, limit), [callback, limit]);
 
   return throttledCallback;
 }
@@ -190,11 +188,7 @@ export class PerformanceMonitor {
 
   static endMeasurement(measurementId: string): number {
     performance.mark(`${measurementId}_end`);
-    performance.measure(
-      measurementId,
-      `${measurementId}_start`,
-      `${measurementId}_end`,
-    );
+    performance.measure(measurementId, `${measurementId}_start`, `${measurementId}_end`);
 
     const measurement = performance.getEntriesByName(measurementId)[0];
     const duration = measurement.duration;
@@ -204,7 +198,10 @@ export class PerformanceMonitor {
     if (!this.measurements.has(componentName)) {
       this.measurements.set(componentName, []);
     }
-    this.measurements.get(componentName)!.push(duration);
+    const measurements = this.measurements.get(componentName);
+    if (measurements) {
+      measurements.push(duration);
+    }
 
     // Clean up
     performance.clearMarks(`${measurementId}_start`);
@@ -226,7 +223,7 @@ export class PerformanceMonitor {
 
   static getAllMeasurements(): Record<string, { average: number; count: number }> {
     const result: Record<string, { average: number; count: number }> = {};
-    
+
     for (const [componentName, measurements] of this.measurements.entries()) {
       const average = measurements.reduce((acc, val) => acc + val, 0) / measurements.length;
       result[componentName] = {
@@ -252,19 +249,21 @@ export function usePerformanceMonitor(componentName: string): void {
   useEffect(() => {
     if (config.monitoring.enablePerformanceTracking) {
       const measurementId = PerformanceMonitor.startMeasurement(componentName);
-      
+
       return () => {
         const duration = PerformanceMonitor.endMeasurement(measurementId);
-        
+
         // Log slow renders (> 16ms for 60fps)
         if (duration > 16) {
           console.warn(`Slow render detected: ${componentName} took ${duration.toFixed(2)}ms`);
         }
       };
     }
-    
+
     // Return empty cleanup function when performance tracking is disabled
-    return () => {};
+    return () => {
+      // Intentionally empty - no cleanup needed when tracking is disabled
+    };
   });
 }
 
@@ -313,27 +312,28 @@ export function analyzeBundleSize(): void {
   if (process.env.NODE_ENV === 'development') {
     // Analyze webpack bundle
     console.group('Bundle Analysis');
-    
+
     // This would integrate with webpack-bundle-analyzer in a real setup
     console.log('Module sizes:');
-    
+
     // Example analysis
-    const modules = [
-      '@patternfly/react-core',
-      '@patternfly/react-icons',
-      'react',
-      'react-dom',
-    ];
-    
-    modules.forEach(module => {
+    const modules = ['@patternfly/react-core', '@patternfly/react-icons', 'react', 'react-dom'];
+
+    modules.forEach((module) => {
       try {
-        const moduleSize = require(`${module}/package.json`);
-        console.log(`${module}: ${moduleSize.version}`);
+        // Use dynamic import for TypeScript compatibility
+        import(`${module}/package.json`)
+          .then((moduleInfo: { version: string }) => {
+            console.log(`${module}: ${moduleInfo.version}`);
+          })
+          .catch(() => {
+            console.log(`${module}: Not found`);
+          });
       } catch {
         console.log(`${module}: Not found`);
       }
     });
-    
+
     console.groupEnd();
   }
 }
@@ -349,5 +349,3 @@ export function createLazyComponent<T extends React.ComponentType<unknown>>(
 
   return React.lazy(factory);
 }
-
- 

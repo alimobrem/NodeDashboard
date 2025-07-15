@@ -334,20 +334,6 @@ export const useNodeData = (): UseNodeDataReturn => {
       memoryUsagePercent =
         allocatableMemoryBytes > 0 ? (usedMemoryBytes / allocatableMemoryBytes) * 100 : 0;
 
-      // Debug: Log real metrics calculation
-      console.log(`🔍 Real Metrics Calculation for ${nodeName}:`, {
-        rawCpuUsage: realMetrics.usage.cpu,
-        rawMemoryUsage: realMetrics.usage.memory,
-        allocatableCpu: allocatable.cpu,
-        allocatableMemory: allocatable.memory,
-        parsedUsedCpu: usedCpuCores,
-        parsedUsedMemory: usedMemoryBytes,
-        parsedAllocCpu: allocatableCpuCores,
-        parsedAllocMemory: allocatableMemoryBytes,
-        cpuPercent: cpuUsagePercent.toFixed(2),
-        memoryPercent: memoryUsagePercent.toFixed(2),
-      });
-
       // Cap at reasonable values to avoid display issues
       cpuUsagePercent = Math.min(100, Math.max(0, cpuUsagePercent));
       memoryUsagePercent = Math.min(100, Math.max(0, memoryUsagePercent));
@@ -658,15 +644,7 @@ export const useNodeData = (): UseNodeDataReturn => {
           (metric: K8sResourceKind) => metric.metadata?.name === nodeData.metadata?.name,
         ) as unknown as KubernetesNodeMetrics | undefined;
 
-        // Debug: Log final metrics processing
-        const result = processNodeData(nodeData, nodePods, nodeEvents, nodeMetrics);
-        console.log(`🔍 Final Node Metrics for ${nodeData.metadata?.name}:`, {
-          hasRealMetrics: !!nodeMetrics,
-          finalCpuPercent: result.metrics?.cpu?.current,
-          finalMemoryPercent: result.metrics?.memory?.current,
-          metricsAvailable: result.metrics ? 'yes' : 'no',
-        });
-        return result;
+        return processNodeData(nodeData, nodePods, nodeEvents, nodeMetrics);
       });
 
       setNodes(processedNodes);
@@ -680,24 +658,6 @@ export const useNodeData = (): UseNodeDataReturn => {
 
   // Effect to process data when any watch updates
   useEffect(() => {
-    // Debug: Log when metrics watch changes
-    console.log('🔍 Metrics Watch Update:', {
-      metricsLoaded,
-      metricsError: metricsError?.toString(),
-      metricsData: watchedMetrics
-        ? Array.isArray(watchedMetrics)
-          ? watchedMetrics.length
-          : 'single item'
-        : null,
-      sampleMetric:
-        watchedMetrics && Array.isArray(watchedMetrics) && watchedMetrics[0]
-          ? {
-              name: watchedMetrics[0].metadata?.name,
-              usage: (watchedMetrics[0] as KubernetesNodeMetrics).usage,
-            }
-          : null,
-    });
-
     processWatchedData();
   }, [
     watchedNodes,

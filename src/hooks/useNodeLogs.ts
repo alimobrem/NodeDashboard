@@ -164,9 +164,10 @@ export const useNodeLogs = (
       const limitedLogs = parsedLogs.slice(-1000);
 
       setLogs(limitedLogs);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching logs:', err);
-      setError(err.message || 'Failed to fetch logs');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch logs';
+      setError(errorMessage);
       setLogs([]);
     } finally {
       setIsLoading(false);

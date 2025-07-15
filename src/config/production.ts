@@ -146,7 +146,7 @@ const developmentConfig: ProductionConfig = {
 // Configuration selector based on environment
 export const getConfig = (): ProductionConfig => {
   const env = process.env.NODE_ENV || 'development';
-  
+
   switch (env) {
     case 'production':
       return productionConfig;
@@ -186,4 +186,4 @@ export const checkConfigHealth = (): { isHealthy: boolean; errors: string[] } =>
     isHealthy: errors.length === 0,
     errors,
   };
-}; 
+};

@@ -107,7 +107,7 @@ export class ErrorLogger {
   static log(error: StructuredError): void {
     // In production, this would integrate with your logging service
     // (e.g., DataDog, New Relic, CloudWatch, etc.)
-    
+
     if (config.monitoring.enableErrorTracking) {
       // Format for structured logging
       const logEntry = {
@@ -268,9 +268,8 @@ export async function withRetry<T>(
       }
 
       // Calculate delay based on backoff strategy
-      const currentDelay = backoff === 'exponential' 
-        ? delay * Math.pow(2, attempt - 1)
-        : delay * attempt;
+      const currentDelay =
+        backoff === 'exponential' ? delay * Math.pow(2, attempt - 1) : delay * attempt;
 
       // Log retry attempt
       ErrorFactory.create(
@@ -281,7 +280,7 @@ export async function withRetry<T>(
       );
 
       // Wait before retry
-      await new Promise(resolve => setTimeout(resolve, currentDelay));
+      await new Promise((resolve) => setTimeout(resolve, currentDelay));
     }
   }
 
@@ -357,4 +356,4 @@ export async function withFallback<T>(
 }
 
 // Export circuit breaker for external monitoring
-export { circuitBreaker }; 
+export { circuitBreaker };
