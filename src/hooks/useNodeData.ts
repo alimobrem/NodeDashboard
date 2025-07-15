@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import { K8sResourceKind } from '@openshift-console/dynamic-plugin-sdk';
 import { NodeDetail, NodeCondition, NodeMetrics, NodeEvent, NodeTaint } from '../types';
@@ -65,6 +65,12 @@ export const useNodeData = (): UseNodeDataReturn => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [metricsAvailable, setMetricsAvailable] = useState(false);
+  
+  // Metrics polling state
+  const [polledMetrics, setPolledMetrics] = useState<K8sResourceKind[]>([]);
+  const [polledMetricsLoaded, setPolledMetricsLoaded] = useState(false);
+  const [polledMetricsError, setPolledMetricsError] = useState<Error | null>(null);
+  const metricsPollingRef = useRef<NodeJS.Timeout | null>(null);
 
   // Watch-based data fetching using Kubernetes watches
   const nodesWatch = useK8sWatchResource({
@@ -94,21 +100,63 @@ export const useNodeData = (): UseNodeDataReturn => {
     isList: true,
   });
 
-  // Watch for Node Metrics from the Kubernetes metrics API
-  const metricsWatch = useK8sWatchResource({
-    groupVersionKind: {
-      group: 'metrics.k8s.io',
-      version: 'v1beta1',
-      kind: 'NodeMetrics',
-    },
-    isList: true,
-  });
+  // Metrics polling function (replacing watch)
+  const pollMetrics = useCallback(async () => {
+    try {
+      console.log('🔄 Polling NodeMetrics API...');
+      
+      // Use console's built-in API proxy to access metrics
+      const response = await fetch('/api/kubernetes/apis/metrics.k8s.io/v1beta1/nodes', {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      const metricsItems = data.items || [];
+      
+      setPolledMetrics(metricsItems);
+      setPolledMetricsLoaded(true);
+      setPolledMetricsError(null);
+      console.log('✅ Metrics polling successful, got', metricsItems.length, 'node metrics');
+    } catch (err) {
+      console.warn('⚠️ Metrics polling failed:', err);
+      setPolledMetricsError(err as Error);
+      // Don't set loaded to false on error - keep using last good data
+    }
+  }, []);
 
-  // Extract values from watch results safely
+  // Start metrics polling on mount
+  useEffect(() => {
+    console.log('🚀 Starting metrics polling every 3 seconds...');
+    
+    // Poll immediately
+    pollMetrics();
+    
+    // Set up interval for every 3 seconds
+    metricsPollingRef.current = setInterval(pollMetrics, 3000);
+    
+    // Cleanup on unmount
+    return () => {
+      if (metricsPollingRef.current) {
+        console.log('🛑 Stopping metrics polling');
+        clearInterval(metricsPollingRef.current);
+        metricsPollingRef.current = null;
+      }
+    };
+  }, []); // Empty dependency array - only run on mount/unmount
+
+  // Extract values from watch results safely (using polled metrics instead of watch)
   const [watchedNodes, nodesLoaded, nodesError] = nodesWatch || [null, false, null];
   const [watchedPods, podsLoaded, podsError] = podsWatch || [null, false, null];
   const [watchedEvents, eventsLoaded, eventsError] = eventsWatch || [null, false, null];
-  const [watchedMetrics, metricsLoaded, metricsError] = metricsWatch || [null, false, null];
+  const [watchedMetrics, metricsLoaded, metricsError] = [polledMetrics, polledMetricsLoaded, polledMetricsError];
 
   // Utility function to parse CPU from various formats
   const parseCpuValue = (cpu: string): number => {
@@ -162,6 +210,20 @@ export const useNodeData = (): UseNodeDataReturn => {
       cpuUsagePercent = allocatableCpuCores > 0 ? (usedCpuCores / allocatableCpuCores) * 100 : 0;
       memoryUsagePercent =
         allocatableMemoryBytes > 0 ? (usedMemoryBytes / allocatableMemoryBytes) * 100 : 0;
+
+      // Debug: Log real metrics calculation
+      console.log(`🔍 Real Metrics Calculation for ${nodeName}:`, {
+        rawCpuUsage: realMetrics.usage.cpu,
+        rawMemoryUsage: realMetrics.usage.memory,
+        allocatableCpu: allocatable.cpu,
+        allocatableMemory: allocatable.memory,
+        parsedUsedCpu: usedCpuCores,
+        parsedUsedMemory: usedMemoryBytes,
+        parsedAllocCpu: allocatableCpuCores,
+        parsedAllocMemory: allocatableMemoryBytes,
+        cpuPercent: (cpuUsagePercent).toFixed(2),
+        memoryPercent: (memoryUsagePercent).toFixed(2)
+      });
 
       // Cap at reasonable values to avoid display issues
       cpuUsagePercent = Math.min(100, Math.max(0, cpuUsagePercent));
@@ -473,7 +535,15 @@ export const useNodeData = (): UseNodeDataReturn => {
           (metric: K8sResourceKind) => metric.metadata?.name === nodeData.metadata?.name,
         ) as unknown as KubernetesNodeMetrics | undefined;
 
-        return processNodeData(nodeData, nodePods, nodeEvents, nodeMetrics);
+        // Debug: Log final metrics processing
+        const result = processNodeData(nodeData, nodePods, nodeEvents, nodeMetrics);
+        console.log(`🔍 Final Node Metrics for ${nodeData.metadata?.name}:`, {
+          hasRealMetrics: !!nodeMetrics,
+          finalCpuPercent: result.metrics?.cpu?.current,
+          finalMemoryPercent: result.metrics?.memory?.current,
+          metricsAvailable: result.metrics ? 'yes' : 'no'
+        });
+        return result;
       });
 
       setNodes(processedNodes);
@@ -487,6 +557,15 @@ export const useNodeData = (): UseNodeDataReturn => {
 
   // Effect to process data when any watch updates
   useEffect(() => {
+    // Debug: Log when metrics watch changes
+    console.log('🔍 Metrics Watch Update:', {
+      metricsLoaded,
+      metricsError: metricsError?.toString(),
+      metricsData: watchedMetrics ? (Array.isArray(watchedMetrics) ? watchedMetrics.length : 'single item') : null,
+      sampleMetric: watchedMetrics && Array.isArray(watchedMetrics) && watchedMetrics[0] ? 
+        { name: watchedMetrics[0].metadata?.name, usage: (watchedMetrics[0] as any).usage } : null
+    });
+    
     processWatchedData();
   }, [
     watchedNodes,
