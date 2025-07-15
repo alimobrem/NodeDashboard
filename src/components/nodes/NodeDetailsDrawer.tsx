@@ -27,6 +27,7 @@ import {
   EmptyState,
   EmptyStateVariant,
   EmptyStateBody,
+  SearchInput,
 } from '@patternfly/react-core';
 import { Table, Thead, Tbody, Tr, Th, Td } from '@patternfly/react-table';
 import {
@@ -60,6 +61,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
   const [drawerWidth, setDrawerWidth] = useState<number>(600);
   const [isResizing, setIsResizing] = useState<boolean>(false);
   const [selectedLogType, setSelectedLogType] = useState<string>('all');
+  const [podSearchTerm, setPodSearchTerm] = useState<string>('');
 
   // Real-time logs fetching
   const {
@@ -181,22 +183,22 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
   const getLogTypeIcon = (component: string) => {
     switch (component.toLowerCase()) {
       case 'kubelet':
-        return <ServerIcon style={{ color: '#0066cc' }} />;
+        return <ServerIcon className="icon-primary" />;
       case 'containerd':
       case 'container-runtime':
-        return <CubesIcon style={{ color: '#0066cc' }} />;
+        return <CubesIcon className="icon-primary" />;
       case 'systemd':
-        return <MonitoringIcon style={{ color: '#0066cc' }} />;
+        return <MonitoringIcon className="icon-primary" />;
       case 'kube-scheduler':
-        return <FilterIcon style={{ color: '#0066cc' }} />;
+        return <FilterIcon className="icon-primary" />;
       case 'controller-manager':
-        return <TagIcon style={{ color: '#0066cc' }} />;
+        return <TagIcon className="icon-primary" />;
       case 'network':
-        return <NetworkIcon style={{ color: '#0066cc' }} />;
+        return <NetworkIcon className="icon-primary" />;
       case 'kernel':
-        return <MonitoringIcon style={{ color: '#0066cc' }} />;
+        return <MonitoringIcon className="icon-primary" />;
       default:
-        return <ListIcon style={{ color: '#6a6e73' }} />;
+        return <ListIcon className="icon-secondary" />;
     }
   };
 
@@ -213,68 +215,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
     return null;
   }
 
-  // Side drawer styles - slides in from the right
-  // OpenShift Console masthead height is typically 56px
-  const mastheadHeight = '56px';
 
-  const overlayStyles: React.CSSProperties = {
-    position: 'fixed',
-    top: mastheadHeight,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    zIndex: 1000,
-    opacity: isOpen ? 1 : 0,
-    visibility: isOpen ? 'visible' : 'hidden',
-    transition: 'opacity 0.3s ease, visibility 0.3s ease',
-  };
-
-  const drawerStyles: React.CSSProperties = {
-    position: 'fixed',
-    top: mastheadHeight,
-    right: 0,
-    bottom: 0,
-    width: `${drawerWidth}px`,
-    backgroundColor: '#fff',
-    boxShadow: '-2px 0 10px rgba(0, 0, 0, 0.1)',
-    zIndex: 1001,
-    transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
-    transition: isResizing ? 'none' : 'transform 0.3s ease-in-out',
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden',
-  };
-
-  const resizeHandleStyles: React.CSSProperties = {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    bottom: 0,
-    width: '4px',
-    backgroundColor: isResizing ? '#0066cc' : 'transparent',
-    cursor: 'col-resize',
-    zIndex: 1002,
-    transition: 'background-color 0.2s ease',
-  };
-
-  const headerStyles: React.CSSProperties = {
-    borderBottom: '1px solid #e8e8e8',
-    padding: '32px 32px 20px 32px',
-    backgroundColor: '#f8f9fa',
-    flexShrink: 0,
-  };
-
-  const contentStyles: React.CSSProperties = {
-    flex: 1,
-    overflow: 'auto',
-    padding: '24px 32px 32px 32px',
-  };
-
-  const tabContentStyles: React.CSSProperties = {
-    padding: '24px 0',
-    minHeight: '200px',
-  };
 
   const getPodStatusColor = (status: string) => {
     switch (status) {
@@ -296,34 +237,27 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
   return (
     <>
       {/* Overlay */}
-      <div style={overlayStyles} onClick={onClose} />
+      <div className={`drawer-overlay ${isOpen ? 'drawer-overlay--open' : ''}`} onClick={onClose} />
 
       {/* Side Drawer */}
-      <div style={drawerStyles}>
+      <div 
+        className={`drawer ${isOpen ? 'drawer--open' : ''} ${isResizing ? 'drawer--resizing' : ''}`}
+        style={{ width: `${drawerWidth}px` }}
+      >
         {/* Resize Handle */}
         <div
-          style={resizeHandleStyles}
+          className={`drawer-resize-handle ${isResizing ? 'drawer-resize-handle--active' : ''}`}
           onMouseDown={handleResizeStart}
-          onMouseEnter={(e) => {
-            if (!isResizing) {
-              (e.target as HTMLElement).style.backgroundColor = '#0066cc40';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isResizing) {
-              (e.target as HTMLElement).style.backgroundColor = 'transparent';
-            }
-          }}
         />
 
-        <div style={headerStyles}>
+        <div className="drawer-header">
           <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }}>
             <FlexItem>
               <Title headingLevel="h2" size="lg">
-                <ServerIcon style={{ marginRight: '8px', color: '#0066cc' }} />
+                <ServerIcon className="icon-with-margin-right-primary" />
                 {node?.name || 'Unknown Node'}
               </Title>
-              <div style={{ marginTop: '8px', fontSize: '0.875rem', color: '#6a6e73' }}>
+              <div className="section-content">
                 {node?.role || 'N/A'} • {node?.zone || 'N/A'} • {node?.instanceType || 'N/A'}
               </div>
             </FlexItem>
@@ -335,20 +269,20 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
           </Flex>
         </div>
 
-        <div style={contentStyles}>
+        <div className="drawer-content">
           <Tabs
             activeKey={activeTab}
             onSelect={(_event, tabIndex) => setActiveTab(tabIndex as string)}
           >
             {/* Overview Tab */}
             <Tab eventKey="overview" title={<TabTitleText>Overview</TabTitleText>}>
-              <div style={tabContentStyles}>
+              <div className="drawer-tab-content">
                 <Grid hasGutter>
                   <GridItem span={6}>
                     <Card>
                       <CardTitle>
                         <Title headingLevel="h3" size="lg">
-                          <InfoCircleIcon style={{ marginRight: '8px', color: '#0066cc' }} />
+                          <InfoCircleIcon className="icon-with-margin-right-primary" />
                           System Information
                         </Title>
                       </CardTitle>
@@ -399,7 +333,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                     <Card>
                       <CardTitle>
                         <Title headingLevel="h3" size="lg">
-                          <MemoryIcon style={{ marginRight: '8px', color: '#0066cc' }} />
+                          <MemoryIcon className="icon-with-margin-right-primary" />
                           Resource Allocation
                         </Title>
                       </CardTitle>
@@ -453,7 +387,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                     <Card>
                       <CardTitle>
                         <Title headingLevel="h3" size="lg">
-                          <NetworkIcon style={{ marginRight: '8px', color: '#0066cc' }} />
+                          <NetworkIcon className="icon-with-margin-right-primary" />
                           Network Information
                         </Title>
                       </CardTitle>
@@ -499,7 +433,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
 
             {/* Conditions Tab */}
             <Tab eventKey="conditions" title={<TabTitleText>Conditions</TabTitleText>}>
-              <div style={tabContentStyles}>
+              <div className="drawer-tab-content">
                 <Stack hasGutter>
                   {(node?.conditions || []).map((condition, index) => (
                     <StackItem key={index}>
@@ -508,12 +442,12 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                         title={
                           <Flex alignItems={{ default: 'alignItemsCenter' }}>
                             <FlexItem>{getConditionIcon(condition)}</FlexItem>
-                            <FlexItem style={{ marginLeft: '8px' }}>
+                            <FlexItem className="flex-item-margin-left">
                               {condition.type}: {condition.status}
                             </FlexItem>
                           </Flex>
                         }
-                        style={{ marginBottom: '16px' }}
+                        className="margin-bottom-16"
                       >
                         <DescriptionList>
                           <DescriptionListGroup>
@@ -547,12 +481,34 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
               eventKey="pods"
               title={<TabTitleText>Pods ({(node?.pods || []).length})</TabTitleText>}
             >
-              <div style={tabContentStyles}>
+              <div className="drawer-tab-content">
+                <Flex
+                  justifyContent={{ default: 'justifyContentSpaceBetween' }}
+                  alignItems={{ default: 'alignItemsCenter' }}
+                  className="margin-bottom-16"
+                >
+                  <FlexItem>
+                    <Title headingLevel="h3" size="lg">
+                      <CubesIcon className="icon-with-margin-right-primary" />
+                      Running Pods
+                    </Title>
+                  </FlexItem>
+                  <FlexItem className="flex-item-margin-left">
+                    <SearchInput
+                      placeholder="Search pods..."
+                      value={podSearchTerm}
+                      onChange={(_event, value) => setPodSearchTerm(value)}
+                      onClear={() => setPodSearchTerm('')}
+                      className="margin-bottom-16"
+                    />
+                  </FlexItem>
+                </Flex>
+
                 <Card>
                   <CardTitle>
                     <Title headingLevel="h3" size="lg">
-                      <CubesIcon style={{ marginRight: '8px', color: '#0066cc' }} />
-                      Running Pods
+                      <CubesIcon className="icon-with-margin-right-primary" />
+                      Pods ({node?.pods?.length || 0})
                     </Title>
                   </CardTitle>
                   <CardBody>
@@ -604,52 +560,48 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
             </Tab>
 
             {/* Events Tab */}
-            <Tab
-              eventKey="events"
-              title={<TabTitleText>Events ({(node?.events || []).length})</TabTitleText>}
-            >
-              <div style={tabContentStyles}>
+            <Tab eventKey="events" title={<TabTitleText>Events</TabTitleText>}>
+              <div className="drawer-tab-content">
                 <Card>
                   <CardTitle>
                     <Title headingLevel="h3" size="lg">
-                      <BellIcon style={{ marginRight: '8px', color: '#0066cc' }} />
+                      <BellIcon className="icon-with-margin-right-primary" />
                       Recent Events
                     </Title>
                   </CardTitle>
                   <CardBody>
-                    <Table aria-label="Node Events">
-                      <Thead>
-                        <Tr>
-                          <Th>Type</Th>
-                          <Th>Reason</Th>
-                          <Th>Message</Th>
-                          <Th>Count</Th>
-                          <Th>Time</Th>
-                        </Tr>
-                      </Thead>
-                      <Tbody>
-                        {(node?.events || []).slice(0, 20).map((event, index) => (
-                          <Tr key={index}>
-                            <Td>
-                              <Badge color={event?.type === 'Warning' ? 'red' : 'green'}>
-                                {event?.type || 'Unknown'}
-                              </Badge>
-                            </Td>
-                            <Td>{event?.reason || 'N/A'}</Td>
-                            <Td style={{ maxWidth: '400px', wordBreak: 'break-word' }}>
-                              {event?.message || 'N/A'}
-                            </Td>
-                            <Td>
-                              <Badge>{event?.count || 0}</Badge>
-                            </Td>
-                            <Td>{formatDate(event?.timestamp)}</Td>
+                    {node?.events && node.events.length > 0 ? (
+                      <Table aria-label="Events table">
+                        <Thead>
+                          <Tr>
+                            <Th>Type</Th>
+                            <Th>Reason</Th>
+                            <Th>Message</Th>
+                            <Th>Count</Th>
+                            <Th>Time</Th>
                           </Tr>
-                        ))}
-                      </Tbody>
-                    </Table>
-                    {(node?.events || []).length > 20 && (
-                      <div style={{ marginTop: '16px', textAlign: 'center', color: '#6a6e73' }}>
-                        Showing first 20 of {(node?.events || []).length} events
+                        </Thead>
+                        <Tbody>
+                          {node.events.map((event, index) => (
+                            <Tr key={index}>
+                              <Td>
+                                <Badge color={event.type === 'Warning' ? 'orange' : 'blue'}>
+                                  {event.type}
+                                </Badge>
+                              </Td>
+                              <Td>{event.reason}</Td>
+                              <Td className="table-cell-wrap">
+                                {event.message}
+                              </Td>
+                              <Td>{event.count}</Td>
+                              <Td>{event.timestamp}</Td>
+                            </Tr>
+                          ))}
+                        </Tbody>
+                      </Table>
+                    ) : (
+                      <div className="table-empty-state">
+                        No events available for this node
                       </div>
                     )}
                   </CardBody>
@@ -659,13 +611,13 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
 
             {/* Taints Tab */}
             <Tab eventKey="taints" title={<TabTitleText>Taints & Labels</TabTitleText>}>
-              <div style={tabContentStyles}>
+              <div className="drawer-tab-content">
                 <Grid hasGutter>
                   <GridItem span={6}>
                     <Card>
                       <CardTitle>
                         <Title headingLevel="h3" size="lg">
-                          <TagIcon style={{ marginRight: '8px', color: '#0066cc' }} />
+                          <TagIcon className="icon-with-margin-right-primary" />
                           Taints ({(node?.taints || []).length})
                         </Title>
                       </CardTitle>
@@ -712,14 +664,14 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                     <Card>
                       <CardTitle>
                         <Title headingLevel="h3" size="lg">
-                          <FilterIcon style={{ marginRight: '8px', color: '#0066cc' }} />
+                          <FilterIcon className="icon-with-margin-right-primary" />
                           Labels ({Object.keys(node?.labels || {}).length})
                         </Title>
                       </CardTitle>
                       <CardBody>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        <div className="flex-wrap-gap-8">
                           {Object.entries(node?.labels || {}).map(([key, value]) => (
-                            <Badge key={key} style={{ fontSize: '0.75rem' }}>
+                            <Badge key={key} className="badge-small">
                               {key}: {value}
                             </Badge>
                           ))}
@@ -733,13 +685,13 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
 
             {/* Debug Tab */}
             <Tab eventKey="debug" title={<TabTitleText>Debug & Logs</TabTitleText>}>
-              <div style={tabContentStyles}>
+              <div className="drawer-tab-content">
                 <Grid hasGutter>
                   <GridItem span={6}>
                     <Card>
                       <CardTitle>
                         <Title headingLevel="h3" size="lg">
-                          <BellIcon style={{ marginRight: '8px', color: '#0066cc' }} />
+                          <BellIcon className="icon-with-margin-right-primary" />
                           Alerts ({(node?.alerts || []).length})
                         </Title>
                       </CardTitle>
@@ -795,7 +747,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                   </GridItem>
 
                   <GridItem span={6}>
-                    <Card style={{ height: '500px', display: 'flex', flexDirection: 'column' }}>
+                    <Card className="card-full-height">
                       <CardTitle>
                         <Flex
                           justifyContent={{ default: 'justifyContentSpaceBetween' }}
@@ -803,7 +755,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                         >
                           <FlexItem>
                             <Title headingLevel="h3" size="lg">
-                              <MonitoringIcon style={{ marginRight: '8px', color: '#0066cc' }} />
+                              <MonitoringIcon className="icon-with-margin-right-primary" />
                               Node Logs ({realLogs.length})
                             </Title>
                           </FlexItem>
@@ -816,13 +768,13 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                       </CardTitle>
 
                       {/* Log Controls - Similar to OpenShift Console */}
-                      <div style={{ padding: '16px', borderBottom: '1px solid #d2d2d2' }}>
+                      <div className="chart-controls">
                         <Flex>
                           <FlexItem>
                             <FormSelect
                               value={selectedPath}
                               onChange={(_event, value) => setSelectedPath(value as string)}
-                              style={{ minWidth: '150px' }}
+                              className="chart-control-item"
                               aria-label="Select log path"
                             >
                               {availablePaths.map((path) => (
@@ -844,7 +796,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                               <FormSelect
                                 value={selectedLogFile}
                                 onChange={(_event, value) => setSelectedLogFile(value as string)}
-                                style={{ minWidth: '200px', marginLeft: '8px' }}
+                                className="chart-control-item-with-margin"
                                 aria-label="Select log file"
                               >
                                 <FormSelectOption value="" label="Select a log file" isDisabled />
@@ -859,7 +811,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                             <FormSelect
                               value={selectedLogType}
                               onChange={(_event, value) => setSelectedLogType(value as string)}
-                              style={{ minWidth: '120px', marginLeft: '8px' }}
+                              className="chart-control-time"
                               aria-label="Filter log types"
                             >
                               <FormSelectOption value="all" label="All Types" />
@@ -877,23 +829,16 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                         </Flex>
                       </div>
 
-                      <CardBody style={{ flex: 1, overflow: 'auto', padding: '0' }}>
+                      <CardBody className="card-body-flex">
                         {isLogsLoading ? (
-                          <div
-                            style={{
-                              display: 'flex',
-                              justifyContent: 'center',
-                              alignItems: 'center',
-                              height: '200px',
-                            }}
-                          >
+                          <div className="chart-loading">
                             <Spinner size="lg" />
                           </div>
                         ) : logsError ? (
                           <Alert
                             variant={AlertVariant.danger}
                             title="Error fetching logs"
-                            style={{ margin: '16px' }}
+                            className="chart-error"
                           >
                             {logsError}
                           </Alert>
@@ -917,7 +862,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                           <Alert
                             variant={AlertVariant.info}
                             title="No logs available"
-                            style={{ margin: '16px' }}
+                            className="chart-error"
                           >
                             {selectedPath === 'journal'
                               ? "This node's journal logs are currently empty or not accessible."
@@ -926,45 +871,27 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                                 }.`}
                           </Alert>
                         ) : (
-                          <div style={{ padding: '8px' }}>
+                          <div className="chart-content">
                             {filteredLogs.slice(-100).map((log, index) => (
                               <div
                                 key={index}
-                                style={{
-                                  padding: '4px 8px',
-                                  borderBottom: '1px solid #f0f0f0',
-                                  fontSize: '0.875rem',
-                                  fontFamily: 'monospace',
-                                }}
+                                className="chart-metric-row"
                               >
-                                <div
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    marginBottom: '2px',
-                                  }}
-                                >
-                                  <span style={{ marginRight: '8px' }}>
+                                <div className="section-header">
+                                  <span className="chart-metric-label">
                                     {getLogTypeIcon(log?.component || 'unknown')}
                                   </span>
-                                  <span style={{ marginRight: '8px' }}>
+                                  <span className="chart-metric-current">
                                     {getLogLevelIcon(log?.level || 'INFO')}
                                   </span>
-                                  <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                                  <span className="chart-metric-max">
                                     {log?.component || 'Unknown'}
                                   </span>
-                                  <span style={{ color: '#6a6e73', fontSize: '0.8rem' }}>
+                                  <span className="chart-metric-time">
                                     {formatDate(log?.timestamp)}
                                   </span>
                                 </div>
-                                <div
-                                  style={{
-                                    color: '#151515',
-                                    whiteSpace: 'pre-wrap',
-                                    wordBreak: 'break-word',
-                                    marginLeft: '60px',
-                                  }}
-                                >
+                                <div className="chart-content">
                                   {log?.content || 'N/A'}
                                 </div>
                               </div>

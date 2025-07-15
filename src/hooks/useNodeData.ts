@@ -232,7 +232,7 @@ export const useNodeData = (): UseNodeDataReturn => {
         logEntries.push({
           component: 'kubelet',
           content: `Pod ${pod.name} is in ${pod.status} state`,
-          timestamp: new Date(Date.now() - Math.random() * 3600000).toISOString(), // Within last hour
+          timestamp: new Date().toISOString(),
           level: pod.status === 'Failed' ? 'ERROR' : 'WARNING',
         });
       }
@@ -244,7 +244,7 @@ export const useNodeData = (): UseNodeDataReturn => {
           content: `Pod ${pod.name} has ${pod.restarts} container restart${
             pod.restarts > 1 ? 's' : ''
           }`,
-          timestamp: new Date(Date.now() - Math.random() * 1800000).toISOString(), // Within last 30 min
+          timestamp: new Date().toISOString(),
           level: 'WARNING',
         });
       }
@@ -348,8 +348,8 @@ export const useNodeData = (): UseNodeDataReturn => {
       const baseCpuUsage = isControlPlane ? 25 : 15;
       const baseMemoryUsage = isControlPlane ? 30 : 20;
 
-      cpuUsagePercent = Math.min(95, baseCpuUsage + podDensityRatio * 40 + Math.random() * 10);
-      memoryUsagePercent = Math.min(95, baseMemoryUsage + podDensityRatio * 35 + Math.random() * 8);
+      cpuUsagePercent = Math.min(95, baseCpuUsage + podDensityRatio * 40);
+      memoryUsagePercent = Math.min(95, baseMemoryUsage + podDensityRatio * 35);
     }
 
     // Generate realistic historical data
@@ -370,8 +370,8 @@ export const useNodeData = (): UseNodeDataReturn => {
         const dailyPattern = 0.8 + 0.4 * Math.sin(((timeOfDay - 6) * Math.PI) / 12);
 
         const variance = isRealData
-          ? (Math.random() - 0.5) * 5 // Less variance for real data
-          : (Math.random() - 0.5) * 10; // More variance for estimated data
+          ? 0 // No variance for real data
+          : 0; // No variance for estimated data
 
         const value = Math.max(0, Math.min(100, currentValue * dailyPattern + variance));
         history.push({ timestamp, value: Math.round(value * 10) / 10 });
@@ -510,8 +510,8 @@ export const useNodeData = (): UseNodeDataReturn => {
         name: pod.metadata?.name || 'Unknown',
         namespace: pod.metadata?.namespace || 'Unknown',
         status: podStatus?.phase || 'Unknown',
-        cpuUsage: Math.round(Math.random() * 80 + 10), // TODO: Add real pod metrics
-        memoryUsage: Math.round(Math.random() * 70 + 15), // TODO: Add real pod metrics
+        cpuUsage: 0, // Real pod metrics not available through basic API
+        memoryUsage: 0, // Real pod metrics not available through basic API
         restarts: restartCount,
         age: getAge(pod.metadata?.creationTimestamp || new Date().toISOString()),
         containers: containerCount,

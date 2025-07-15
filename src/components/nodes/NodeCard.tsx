@@ -28,12 +28,6 @@ interface NodeCardProps {
 }
 
 const NodeCard: React.FC<NodeCardProps> = ({ node, onClick, isSelected }) => {
-  const getNodeHealthColor = (node: NodeDetail) => {
-    if (node.status === 'Ready') return '#28a745'; // green
-    if (node.status === 'NotReady') return '#dc3545'; // red
-    return '#ffc107'; // yellow for Unknown
-  };
-
   const getNodeHealthIcon = (node: NodeDetail) => {
     if (node.status === 'Ready') return <CheckCircleIcon />;
     if (node.status === 'NotReady') return <TimesCircleIcon />;
@@ -45,16 +39,17 @@ const NodeCard: React.FC<NodeCardProps> = ({ node, onClick, isSelected }) => {
       isClickable={Boolean(onClick)}
       isSelected={isSelected}
       onClick={() => onClick?.(node)}
-      style={{
-        borderLeft: `4px solid ${getNodeHealthColor(node)}`,
-        transition: 'all 0.2s ease-in-out',
-        cursor: onClick ? 'pointer' : 'default',
-      }}
+      className="node-card"
     >
       <CardTitle>
         <Flex alignItems={{ default: 'alignItemsCenter' }}>
           <FlexItem>
-            <span style={{ color: getNodeHealthColor(node) }}>{getNodeHealthIcon(node)}</span>
+            <span className={`node-health-icon ${
+              node.status === 'Ready' ? 'node-health-icon--ready' :
+              node.status === 'NotReady' ? 'node-health-icon--not-ready' :
+              node.status === 'Unknown' ? 'node-health-icon--unknown' :
+              'node-health-icon--default'
+            }`}>{getNodeHealthIcon(node)}</span>
           </FlexItem>
           <FlexItem>
             <strong>{node.name}</strong>
@@ -68,7 +63,7 @@ const NodeCard: React.FC<NodeCardProps> = ({ node, onClick, isSelected }) => {
         <Grid hasGutter>
           <GridItem span={6}>
             <div>
-              <CpuIcon style={{ marginRight: '4px' }} />
+              <CpuIcon className="icon-margin-right" />
               CPU: {node.metrics.cpu.current.toFixed(1)}%
             </div>
             <Progress
@@ -79,7 +74,7 @@ const NodeCard: React.FC<NodeCardProps> = ({ node, onClick, isSelected }) => {
           </GridItem>
           <GridItem span={6}>
             <div>
-              <MemoryIcon style={{ marginRight: '4px' }} />
+              <MemoryIcon className="icon-margin-right" />
               Memory: {node.metrics.memory.current.toFixed(1)}%
             </div>
             <Progress
@@ -91,7 +86,7 @@ const NodeCard: React.FC<NodeCardProps> = ({ node, onClick, isSelected }) => {
           <GridItem span={12}>
             <Flex>
               <FlexItem>
-                <ServerIcon style={{ marginRight: '4px' }} />
+                <ServerIcon className="icon-margin-right" />
                 {node.role}
               </FlexItem>
               <FlexItem>Pods: {node.pods.length}</FlexItem>

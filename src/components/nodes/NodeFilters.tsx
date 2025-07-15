@@ -50,11 +50,11 @@ export const NodeFilters: React.FC<NodeFiltersProps> = ({
                 placeholder="Search nodes by name, zone, or instance type..."
                 value={searchTerm}
                 onChange={(_, value) => setSearchTerm(value)}
-                style={{ width: '300px' }}
+                className="filter-search-input"
               />
             </FlexItem>
             <FlexItem>
-              <SearchIcon style={{ color: '#6a6e73', marginLeft: '8px' }} />
+              <SearchIcon className="filter-search-icon" />
             </FlexItem>
           </Flex>
         </ToolbarItem>
@@ -64,14 +64,7 @@ export const NodeFilters: React.FC<NodeFiltersProps> = ({
             aria-label="Filter by status"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            style={{
-              width: '200px',
-              height: '36px',
-              padding: '6px 8px',
-              border: '1px solid #d2d2d2',
-              borderRadius: '3px',
-              fontSize: '14px',
-            }}
+            className="filter-dropdown"
           >
             {statusOptions.map((option) => (
               <option key={option.value} value={option.value}>
@@ -86,14 +79,7 @@ export const NodeFilters: React.FC<NodeFiltersProps> = ({
             aria-label="Filter by role"
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            style={{
-              width: '200px',
-              height: '36px',
-              padding: '6px 8px',
-              border: '1px solid #d2d2d2',
-              borderRadius: '3px',
-              fontSize: '14px',
-            }}
+            className="filter-dropdown"
           >
             {roleOptions.map((option) => (
               <option key={option.value} value={option.value}>

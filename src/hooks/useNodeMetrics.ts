@@ -44,14 +44,14 @@ export const useNodeMetrics = (nodeName: string): UseNodeMetricsResult => {
         // Fallback to estimated metrics
         setIsRealTime(false);
 
-        // Generate estimated metrics when API is not available
+        // Use actual node resource usage when metrics API is not available
         const estimatedMetrics: NodeMetrics = {
           cpu: {
-            current: Math.random() * 80 + 10, // Random value between 10-90%
+            current: 0, // No metrics available - show 0%
             history: [],
           },
           memory: {
-            current: Math.random() * 70 + 15, // Random value between 15-85%
+            current: 0, // No metrics available - show 0%
             history: [],
           },
         };

@@ -94,7 +94,7 @@ class NodeErrorBoundary extends React.Component<NodeErrorBoundaryProps, NodeErro
                   }}
                 />
               }
-              style={{ marginTop: '1rem', textAlign: 'left' }}
+              className="error-boundary-details"
             >
               <pre className="error-stack-trace">
                 {this.state.error.message}

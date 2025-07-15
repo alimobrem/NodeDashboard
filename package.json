@@ -1,6 +1,6 @@
 {
   "name": "node-dashboard",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "OpenShift Console Plugin for Node Dashboard - comprehensive cluster node monitoring and management",
   "private": true,
   "license": "Apache-2.0",
