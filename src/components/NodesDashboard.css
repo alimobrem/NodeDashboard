@@ -38,8 +38,16 @@
   color: #9c27b0;
 }
 
-.summary-card-icon--cpu-orange {
+.summary-card-icon--cpu {
   color: #ff6b35;
+}
+
+.summary-card-icon--storage {
+  color: #6f42c1;
+}
+
+.summary-card-icon--network {
+  color: #20c997;
 }
 
 .summary-card-title--primary {
@@ -48,6 +56,22 @@
 
 .summary-card-title--success {
   color: #3e8635;
+}
+
+.summary-card-title--cpu {
+  color: #ff6b35;
+}
+
+.summary-card-title--memory {
+  color: #9c27b0;
+}
+
+.summary-card-title--storage {
+  color: #6f42c1;
+}
+
+.summary-card-title--network {
+  color: #20c997;
 }
 
 .summary-card-title--warning {
@@ -351,6 +375,13 @@
   font-size: 0.875rem;
 }
 
+.summary-card-utilization {
+  font-size: 0.75rem;
+  color: #6a6e73;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
 /* Utility Classes */
 .icon-margin-right {
   margin-right: 8px;
@@ -505,7 +536,7 @@
   top: 56px; /* OpenShift Console masthead height */
   right: 0;
   bottom: 0;
-  width: 600px;
+  width: 600px; /* Default width */
   background-color: #fff;
   box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
   z-index: 1001;
@@ -515,6 +546,8 @@
   flex-direction: column;
   overflow: hidden;
 }
+
+/* Dynamic width will be set via JavaScript on the element's style.width property */
 
 .drawer--open {
   transform: translateX(0);
@@ -747,5 +780,219 @@
   }
   100% {
     opacity: 1;
+  }
+}
+
+/* Visual Pods Grid Styles */
+.node-pods-visual {
+  background-color: var(--pf-global--BackgroundColor--200);
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid var(--pf-global--BorderColor--100);
+}
+
+.node-pods-visual-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.node-pods-visual-title {
+  font-weight: 600;
+  color: var(--pf-global--Color--100);
+  font-size: 14px;
+}
+
+.pods-view-all-btn {
+  background: none;
+  border: 1px solid var(--pf-global--primary-color--100);
+  color: var(--pf-global--primary-color--100);
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.pods-view-all-btn:hover {
+  background-color: var(--pf-global--primary-color--100);
+  color: #fff;
+}
+
+.node-pods-circles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.pod-circle {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  border: 2px solid transparent;
+  flex-shrink: 0;
+}
+
+.pod-circle:hover {
+  transform: scale(1.2);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Healthy Pod Statuses - Green */
+.pod-circle--running {
+  background-color: #3e8635;
+}
+
+.pod-circle--succeeded {
+  background-color: #3e8635;
+}
+
+.pod-circle--completed {
+  background-color: #3e8635;
+}
+
+/* Warning Pod Statuses - Yellow/Orange */
+.pod-circle--pending {
+  background-color: #f0ab00;
+}
+
+.pod-circle--containercreating {
+  background-color: #2b9af3;
+}
+
+.pod-circle--podinitializing {
+  background-color: #2b9af3;
+}
+
+.pod-circle--init {
+  background-color: #2b9af3;
+}
+
+.pod-circle--terminating {
+  background-color: #ec7a08;
+}
+
+/* Error Pod Statuses - Red */
+.pod-circle--failed {
+  background-color: #c9190b;
+}
+
+.pod-circle--error {
+  background-color: #c9190b;
+}
+
+.pod-circle--crashloopbackoff {
+  background-color: #c9190b;
+  animation: pulse 2s infinite;
+}
+
+.pod-circle--imagepullbackoff {
+  background-color: #c9190b;
+  animation: pulse 1.5s infinite;
+}
+
+.pod-circle--errimagepull {
+  background-color: #c9190b;
+}
+
+.pod-circle--invalidimagename {
+  background-color: #c9190b;
+}
+
+.pod-circle--createcontainerconfigerror {
+  background-color: #c9190b;
+}
+
+/* Unknown/Other Pod Statuses - Gray */
+.pod-circle--unknown {
+  background-color: #6a6e73;
+}
+
+.pod-circle--nodelost {
+  background-color: #6a6e73;
+}
+
+.pod-circle--evicted {
+  background-color: #6a6e73;
+}
+
+
+
+/* Watch Status Controls */
+.watch-status-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.watch-status-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.watch-status {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pf-global--Color--100);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.watch-status--connected {
+  color: var(--pf-global--success-color--100);
+}
+
+.watch-status--reconnecting {
+  color: var(--pf-global--warning-color--100);
+}
+
+.watch-status--disconnected {
+  color: var(--pf-global--danger-color--100);
+}
+
+.watch-description {
+  font-size: 10px;
+  color: var(--pf-global--Color--200);
+  font-weight: 400;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .node-pods-circles {
+    gap: 4px;
+    max-height: 150px;
+  }
+  
+  .pod-circle {
+    width: 14px;
+    height: 14px;
+  }
+
+  .watch-status-controls {
+    gap: 8px;
+  }
+
+  .watch-status-indicator {
+    align-items: center;
+  }
+
+  .watch-status {
+    font-size: 11px;
+  }
+
+  .watch-description {
+    font-size: 9px;
   }
 } 

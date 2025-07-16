@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Title,
   Tabs,
@@ -45,6 +45,8 @@ import {
   MemoryIcon,
   NetworkIcon,
   TimesIcon,
+  SortAlphaDownIcon,
+  SortAlphaUpIcon,
 } from '@patternfly/react-icons';
 import type { NodeDetail, NodeCondition } from '../../types';
 import { useNodeLogs, type NodeLogEntry } from '../../hooks';
@@ -62,6 +64,9 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
   const [isResizing, setIsResizing] = useState<boolean>(false);
   const [selectedLogType, setSelectedLogType] = useState<string>('all');
   const [podSearchTerm, setPodSearchTerm] = useState<string>('');
+  const [podSortBy, setPodSortBy] = useState<string>('name');
+  const [podSortDirection, setPodSortDirection] = useState<'asc' | 'desc'>('asc');
+  const drawerRef = useRef<HTMLDivElement>(null);
 
   // Real-time logs fetching
   const {
@@ -123,9 +128,68 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
     };
   }, [isResizing, node, isOpen]);
 
+  // Update drawer width via direct DOM manipulation (no inline styles)
+  useEffect(() => {
+    if (drawerRef.current) {
+      drawerRef.current.style.width = `${drawerWidth}px`;
+    }
+  }, [drawerWidth]);
+
   const handleResizeStart = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizing(true);
+  };
+
+  // Pod sorting functionality
+  const handlePodSort = (columnKey: string) => {
+    if (podSortBy === columnKey) {
+      setPodSortDirection(podSortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setPodSortBy(columnKey);
+      setPodSortDirection('asc');
+    }
+  };
+
+  const sortPods = (pods: any[]) => {
+    return [...pods].sort((a, b) => {
+      let aValue = a[podSortBy];
+      let bValue = b[podSortBy];
+
+      // Handle different data types
+      if (podSortBy === 'cpuUsage' || podSortBy === 'memoryUsage') {
+        aValue = aValue || 0;
+        bValue = bValue || 0;
+      } else if (podSortBy === 'restarts' || podSortBy === 'containers' || podSortBy === 'readyContainers') {
+        aValue = Number(aValue) || 0;
+        bValue = Number(bValue) || 0;
+             } else if (podSortBy === 'age') {
+         // Convert age string to timestamp for proper sorting
+         const parseAge = (ageStr: string) => {
+          if (!ageStr || ageStr === 'N/A') return 0;
+          const match = ageStr.match(/(\d+)([dhms])/);
+          if (!match) return 0;
+          const value = parseInt(match[1]);
+          const unit = match[2];
+          switch (unit) {
+            case 'd': return value * 24 * 60 * 60 * 1000;
+            case 'h': return value * 60 * 60 * 1000;
+            case 'm': return value * 60 * 1000;
+            case 's': return value * 1000;
+            default: return 0;
+          }
+        };
+        aValue = parseAge(aValue);
+        bValue = parseAge(bValue);
+      } else {
+        // String comparison for name, namespace, status
+        aValue = String(aValue || '').toLowerCase();
+        bValue = String(bValue || '').toLowerCase();
+      }
+
+      if (aValue < bValue) return podSortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return podSortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
   };
 
   const formatMemoryForDisplay = (memoryValue: string): string => {
@@ -210,6 +274,22 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
           (log: NodeLogEntry) => log?.component?.toLowerCase() === selectedLogType.toLowerCase(),
         );
 
+  // Filter and sort pods
+  const filteredAndSortedPods = React.useMemo(() => {
+    if (!node?.pods) return [];
+    
+    // Filter pods based on search term
+    const filtered = podSearchTerm
+      ? node.pods.filter((pod) =>
+          pod.name.toLowerCase().includes(podSearchTerm.toLowerCase()) ||
+          pod.namespace.toLowerCase().includes(podSearchTerm.toLowerCase())
+        )
+      : node.pods;
+    
+    // Sort the filtered pods
+    return sortPods(filtered);
+  }, [node?.pods, podSearchTerm, podSortBy, podSortDirection]);
+
   // Conditional rendering at the end - after all hooks have been called
   if (!node || !isOpen) {
     return null;
@@ -234,6 +314,11 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
     }
   };
 
+  const getSortIcon = (columnKey: string) => {
+    if (podSortBy !== columnKey) return null;
+    return podSortDirection === 'asc' ? <SortAlphaUpIcon /> : <SortAlphaDownIcon />;
+  };
+
   return (
     <>
       {/* Overlay */}
@@ -241,8 +326,8 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
 
       {/* Side Drawer */}
       <div 
+        ref={drawerRef}
         className={`drawer ${isOpen ? 'drawer--open' : ''} ${isResizing ? 'drawer--resizing' : ''}`}
-        style={{ width: `${drawerWidth}px` }}
       >
         {/* Resize Handle */}
         <div
@@ -479,7 +564,7 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
             {/* Pods Tab */}
             <Tab
               eventKey="pods"
-              title={<TabTitleText>Pods ({(node?.pods || []).length})</TabTitleText>}
+              title={<TabTitleText>Pods ({filteredAndSortedPods.length}{podSearchTerm ? ` of ${(node?.pods || []).length}` : ''})</TabTitleText>}
             >
               <div className="drawer-tab-content">
                 <Flex
@@ -508,30 +593,96 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                   <CardTitle>
                     <Title headingLevel="h3" size="lg">
                       <CubesIcon className="icon-with-margin-right-primary" />
-                      Pods ({node?.pods?.length || 0})
+                      Pods ({filteredAndSortedPods.length}{podSearchTerm ? ` of ${(node?.pods || []).length}` : ''})
                     </Title>
                   </CardTitle>
                   <CardBody>
-                    {(node?.pods || []).length === 0 ? (
-                      <Alert variant={AlertVariant.info} title="No Running Pods">
-                        This node currently has no running pods.
+                    {filteredAndSortedPods.length === 0 ? (
+                      <Alert variant={AlertVariant.info} title={podSearchTerm ? "No Matching Pods" : "No Running Pods"}>
+                        {podSearchTerm 
+                          ? `No pods match the search term "${podSearchTerm}".`
+                          : "This node currently has no running pods."}
                       </Alert>
                     ) : (
                       <Table aria-label="Pods table">
                         <Thead>
                           <Tr>
-                            <Th>Pod Name</Th>
-                            <Th>Namespace</Th>
-                            <Th>Status</Th>
-                            <Th>CPU</Th>
-                            <Th>Memory</Th>
-                            <Th>Containers</Th>
-                            <Th>Restarts</Th>
-                            <Th>Age</Th>
+                            <Th
+                              sort={{
+                                sortBy: { index: 0, direction: podSortBy === 'name' ? podSortDirection : undefined },
+                                onSort: () => handlePodSort('name'),
+                                columnIndex: 0,
+                              }}
+                            >
+                              Pod Name {getSortIcon('name')}
+                            </Th>
+                            <Th
+                              sort={{
+                                sortBy: { index: 1, direction: podSortBy === 'namespace' ? podSortDirection : undefined },
+                                onSort: () => handlePodSort('namespace'),
+                                columnIndex: 1,
+                              }}
+                            >
+                              Namespace {getSortIcon('namespace')}
+                            </Th>
+                            <Th
+                              sort={{
+                                sortBy: { index: 2, direction: podSortBy === 'status' ? podSortDirection : undefined },
+                                onSort: () => handlePodSort('status'),
+                                columnIndex: 2,
+                              }}
+                            >
+                              Status {getSortIcon('status')}
+                            </Th>
+                            <Th
+                              sort={{
+                                sortBy: { index: 3, direction: podSortBy === 'cpuUsage' ? podSortDirection : undefined },
+                                onSort: () => handlePodSort('cpuUsage'),
+                                columnIndex: 3,
+                              }}
+                            >
+                              CPU % {getSortIcon('cpuUsage')}
+                            </Th>
+                            <Th
+                              sort={{
+                                sortBy: { index: 4, direction: podSortBy === 'memoryUsage' ? podSortDirection : undefined },
+                                onSort: () => handlePodSort('memoryUsage'),
+                                columnIndex: 4,
+                              }}
+                            >
+                              Memory % {getSortIcon('memoryUsage')}
+                            </Th>
+                            <Th
+                              sort={{
+                                sortBy: { index: 5, direction: podSortBy === 'containers' ? podSortDirection : undefined },
+                                onSort: () => handlePodSort('containers'),
+                                columnIndex: 5,
+                              }}
+                            >
+                              Containers {getSortIcon('containers')}
+                            </Th>
+                            <Th
+                              sort={{
+                                sortBy: { index: 6, direction: podSortBy === 'restarts' ? podSortDirection : undefined },
+                                onSort: () => handlePodSort('restarts'),
+                                columnIndex: 6,
+                              }}
+                            >
+                              Restarts {getSortIcon('restarts')}
+                            </Th>
+                            <Th
+                              sort={{
+                                sortBy: { index: 7, direction: podSortBy === 'age' ? podSortDirection : undefined },
+                                onSort: () => handlePodSort('age'),
+                                columnIndex: 7,
+                              }}
+                            >
+                              Age {getSortIcon('age')}
+                            </Th>
                           </Tr>
                         </Thead>
                         <Tbody>
-                          {(node?.pods || []).map((pod, index) => (
+                          {filteredAndSortedPods.map((pod, index) => (
                             <Tr key={index}>
                               <Td>{pod?.name || 'N/A'}</Td>
                               <Td>
@@ -542,13 +693,21 @@ const NodeDetailsDrawer: React.FC<NodeDetailsDrawerProps> = ({ node, isOpen, onC
                                   {pod?.status || 'Unknown'}
                                 </Badge>
                               </Td>
-                              <Td>{pod?.cpuUsage?.toFixed(2) || 'N/A'}%</Td>
-                              <Td>{pod?.memoryUsage?.toFixed(2) || 'N/A'}%</Td>
+                              <Td>
+                                {pod?.cpuUsage !== undefined && pod.cpuUsage > 0 
+                                  ? `${pod.cpuUsage.toFixed(2)}%` 
+                                  : 'N/A'}
+                              </Td>
+                              <Td>
+                                {pod?.memoryUsage !== undefined && pod.memoryUsage > 0 
+                                  ? `${pod.memoryUsage.toFixed(2)}%` 
+                                  : 'N/A'}
+                              </Td>
                               <Td>
                                 {pod?.readyContainers || 0}/{pod?.containers || 0}
                               </Td>
                               <Td>{pod?.restarts || 0}</Td>
-                              <Td>{formatDate(pod?.age)}</Td>
+                              <Td>{pod?.age || 'N/A'}</Td>
                             </Tr>
                           ))}
                         </Tbody>

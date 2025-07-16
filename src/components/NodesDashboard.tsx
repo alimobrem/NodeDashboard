@@ -20,19 +20,14 @@ import {
   TabTitleText,
   TabContent,
   TabContentBody,
-  Switch
+  Tooltip
 } from '@patternfly/react-core';
 import {
   MonitoringIcon,
   CpuIcon,
   MemoryIcon,
   BellIcon,
-  RedoIcon,
-  ExclamationTriangleIcon,
-  EyeIcon,
-  CheckCircleIcon,
-  ExclamationCircleIcon,
-  TimesCircleIcon
+  EyeIcon
 } from '@patternfly/react-icons';
 
 import NodeFilters from './nodes/NodeFilters';
@@ -48,7 +43,7 @@ import { getAge } from '../utils/timeUtils';
 import './NodesDashboard.css';
 
 const NodesDashboard: React.FC = () => {
-  const { nodes, loading, error, refetch: refetchNodes, metricsAvailable } = useNodeData();
+  const { nodes, loading, error, metricsAvailable } = useNodeData();
   const {
     searchTerm,
     setSearchTerm,
@@ -67,9 +62,11 @@ const NodesDashboard: React.FC = () => {
   // Drawer state (managed locally since it's not in the hook)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Auto-refresh state
-  const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
-  const [refreshCountdown, setRefreshCountdown] = useState<number>(30);
+  // Real-time watch status (watches provide live updates automatically)
+  const [watchStatus, setWatchStatus] = useState<'connected' | 'disconnected' | 'reconnecting'>('connected');
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
+  
+
 
   // Tab state
   const [activeTab, setActiveTab] = useState<string>('overview');
@@ -77,24 +74,28 @@ const NodesDashboard: React.FC = () => {
   // Node selection state
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
 
-  // Auto-refresh effect
+  // Watch connection status monitoring
   useEffect(() => {
-    if (!autoRefresh) return;
+    if (loading) {
+      setWatchStatus('reconnecting');
+    } else if (error) {
+      setWatchStatus('disconnected');
+    } else {
+      setWatchStatus('connected');
+      setLastUpdateTime(new Date());
+    }
+  }, [loading, error]);
 
-    const interval = setInterval(() => {
-      setRefreshCountdown(prev => {
-        if (prev <= 1) {
-          refetchNodes();
-          return 30;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+  // Update timestamp when nodes data changes (indicating watch updates)
+  useEffect(() => {
+    if (nodes.length > 0 && !loading && !error) {
+      setLastUpdateTime(new Date());
+    }
+  }, [nodes, loading, error]);
 
-    return () => clearInterval(interval);
-  }, [autoRefresh, refetchNodes]);
 
-  // Summary statistics
+
+  // Summary statistics and cluster metrics
   const summary = useMemo(() => {
     const total = filteredAndSortedNodes.length;
     const ready = filteredAndSortedNodes.filter((node: NodeDetail) => node.status === 'Ready').length;
@@ -111,6 +112,49 @@ const NodesDashboard: React.FC = () => {
     const failedPods = filteredAndSortedNodes.reduce((sum: number, node: NodeDetail) => 
       sum + (node.pods?.filter(pod => pod.status === 'Failed').length || 0), 0);
 
+    // Calculate cluster-wide resource metrics
+    const clusterMetrics = {
+      totalCpu: {
+        cores: filteredAndSortedNodes.reduce((sum: number, node: NodeDetail) => {
+          const cpuStr = node.allocatableResources?.cpu || '0';
+          const cores = cpuStr.endsWith('m') ? parseInt(cpuStr.slice(0, -1)) / 1000 : parseFloat(cpuStr);
+          return sum + cores;
+        }, 0),
+        utilizationPercent: filteredAndSortedNodes.length > 0 
+          ? filteredAndSortedNodes.reduce((sum: number, node: NodeDetail) => 
+              sum + (node.metrics?.cpu?.current || 0), 0) / filteredAndSortedNodes.length
+          : 0
+      },
+      totalMemory: {
+        totalGB: filteredAndSortedNodes.reduce((sum: number, node: NodeDetail) => {
+          const memoryStr = node.allocatableResources?.memory || '0Ki';
+          let bytes = 0;
+          if (memoryStr.endsWith('Ki')) {
+            bytes = parseInt(memoryStr.slice(0, -2)) * 1024;
+          } else if (memoryStr.endsWith('Mi')) {
+            bytes = parseInt(memoryStr.slice(0, -2)) * 1024 * 1024;
+          } else if (memoryStr.endsWith('Gi')) {
+            bytes = parseInt(memoryStr.slice(0, -2)) * 1024 * 1024 * 1024;
+          }
+          return sum + (bytes / (1024 * 1024 * 1024)); // Convert to GB
+        }, 0),
+        utilizationPercent: filteredAndSortedNodes.length > 0 
+          ? filteredAndSortedNodes.reduce((sum: number, node: NodeDetail) => 
+              sum + (node.metrics?.memory?.current || 0), 0) / filteredAndSortedNodes.length
+          : 0
+      },
+      totalStorage: {
+        // Note: Real storage metrics would require PersistentVolume API or storage monitoring
+        totalTB: 0, // Not available through basic node API
+        utilizationPercent: 0 // Not available through basic node API
+      },
+      networkThroughput: {
+        // Note: Real network metrics would require monitoring systems (Prometheus, etc.)
+        ingressMbps: 0, // Not available through basic node API
+        egressMbps: 0  // Not available through basic node API
+      }
+    };
+
     return {
       total,
       ready,
@@ -121,7 +165,8 @@ const NodesDashboard: React.FC = () => {
       totalPods,
       runningPods,
       pendingPods,
-      failedPods
+      failedPods,
+      clusterMetrics
     };
   }, [filteredAndSortedNodes]);
 
@@ -132,15 +177,7 @@ const NodesDashboard: React.FC = () => {
     // Implement bulk actions here
   }, [selectedNodes]);
 
-  // Node health helper
-  const getNodeHealthIcon = (node: NodeDetail): React.ReactNode => {
-    switch (node.status) {
-      case 'Ready': return <CheckCircleIcon />;
-      case 'NotReady': return <TimesCircleIcon />;
-      case 'Unknown': return <ExclamationTriangleIcon />;
-      default: return <ExclamationCircleIcon />;
-    }
-  };
+
 
   const handleNodeClick = useCallback((node: NodeDetail) => {
     setSelectedNode(node);
@@ -310,6 +347,62 @@ const NodesDashboard: React.FC = () => {
               </div>
             </StackItem>
 
+            {/* Visual Pods Circles */}
+            {node.pods && node.pods.length > 0 && (
+              <StackItem>
+                <div className="node-pods-visual">
+                  <div className="node-pods-visual-header">
+                    <span className="node-pods-visual-title">Pods ({node.pods.length})</span>
+                    {node.pods.length > 0 && (
+                      <button 
+                        className="pods-view-all-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleNodeClick(node);
+                        }}
+                        title="View detailed pod information"
+                      >
+                        View All
+                      </button>
+                    )}
+                  </div>
+                  <div className="node-pods-circles">
+                    {node.pods.map((pod, index) => (
+                      <Tooltip
+                        key={`${pod.name}-${index}`}
+                        content={
+                          <div>
+                            <div><strong>{pod.name}</strong></div>
+                            <div>Namespace: {pod.namespace}</div>
+                            <div>Status: <strong>{pod.status}</strong></div>
+                            <div>Health: {
+                              ['Running', 'Succeeded', 'Completed'].includes(pod.status) ? '🟢 Healthy' :
+                              ['Pending', 'ContainerCreating', 'PodInitializing', 'Init', 'Terminating'].includes(pod.status) ? '🟡 Starting/Stopping' :
+                              ['Failed', 'Error', 'CrashLoopBackOff', 'ImagePullBackOff', 'ErrImagePull', 'InvalidImageName', 'CreateContainerConfigError'].includes(pod.status) ? '🔴 Error' :
+                              '⚫ Unknown'
+                            }</div>
+                            <div>Containers: {pod.readyContainers}/{pod.containers}</div>
+                            <div>Restarts: {pod.restarts}</div>
+                            <div><em>Click to view pod details</em></div>
+                          </div>
+                        }
+                      >
+                        <a
+                          href={`/k8s/ns/${pod.namespace}/pods/${pod.name}`}
+                          className={`pod-circle pod-circle--${pod.status.toLowerCase()}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Let the link navigate naturally to the pod details page
+                          }}
+                          title={`${pod.name} - ${pod.status}`}
+                        />
+                      </Tooltip>
+                    ))}
+                  </div>
+                </div>
+              </StackItem>
+            )}
+
             {/* Node Conditions */}
             <StackItem>
               <div className="flex-wrap-gap">
@@ -374,46 +467,21 @@ const NodesDashboard: React.FC = () => {
                   </span>
                 </FlexItem>
                 <FlexItem>
-                  <Flex alignItems={{ default: 'alignItemsCenter' }}>
-                    <FlexItem>
-                      <div className={`status-indicator-metrics ${
-                        metricsAvailable ? 'status-indicator-metrics--available' : 'status-indicator-metrics--unavailable'
-                      }`}>
-                        <div className={`status-dot ${
-                          metricsAvailable ? 'status-dot--available' : 'status-dot--unavailable'
-                        }`} />
-                        <span className={`status-text ${
-                          metricsAvailable ? 'status-text--available' : 'status-text--unavailable'
-                        }`}>
-                          {metricsAvailable ? 'Live Metrics' : 'Limited Data'}
-                        </span>
-                      </div>
-                    </FlexItem>
-                    <FlexItem>
-                      <div className="auto-refresh-controls">
-                        <Switch
-                          id="auto-refresh-switch"
-                          label="Auto-refresh"
-                          isChecked={autoRefresh}
-                          onChange={(_event, checked) => setAutoRefresh(checked)}
-                        />
-                        {autoRefresh && (
-                          <span className="refresh-countdown">
-                            Next: {refreshCountdown}s
-                          </span>
-                        )}
-                        <Button
-                          variant="plain"
-                          icon={<RedoIcon />}
-                          onClick={() => {
-                            refetchNodes();
-                            setRefreshCountdown(30);
-                          }}
-                          aria-label="Refresh nodes"
-                        />
-                      </div>
-                    </FlexItem>
-                  </Flex>
+                  <div className="watch-status-controls">
+                    <div className="watch-status-indicator">
+                      <span className={`watch-status watch-status--${watchStatus}`}>
+                        {watchStatus === 'connected' ? (
+                          metricsAvailable ? '🟢 Live with Metrics' : '🟢 Live (Limited Data)'
+                        ) : watchStatus === 'reconnecting' ? '🟡 Connecting' : 
+                          '🔴 Disconnected'}
+                      </span>
+                      <span className="watch-description">
+                        {watchStatus === 'connected' 
+                          ? `Updated ${lastUpdateTime.toLocaleTimeString()}` 
+                          : 'Real-time updates'}
+                      </span>
+                    </div>
+                  </div>
                 </FlexItem>
               </Flex>
             </StackItem>
@@ -447,6 +515,7 @@ const NodesDashboard: React.FC = () => {
               readyNodes={summary.ready}
               runningPods={summary.runningPods}
               needsAttention={summary.notReady + summary.unknown}
+              clusterMetrics={summary.clusterMetrics}
             />
           </StackItem>
 
@@ -482,10 +551,10 @@ const NodesDashboard: React.FC = () => {
               <Tab eventKey="overview" title={<TabTitleText>Overview</TabTitleText>}>
                 <TabContent eventKey="overview" id="overview-tab">
                   <TabContentBody>
-                    {/* Node Grid */}
+                    {/* Node Grid - Responsive: 1 col mobile, 2 col small tablet, 3 col default, 4 col large screens */}
                     <Grid hasGutter>
                       {filteredAndSortedNodes.map((node) => (
-                        <GridItem key={node.name} span={12} md={6} lg={4} xl={3}>
+                        <GridItem key={node.name} span={12} sm={6} md={4} lg={4} xl={3}>
                           <EnhancedNodeCard node={node} />
                         </GridItem>
                       ))}

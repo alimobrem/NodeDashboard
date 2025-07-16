@@ -49,8 +49,11 @@ A **production-ready** OpenShift Console dynamic plugin for real-time monitoring
 ## ✨ Features
 
 ### 🏠 **Real-Time Cluster Overview Dashboard**
-- **Live Node Status**: Real-time view of all cluster nodes with ready/not ready status
-- **Cluster-Wide Resource Metrics**: Summary cards showing cluster CPU and Memory usage averages across all ready nodes
+- **Live Node Status**: Real-time view of all cluster nodes with unified live status indicator
+- **Cluster-Wide Resource Metrics**: Comprehensive summary cards showing:
+  - **Node Status**: Total nodes, ready nodes, running pods, attention needed
+  - **Resource Utilization**: Total CPU cores, memory (GB), storage (TB), network throughput (Mbps)
+- **Responsive Grid Layout**: Optimized 3-nodes-per-row layout with responsive breakpoints
 - **Resource Monitoring**: Live CPU and memory usage with auto-refresh every 3 seconds
 - **Pod Statistics**: Running pod counts with dynamic updates
 - **System Information**: Kubernetes version, cluster uptime, and infrastructure details
@@ -76,16 +79,33 @@ A **production-ready** OpenShift Console dynamic plugin for real-time monitoring
 - **Professional UI Controls**: Refresh functionality, loading states, and error handling
 
 ### 📊 **Enhanced Real-Time Metrics System**
-- **Kubernetes Metrics API Integration**: Direct integration with `metrics.k8s.io/v1beta1` for real-time node metrics
-- **Dual Metrics Sources**: Real-time metrics from Kubernetes API with intelligent fallback to estimated metrics
-- **Visual Metrics Indicator**: Dynamic status badge showing "Real-time Metrics" vs "Estimated Metrics"
+- **Kubernetes Metrics API Integration**: Direct integration with `metrics.k8s.io/v1beta1` for real-time node and pod metrics
+- **Real Pod Metrics**: Actual CPU and memory usage from running pods using metrics server
+- **Pod Metrics Correlation**: Automatic matching of pod metrics with node allocatable resources
+- **Visual Metrics Indicator**: Dynamic status badge showing "Live with Metrics" vs "Live (Limited Data)"
 - **Precision Data Parsing**: Support for nanocores, millicores, and various memory formats (Ki, Mi, Gi)
 - **Historical Trend Data**: 30-second intervals for real metrics, 1-minute intervals for estimated data
 - **Smart Fallback Logic**: Graceful degradation when metrics API is unavailable
 
+### 🗂️ **Sortable Pods Table**
+- **Advanced Pod Sorting**: Click column headers to sort by:
+  - **Name**: Alphabetical sorting (case-insensitive)
+  - **Namespace**: Alphabetical namespace grouping
+  - **Status**: Status-based organization (Running, Pending, etc.)
+  - **CPU Usage**: Numerical sorting by actual CPU percentage
+  - **Memory Usage**: Numerical sorting by actual memory percentage
+  - **Containers**: Sort by container count
+  - **Restarts**: Sort by restart count
+  - **Age**: Chronological sorting (converts "2h", "3d" to proper time values)
+- **Smart Data Types**: Intelligent sorting algorithms for strings, numbers, and time values
+- **Visual Sort Indicators**: Clear ascending/descending arrows with interactive feedback
+- **Combined Search & Sort**: Filtered results maintain sort order for optimal data exploration
+- **Dynamic Counts**: Shows "X of Y pods" when search filters are active
+
 ### 🚀 **WebSocket Real-Time Features**
 - **Node Watch API**: Live monitoring of node status changes
-- **Pod Watch API**: Real-time pod lifecycle events for selected nodes
+- **Pod Watch API**: Real-time pod lifecycle events for selected nodes with actual metrics
+- **Pod Metrics Watch**: Live pod CPU and memory usage from metrics server
 - **Event Streaming**: Live system event notifications
 - **Auto-Reconnection**: Robust WebSocket handling with automatic reconnection
 - **Performance Optimized**: Efficient data streaming with minimal resource usage
@@ -118,6 +138,8 @@ A **production-ready** OpenShift Console dynamic plugin for real-time monitoring
 
 ### Real-Time Data Architecture
 - **WebSocket Connections**: Direct integration with OpenShift API watch endpoints
+- **Real Pod Metrics**: Integration with `metrics.k8s.io/v1beta1/PodMetrics` API for actual resource usage
+- **Metrics Correlation**: Automatic correlation of pod metrics with node data for accurate CPU/memory percentages
 - **Component State Management**: React hooks with optimized re-rendering
 - **Memory Management**: Automatic cleanup of WebSocket connections and timers
 - **Error Handling**: Graceful degradation and reconnection strategies
@@ -126,6 +148,7 @@ A **production-ready** OpenShift Console dynamic plugin for real-time monitoring
 ### API Integration
 - **OpenShift Node API**: Real-time node data retrieval
 - **Pod Watch API**: Live pod monitoring for selected nodes
+- **Pod Metrics API**: Real CPU and memory usage from metrics server
 - **Events API**: System event streaming and notifications
 - **Metrics API**: Resource usage data with proper unit conversion
 - **Custom Resource Definitions**: Extended metadata and configuration
@@ -144,6 +167,7 @@ This plugin requires OpenShift 4.12+ for the `v1` API version of `ConsolePlugin`
 - [Docker](https://www.docker.com) or [podman 3.2.0+](https://podman.io) 
 - [oc](https://console.redhat.com/openshift/downloads) CLI tool
 - Access to an OpenShift cluster with proper RBAC permissions
+- **Metrics Server**: For real pod CPU/memory metrics (optional - graceful fallback without it)
 
 ## 💻 Development
 
@@ -404,11 +428,11 @@ The plugin registers with OpenShift Console as:
 - **NodesDashboard**: Comprehensive dashboard with real-time node monitoring, interactive selection, and live resource tracking
 - **NodeCard**: Individual node display component with status and metrics
 - **NodeFilters**: Advanced filtering and search capabilities
-- **NodeSummaryMetrics**: Aggregated cluster statistics
-- **NodeDetailsDrawer**: Advanced side drawer with comprehensive node details, logs, and real-time metrics
+- **NodeSummaryCards**: Aggregated cluster statistics with real resource calculations
+- **NodeDetailsDrawer**: Advanced side drawer with comprehensive node details, sortable pods table, and real-time metrics
 - **NodeErrorBoundary**: Robust error handling with graceful fallbacks
 - **Custom Hooks**: 
-  - `useNodeData`: Real-time node data management and metrics polling
+  - `useNodeData`: Real-time node data management and pod metrics integration
   - `useNodeLogs`: Advanced log viewing with multiple sources and file discovery
   - `useNodeFilters`: Filtering and search capabilities
   - `useNodeSelection`: Node selection state management
@@ -417,10 +441,11 @@ The plugin registers with OpenShift Console as:
 
 1. **WebSocket Connections**: Direct integration with OpenShift API watch endpoints
 2. **Real-Time Updates**: Components refresh every 3 seconds with live data streaming
-3. **Resource Calculations**: Automatic unit conversion (Gi→GB, millicores→cores)
-4. **State Management**: React hooks with optimized re-rendering and memory management
-5. **OpenShift Integration**: Uses OpenShift Console SDK for cluster data access
-6. **Error Handling**: Graceful degradation and automatic reconnection strategies
+3. **Pod Metrics Integration**: Direct correlation of pod resource usage with node allocatable resources
+4. **Resource Calculations**: Automatic unit conversion (Gi→GB, millicores→cores, nanocores→percentages)
+5. **State Management**: React hooks with optimized re-rendering and memory management
+6. **OpenShift Integration**: Uses OpenShift Console SDK for cluster data access
+7. **Error Handling**: Graceful degradation and automatic reconnection strategies
 
 ### Performance Optimizations
 
@@ -534,8 +559,12 @@ yarn run test:integration
 
 ## 🎯 Code Quality & TypeScript
 
-### Current Status (v4.0.0) - Production Ready
+### Current Status (v5.0.0) - Production Ready
 
+- ✅ **Zero Mock Data**: Complete elimination of simulated values in favor of real Kubernetes API data
+- ✅ **Real Pod Metrics**: Integration with metrics.k8s.io/v1beta1 for actual CPU/memory usage
+- ✅ **Sortable Data Tables**: Advanced sorting with proper data type handling
+- ✅ **Responsive Design**: 3-nodes-per-row layout with optimized breakpoints
 - ✅ **Production Architecture**: Enterprise-grade configuration management, error handling, and performance optimization
 - ✅ **TypeScript Compilation**: 100% successful builds without errors
 - ✅ **Error Handling**: Comprehensive circuit breaker patterns and structured logging
@@ -693,7 +722,42 @@ Integration-ready monitoring:
 
 ## 📋 Changelog
 
-### Latest Changes (v4.0.2) - CSS Architecture Refactoring & Performance Improvements
+### Latest Changes (v5.0.0) - Complete Real Data Implementation & Enhanced UX
+
+- 🚫 **Zero Mock Data**: Complete elimination of all simulated values across the entire application
+  - Removed artificial pod CPU/memory usage (hardcoded 0%)
+  - Eliminated random storage utilization (Math.random())
+  - Removed fake network throughput calculations
+  - Eliminated artificial historical patterns (Math.sin())
+  - All displays now show real data or clear "N/A"/"Not available" indicators
+
+- 📊 **Real Pod Metrics Integration**: Direct integration with Kubernetes metrics server
+  - Added `podMetricsWatch` using `metrics.k8s.io/v1beta1/PodMetrics` API
+  - Created `KubernetesPodMetrics` interface for proper API response handling
+  - Implemented pod metrics correlation logic in `processNodeData` function
+  - Real CPU/memory calculation: aggregates container usage, converts to percentages
+  - Enhanced NodeDetailsDrawer with actual CPU %/Memory % columns
+
+- 🗂️ **Advanced Sortable Pods Table**: Comprehensive table sorting functionality
+  - **Smart Data Type Sorting**: Strings (case-insensitive), numbers (proper numerical), time values (chronological)
+  - **Multiple Sort Fields**: Name, namespace, status, CPU usage, memory usage, containers, restarts, age
+  - **Visual Sort Indicators**: Clear ascending/descending arrows with SortAlphaUpIcon/SortAlphaDownIcon
+  - **Combined Search & Sort**: Maintains sort order when filtering with search
+  - **Dynamic Counts**: Shows "X of Y pods" with contextual messaging when filtering
+
+- 🎨 **Enhanced Dashboard Layout**: Improved responsive design and user experience
+  - **Responsive Grid**: Optimized 3-nodes-per-row layout with breakpoints (span=12 sm=6 md=4 lg=4 xl=3)
+  - **Consolidated Status**: Unified live status indicator replacing duplicate indicators
+  - **Cluster Resource Cards**: Extended summary with CPU cores, memory GB, storage TB, network Mbps
+  - **Real Resource Aggregation**: Actual CPU/memory totals from node allocatable resources
+
+- 🔄 **Streamlined Interface**: Removed manual refresh functionality
+  - Eliminated RedoIcon import and refresh button component
+  - Removed manualRefreshCooldown state and handleManualRefresh function
+  - Fixed all TypeScript errors from unused imports/variables
+  - Focus on automatic real-time updates every 3 seconds
+
+### Previous Changes (v4.0.2) - CSS Architecture Refactoring & Performance Improvements
 
 - 🎨 **Zero Inline CSS**: Complete removal of all inline styles from React components for better maintainability and separation of concerns
 - ⚡ **CSS Performance**: Replaced runtime style calculations with optimized CSS classes, improving rendering performance

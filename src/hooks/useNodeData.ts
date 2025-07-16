@@ -39,6 +39,21 @@ interface KubernetesNodeMetrics {
   };
 }
 
+// Interface for Kubernetes PodMetrics API response
+interface KubernetesPodMetrics {
+  metadata: {
+    name: string;
+    namespace: string;
+  };
+  containers: Array<{
+    name: string;
+    usage: {
+      cpu: string; // e.g., "23456789n" (nanocores)
+      memory: string; // e.g., "123456Ki" (kilobytes)
+    };
+  }>;
+}
+
 // Define a simplified PodResource interface for the dashboard
 interface SimplePodResource {
   name: string;
@@ -100,6 +115,15 @@ export const useNodeData = (): UseNodeDataReturn => {
     isList: true,
   });
 
+  const podMetricsWatch = useK8sWatchResource({
+    groupVersionKind: {
+      group: 'metrics.k8s.io',
+      version: 'v1beta1',
+      kind: 'PodMetrics',
+    },
+    isList: true,
+  });
+
   // Metrics polling function (replacing watch)
   const pollMetrics = useCallback(async () => {
     try {
@@ -156,6 +180,7 @@ export const useNodeData = (): UseNodeDataReturn => {
   const [watchedNodes, nodesLoaded, nodesError] = nodesWatch || [null, false, null];
   const [watchedPods, podsLoaded, podsError] = podsWatch || [null, false, null];
   const [watchedEvents, eventsLoaded, eventsError] = eventsWatch || [null, false, null];
+  const [watchedPodMetrics, podMetricsLoaded, podMetricsError] = podMetricsWatch || [null, false, null];
   const [watchedMetrics, metricsLoaded, metricsError] = [
     polledMetrics,
     polledMetricsLoaded,
@@ -352,28 +377,22 @@ export const useNodeData = (): UseNodeDataReturn => {
       memoryUsagePercent = Math.min(95, baseMemoryUsage + podDensityRatio * 35);
     }
 
-    // Generate realistic historical data
+    // Generate historical data - only use current real value for real metrics
     const generateHistory = (
       currentValue: number,
       isRealData = false,
     ): Array<{ timestamp: number; value: number }> => {
       const history: Array<{ timestamp: number; value: number }> = [];
       const now = Date.now();
-      const dataPoints = isRealData ? 30 : 20; // More data points for real metrics
-      const intervalMs = isRealData ? 30000 : 60000; // 30s vs 1min intervals
+      const dataPoints = isRealData ? 30 : 20;
+      const intervalMs = isRealData ? 30000 : 60000;
 
       for (let i = dataPoints; i >= 0; i--) {
         const timestamp = now - i * intervalMs;
 
-        // Create more realistic patterns for real data
-        const timeOfDay = new Date(timestamp).getHours();
-        const dailyPattern = 0.8 + 0.4 * Math.sin(((timeOfDay - 6) * Math.PI) / 12);
-
-        const variance = isRealData
-          ? 0 // No variance for real data
-          : 0; // No variance for estimated data
-
-        const value = Math.max(0, Math.min(100, currentValue * dailyPattern + variance));
+        // For real data, use only the current actual value (no artificial patterns)
+        // For estimated data, keep it flat since we don't have historical data
+        const value = Math.max(0, Math.min(100, currentValue));
         history.push({ timestamp, value: Math.round(value * 10) / 10 });
       }
 
@@ -397,6 +416,7 @@ export const useNodeData = (): UseNodeDataReturn => {
     nodePods: K8sResourceKind[],
     nodeEvents: K8sResourceKind[],
     nodeMetrics?: KubernetesNodeMetrics,
+    podMetrics?: KubernetesPodMetrics[],
   ): NodeDetail => {
     const name = nodeData.metadata?.name || 'Unknown';
     const labels = nodeData.metadata?.labels || {};
@@ -493,7 +513,7 @@ export const useNodeData = (): UseNodeDataReturn => {
     // Calculate metrics using real data when available
     const metrics = calculateNodeMetrics(name, nodePods, allocatable, nodeMetrics);
 
-    // Process pods (simplified for now)
+    // Process pods with real metrics when available
     const pods: SimplePodResource[] = nodePods.map((pod: K8sResourceKind) => {
       const podStatus = pod.status as KubernetesPodStatus;
       const podSpec = pod.spec as KubernetesPodSpec;
@@ -506,12 +526,48 @@ export const useNodeData = (): UseNodeDataReturn => {
           0,
         ) || 0;
 
+      // Find corresponding pod metrics
+      const podMetric = podMetrics?.find(
+        (metric) =>
+          metric.metadata.name === pod.metadata?.name &&
+          metric.metadata.namespace === pod.metadata?.namespace
+      );
+
+      let cpuUsage = 0;
+      let memoryUsage = 0;
+
+      if (podMetric && podMetric.containers) {
+        // Calculate total CPU and memory usage across all containers
+        let totalCpuNanocores = 0;
+        let totalMemoryBytes = 0;
+
+        podMetric.containers.forEach((container) => {
+          if (container.usage.cpu) {
+            totalCpuNanocores += parseCpuValue(container.usage.cpu);
+          }
+          if (container.usage.memory) {
+            totalMemoryBytes += parseMemoryValue(container.usage.memory);
+          }
+        });
+
+        // Convert to percentage based on node allocatable resources
+        const nodeCpuCores = parseCpuValue(allocatable.cpu || '0');
+        const nodeMemoryBytes = parseMemoryValue(allocatable.memory || '0Ki');
+
+        if (nodeCpuCores > 0) {
+          cpuUsage = (totalCpuNanocores / nodeCpuCores) * 100;
+        }
+        if (nodeMemoryBytes > 0) {
+          memoryUsage = (totalMemoryBytes / nodeMemoryBytes) * 100;
+        }
+      }
+
       return {
         name: pod.metadata?.name || 'Unknown',
         namespace: pod.metadata?.namespace || 'Unknown',
         status: podStatus?.phase || 'Unknown',
-        cpuUsage: 0, // Real pod metrics not available through basic API
-        memoryUsage: 0, // Real pod metrics not available through basic API
+        cpuUsage: Math.round(cpuUsage * 100) / 100, // Round to 2 decimal places
+        memoryUsage: Math.round(memoryUsage * 100) / 100, // Round to 2 decimal places
         restarts: restartCount,
         age: getAge(pod.metadata?.creationTimestamp || new Date().toISOString()),
         containers: containerCount,
@@ -624,6 +680,11 @@ export const useNodeData = (): UseNodeDataReturn => {
             ? watchedMetrics
             : [watchedMetrics]
           : [];
+      const podMetricsArray = watchedPodMetrics
+        ? Array.isArray(watchedPodMetrics)
+          ? watchedPodMetrics
+          : [watchedPodMetrics]
+        : [];
 
       const processedNodes = nodesArray.map((nodeData: K8sResourceKind) => {
         const nodePods = podsArray.filter(
@@ -644,7 +705,19 @@ export const useNodeData = (): UseNodeDataReturn => {
           (metric: K8sResourceKind) => metric.metadata?.name === nodeData.metadata?.name,
         ) as unknown as KubernetesNodeMetrics | undefined;
 
-        return processNodeData(nodeData, nodePods, nodeEvents, nodeMetrics);
+        // Filter pod metrics for pods on this node
+        const nodePodMetrics = podMetricsArray
+          .filter((podMetric: K8sResourceKind) => {
+            const podMetricData = podMetric as unknown as KubernetesPodMetrics;
+            return nodePods.some(
+              (pod: K8sResourceKind) =>
+                pod.metadata?.name === podMetricData.metadata?.name &&
+                pod.metadata?.namespace === podMetricData.metadata?.namespace
+            );
+          })
+          .map((podMetric: K8sResourceKind) => podMetric as unknown as KubernetesPodMetrics);
+
+        return processNodeData(nodeData, nodePods, nodeEvents, nodeMetrics, nodePodMetrics);
       });
 
       setNodes(processedNodes);
@@ -663,14 +736,17 @@ export const useNodeData = (): UseNodeDataReturn => {
     watchedNodes,
     watchedPods,
     watchedEvents,
+    watchedPodMetrics,
     watchedMetrics,
     nodesLoaded,
     podsLoaded,
     eventsLoaded,
+    podMetricsLoaded,
     metricsLoaded,
     nodesError,
     podsError,
     eventsError,
+    podMetricsError,
     metricsError,
   ]);
 
