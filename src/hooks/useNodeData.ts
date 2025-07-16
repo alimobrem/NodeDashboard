@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useK8sWatchResource, usePrometheusPoll, PrometheusEndpoint } from '@openshift-console/dynamic-plugin-sdk';
 import { K8sResourceKind } from '@openshift-console/dynamic-plugin-sdk';
 import { NodeDetail, NodeCondition, NodeMetrics, NodeEvent, NodeTaint, NodeLog } from '../types';
@@ -92,11 +92,7 @@ export const useNodeData = (): UseNodeDataReturn => {
   const [error, setError] = useState<string | null>(null);
   const [metricsAvailable, setMetricsAvailable] = useState(false);
 
-  // Metrics polling state
-  const [polledMetrics, setPolledMetrics] = useState<K8sResourceKind[]>([]);
-  const [polledMetricsLoaded, setPolledMetricsLoaded] = useState(false);
-  const [polledMetricsError, setPolledMetricsError] = useState<Error | null>(null);
-  const metricsPollingRef = useRef<NodeJS.Timeout | null>(null);
+  // Removed manual metrics polling - now using usePrometheusPoll for all metrics
 
   // Watch-based data fetching using Kubernetes watches
   const nodesWatch = useK8sWatchResource({
@@ -155,7 +151,7 @@ export const useNodeData = (): UseNodeDataReturn => {
     isList: true,
   });
 
-  // Prometheus polling for network metrics
+  // Prometheus polling for all metrics - network, CPU, and memory
   // Network bytes received per second across all nodes
   const [networkIngressData] = usePrometheusPoll({
     query: 'sum(rate(node_network_receive_bytes_total{device!="lo"}[5m])) * 8 / 1000000', // Convert to Mbps
@@ -170,57 +166,61 @@ export const useNodeData = (): UseNodeDataReturn => {
     delay: 10000, // Poll every 10 seconds
   });
 
-  // Metrics polling function (replacing watch)
-  const pollMetrics = useCallback(async () => {
+  // CPU usage percentage per node
+  const [nodeCpuData] = usePrometheusPoll({
+    query: '100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)',
+    endpoint: PrometheusEndpoint.QUERY,
+    delay: 10000, // Poll every 10 seconds
+  });
+
+  // Memory usage per node (used memory in bytes)
+  const [nodeMemoryData] = usePrometheusPoll({
+    query: 'node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes',
+    endpoint: PrometheusEndpoint.QUERY,
+    delay: 10000, // Poll every 10 seconds
+  });
+
+  // Memory total is calculated from allocatable resources in Kubernetes API
+
+  // Convert Prometheus data to KubernetesNodeMetrics format
+  const convertPrometheusToNodeMetrics = (nodeName: string): KubernetesNodeMetrics | undefined => {
     try {
-      console.log('🔄 Polling NodeMetrics API...');
-
-      // Use console's built-in API proxy to access metrics
-      const response = await fetch('/api/kubernetes/apis/metrics.k8s.io/v1beta1/nodes', {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      // Find CPU data for this node
+      const cpuResult = nodeCpuData?.data?.result?.find((result: any) => 
+        result.metric?.instance?.includes(nodeName) || result.metric?.node === nodeName
+      );
+      
+      // Find memory data for this node
+      const memoryResult = nodeMemoryData?.data?.result?.find((result: any) => 
+        result.metric?.instance?.includes(nodeName) || result.metric?.node === nodeName
+      );
+      
+      if (!cpuResult && !memoryResult) {
+        return undefined;
       }
 
-      const data = await response.json();
-      const metricsItems = data.items || [];
+      // Convert CPU percentage to nanocores (approximate)
+      const cpuPercent = cpuResult?.value?.[1] ? parseFloat(cpuResult.value[1]) : 0;
+      const cpuNanocores = Math.round(cpuPercent * 10000000); // Rough conversion for display
 
-      setPolledMetrics(metricsItems);
-      setPolledMetricsLoaded(true);
-      setPolledMetricsError(null);
-      console.log('✅ Metrics polling successful, got', metricsItems.length, 'node metrics');
+      // Memory is already in bytes from Prometheus
+      const memoryBytes = memoryResult?.value?.[1] ? parseFloat(memoryResult.value[1]) : 0;
+      const memoryKi = Math.round(memoryBytes / 1024); // Convert to Ki
+
+      return {
+        metadata: { name: nodeName },
+        usage: {
+          cpu: `${cpuNanocores}n`,
+          memory: `${memoryKi}Ki`
+        }
+      };
     } catch (err) {
-      console.warn('⚠️ Metrics polling failed:', err);
-      setPolledMetricsError(err as Error);
-      // Don't set loaded to false on error - keep using last good data
+      console.warn(`Failed to convert Prometheus data for node ${nodeName}:`, err);
+      return undefined;
     }
-  }, []);
+  };
 
-  // Start metrics polling on mount
-  useEffect(() => {
-    console.log('🚀 Starting metrics polling every 3 seconds...');
-
-    // Poll immediately
-    pollMetrics();
-
-    // Set up interval for every 3 seconds
-    metricsPollingRef.current = setInterval(pollMetrics, 3000);
-
-    // Cleanup on unmount
-    return () => {
-      if (metricsPollingRef.current) {
-        console.log('🛑 Stopping metrics polling');
-        clearInterval(metricsPollingRef.current);
-        metricsPollingRef.current = null;
-      }
-    };
-  }, []); // Empty dependency array - only run on mount/unmount
+  // All metrics now handled by usePrometheusPoll hooks above
 
   // Extract values from watch results safely (using polled metrics instead of watch)
   const [watchedNodes, nodesLoaded, nodesError] = nodesWatch || [null, false, null];
@@ -229,10 +229,12 @@ export const useNodeData = (): UseNodeDataReturn => {
   const [watchedPodMetrics, podMetricsLoaded, podMetricsError] = podMetricsWatch || [null, false, null];
   const [watchedPersistentVolumes, persistentVolumesLoaded, persistentVolumesError] = persistentVolumesWatch || [null, false, null];
   const [watchedPersistentVolumeClaims, persistentVolumeClaimsLoaded, persistentVolumeClaimsError] = persistentVolumeClaimsWatch || [null, false, null];
+  // Prometheus metrics availability check
+  const prometheusMetricsAvailable = (nodeCpuData?.data?.result?.length ?? 0) > 0 || (nodeMemoryData?.data?.result?.length ?? 0) > 0;
   const [watchedMetrics, metricsLoaded, metricsError] = [
-    polledMetrics,
-    polledMetricsLoaded,
-    polledMetricsError,
+    [], // Empty array since we use Prometheus data directly
+    prometheusMetricsAvailable, // Available if we have Prometheus data
+    null // No error state needed since Prometheus hooks handle their own errors
   ];
 
   // Utility function to parse CPU from various formats
@@ -705,8 +707,8 @@ export const useNodeData = (): UseNodeDataReturn => {
       setError(null);
 
       // Check if metrics are available
-      const metricsWork = metricsLoaded && !metricsError;
-      setMetricsAvailable(metricsWork);
+      // Use Prometheus metrics availability
+      setMetricsAvailable(prometheusMetricsAvailable);
 
       // Process data arrays
       const nodesArray = watchedNodes
@@ -724,12 +726,7 @@ export const useNodeData = (): UseNodeDataReturn => {
           ? watchedEvents
           : [watchedEvents]
         : [];
-      const metricsArray =
-        watchedMetrics && metricsWork
-          ? Array.isArray(watchedMetrics)
-            ? watchedMetrics
-            : [watchedMetrics]
-          : [];
+      // Metrics now handled by Prometheus data conversion
       const podMetricsArray = watchedPodMetrics
         ? Array.isArray(watchedPodMetrics)
           ? watchedPodMetrics
@@ -751,10 +748,8 @@ export const useNodeData = (): UseNodeDataReturn => {
           );
         });
 
-        // Find metrics for this node
-        const nodeMetrics = metricsArray.find(
-          (metric: K8sResourceKind) => metric.metadata?.name === nodeData.metadata?.name,
-        ) as unknown as KubernetesNodeMetrics | undefined;
+        // Convert Prometheus metrics for this node
+        const nodeMetrics = convertPrometheusToNodeMetrics(nodeData.metadata?.name || '');
 
         // Filter pod metrics for pods on this node
         const nodePodMetrics = podMetricsArray

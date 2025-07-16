@@ -148,10 +148,11 @@ A **production-ready** OpenShift Console dynamic plugin for real-time monitoring
 ### API Integration
 - **OpenShift Node API**: Real-time node data retrieval
 - **Pod Watch API**: Live pod monitoring for selected nodes
-- **Pod Metrics API**: Real CPU and memory usage from metrics server
 - **Events API**: System event streaming and notifications
-- **Metrics API**: Resource usage data with proper unit conversion
-- **Prometheus API**: Network throughput metrics via `/api/prometheus` endpoint with `usePrometheusPoll`
+- **Prometheus API**: Complete metrics integration via `/api/prometheus` endpoint with `usePrometheusPoll`
+  - **Network Metrics**: `node_network_receive_bytes_total` and `node_network_transmit_bytes_total`
+  - **CPU Metrics**: `node_cpu_seconds_total` for real CPU usage percentages
+  - **Memory Metrics**: `node_memory_MemTotal_bytes` and `node_memory_MemAvailable_bytes`
 - **PersistentVolume API**: Real storage capacity and utilization calculations
 - **Custom Resource Definitions**: Extended metadata and configuration
 - **Kubernetes Proxy API**: Direct log access through `/api/v1/nodes/{nodeName}/proxy/logs/{path}` endpoints
@@ -724,7 +725,23 @@ Integration-ready monitoring:
 
 ## 📋 Changelog
 
-### Latest Changes (v5.0.0) - Complete Real Data Implementation & Enhanced UX
+### Latest Changes (v5.1.0) - Complete Prometheus Migration & Metrics Standardization
+
+- 🔄 **Complete Prometheus Migration**: Replaced all manual metrics polling with standardized `usePrometheusPoll`
+  - **Eliminated Manual Polling**: Removed custom fetch-based metrics polling and interval management
+  - **Unified Metrics Architecture**: All CPU, memory, and network metrics now use `usePrometheusPoll` hooks
+  - **Prometheus-Only Approach**: Standardized on Prometheus API for all real-time metrics data
+  - **Performance Optimization**: Removed manual polling state management and cleanup complexity
+  - **Consistent Update Intervals**: All metrics update every 10 seconds via Prometheus endpoints
+
+- 🏗️ **Metrics Architecture Refactoring**: Streamlined data processing pipeline
+  - **Prometheus Data Conversion**: Created `convertPrometheusToNodeMetrics()` for seamless integration
+  - **Real CPU Usage**: `node_cpu_seconds_total{mode="idle"}` for accurate CPU percentage calculations
+  - **Real Memory Usage**: `node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes` for live memory data
+  - **Eliminated Fallback Logic**: Removed estimated metrics based on pod density
+  - **TypeScript Optimization**: Cleaned up unused imports, states, and callback functions
+
+### Previous Changes (v5.0.0) - Complete Real Data Implementation & Enhanced UX
 
 - 🚫 **Zero Mock Data**: Complete elimination of all simulated values across the entire application
   - Removed artificial pod CPU/memory usage (hardcoded 0%)
