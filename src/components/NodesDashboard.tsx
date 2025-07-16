@@ -43,7 +43,7 @@ import { getAge } from '../utils/timeUtils';
 import './NodesDashboard.css';
 
 const NodesDashboard: React.FC = () => {
-  const { nodes, loading, error, metricsAvailable } = useNodeData();
+  const { nodes, loading, error, metricsAvailable, storageData, networkData } = useNodeData();
   const {
     searchTerm,
     setSearchTerm,
@@ -143,15 +143,76 @@ const NodesDashboard: React.FC = () => {
               sum + (node.metrics?.memory?.current || 0), 0) / filteredAndSortedNodes.length
           : 0
       },
-      totalStorage: {
-        // Note: Real storage metrics would require PersistentVolume API or storage monitoring
-        totalTB: 0, // Not available through basic node API
-        utilizationPercent: 0 // Not available through basic node API
-      },
+      totalStorage: (() => {
+        // Calculate real storage metrics from PersistentVolumes and PersistentVolumeClaims
+        const { persistentVolumes, persistentVolumeClaims } = storageData;
+        
+        if (!persistentVolumes || !persistentVolumeClaims) {
+          return {
+            totalTB: 0,
+            utilizationPercent: 0
+          };
+        }
+
+        // Parse storage values from various formats (Ki, Mi, Gi, Ti)
+        const parseStorageValue = (storage: string): number => {
+          if (storage.endsWith('Ki')) {
+            return parseInt(storage.slice(0, -2)) * 1024;
+          } else if (storage.endsWith('Mi')) {
+            return parseInt(storage.slice(0, -2)) * 1024 * 1024;
+          } else if (storage.endsWith('Gi')) {
+            return parseInt(storage.slice(0, -2)) * 1024 * 1024 * 1024;
+          } else if (storage.endsWith('Ti')) {
+            return parseInt(storage.slice(0, -2)) * 1024 * 1024 * 1024 * 1024;
+          }
+          return parseInt(storage);
+        };
+
+        try {
+          // Convert arrays properly
+          const pvsArray = Array.isArray(persistentVolumes) ? persistentVolumes : [persistentVolumes];
+          const pvcsArray = Array.isArray(persistentVolumeClaims) ? persistentVolumeClaims : [persistentVolumeClaims];
+
+          // Calculate total capacity from PersistentVolumes
+          let totalCapacityBytes = 0;
+          let totalUsedBytes = 0;
+
+          pvsArray.forEach((pv: any) => {
+            if (pv?.spec?.capacity?.storage) {
+              totalCapacityBytes += parseStorageValue(pv.spec.capacity.storage);
+            }
+          });
+
+          // Calculate used storage from bound PersistentVolumeClaims
+          pvcsArray.forEach((pvc: any) => {
+            if (pvc?.status?.phase === 'Bound' && pvc?.status?.capacity?.storage) {
+              totalUsedBytes += parseStorageValue(pvc.status.capacity.storage);
+            } else if (pvc?.spec?.resources?.requests?.storage) {
+              // Fallback to requested storage if capacity isn't available
+              totalUsedBytes += parseStorageValue(pvc.spec.resources.requests.storage);
+            }
+          });
+
+          // Convert to TB
+          const totalTB = totalCapacityBytes / (1024 * 1024 * 1024 * 1024);
+          const utilizationPercent = totalCapacityBytes > 0 ? (totalUsedBytes / totalCapacityBytes) * 100 : 0;
+
+          return {
+            totalTB: Math.round(totalTB * 100) / 100, // Round to 2 decimal places
+            utilizationPercent: Math.round(utilizationPercent * 10) / 10 // Round to 1 decimal place
+          };
+        } catch (err) {
+          console.warn('Failed to calculate storage metrics:', err);
+          return {
+            totalTB: 0,
+            utilizationPercent: 0
+          };
+        }
+      })(),
       networkThroughput: {
-        // Note: Real network metrics would require monitoring systems (Prometheus, etc.)
-        ingressMbps: 0, // Not available through basic node API
-        egressMbps: 0  // Not available through basic node API
+        // Real network metrics from Prometheus monitoring
+        ingressMbps: networkData.ingressMbps,
+        egressMbps: networkData.egressMbps
       }
     };
 

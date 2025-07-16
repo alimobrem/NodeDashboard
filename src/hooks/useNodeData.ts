@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
+import { useK8sWatchResource, usePrometheusPoll, PrometheusEndpoint } from '@openshift-console/dynamic-plugin-sdk';
 import { K8sResourceKind } from '@openshift-console/dynamic-plugin-sdk';
 import { NodeDetail, NodeCondition, NodeMetrics, NodeEvent, NodeTaint, NodeLog } from '../types';
 import { NodeAddress } from '../types/kubernetes';
@@ -54,6 +54,8 @@ interface KubernetesPodMetrics {
   }>;
 }
 
+
+
 // Define a simplified PodResource interface for the dashboard
 interface SimplePodResource {
   name: string;
@@ -73,6 +75,15 @@ interface UseNodeDataReturn {
   error: string | null;
   refetch: () => void;
   metricsAvailable: boolean;
+  storageData: {
+    persistentVolumes: any;
+    persistentVolumeClaims: any;
+  };
+  networkData: {
+    ingressMbps: number;
+    egressMbps: number;
+    available: boolean;
+  };
 }
 
 export const useNodeData = (): UseNodeDataReturn => {
@@ -122,6 +133,41 @@ export const useNodeData = (): UseNodeDataReturn => {
       kind: 'PodMetrics',
     },
     isList: true,
+  });
+
+  // Add PersistentVolume watching for real storage metrics
+  const persistentVolumesWatch = useK8sWatchResource({
+    groupVersionKind: {
+      group: '',
+      version: 'v1',
+      kind: 'PersistentVolume',
+    },
+    isList: true,
+  });
+
+  // Add PersistentVolumeClaim watching for storage usage
+  const persistentVolumeClaimsWatch = useK8sWatchResource({
+    groupVersionKind: {
+      group: '',
+      version: 'v1',
+      kind: 'PersistentVolumeClaim',
+    },
+    isList: true,
+  });
+
+  // Prometheus polling for network metrics
+  // Network bytes received per second across all nodes
+  const [networkIngressData] = usePrometheusPoll({
+    query: 'sum(rate(node_network_receive_bytes_total{device!="lo"}[5m])) * 8 / 1000000', // Convert to Mbps
+    endpoint: PrometheusEndpoint.QUERY,
+    delay: 10000, // Poll every 10 seconds
+  });
+
+  // Network bytes transmitted per second across all nodes  
+  const [networkEgressData] = usePrometheusPoll({
+    query: 'sum(rate(node_network_transmit_bytes_total{device!="lo"}[5m])) * 8 / 1000000', // Convert to Mbps
+    endpoint: PrometheusEndpoint.QUERY,
+    delay: 10000, // Poll every 10 seconds
   });
 
   // Metrics polling function (replacing watch)
@@ -181,6 +227,8 @@ export const useNodeData = (): UseNodeDataReturn => {
   const [watchedPods, podsLoaded, podsError] = podsWatch || [null, false, null];
   const [watchedEvents, eventsLoaded, eventsError] = eventsWatch || [null, false, null];
   const [watchedPodMetrics, podMetricsLoaded, podMetricsError] = podMetricsWatch || [null, false, null];
+  const [watchedPersistentVolumes, persistentVolumesLoaded, persistentVolumesError] = persistentVolumesWatch || [null, false, null];
+  const [watchedPersistentVolumeClaims, persistentVolumeClaimsLoaded, persistentVolumeClaimsError] = persistentVolumeClaimsWatch || [null, false, null];
   const [watchedMetrics, metricsLoaded, metricsError] = [
     polledMetrics,
     polledMetricsLoaded,
@@ -213,6 +261,8 @@ export const useNodeData = (): UseNodeDataReturn => {
     }
     return parseInt(memory);
   };
+
+
 
   // Generate comprehensive logs from node events and pod activities
   const generateNodeLogs = (nodeName: string, events: NodeEvent[], pods: SimplePodResource[]) => {
@@ -640,12 +690,12 @@ export const useNodeData = (): UseNodeDataReturn => {
 
   // Process all watched data
   const processWatchedData = () => {
-    if (!nodesLoaded || !podsLoaded || !eventsLoaded) {
+    if (!nodesLoaded || !podsLoaded || !eventsLoaded || !persistentVolumesLoaded || !persistentVolumeClaimsLoaded) {
       setLoading(true);
       return;
     }
 
-    if (nodesError || podsError || eventsError) {
+    if (nodesError || podsError || eventsError || persistentVolumesError || persistentVolumeClaimsError) {
       setError('Failed to connect to the Kubernetes API. Please check your connection.');
       setLoading(false);
       return;
@@ -685,6 +735,7 @@ export const useNodeData = (): UseNodeDataReturn => {
           ? watchedPodMetrics
           : [watchedPodMetrics]
         : [];
+
 
       const processedNodes = nodesArray.map((nodeData: K8sResourceKind) => {
         const nodePods = podsArray.filter(
@@ -737,16 +788,22 @@ export const useNodeData = (): UseNodeDataReturn => {
     watchedPods,
     watchedEvents,
     watchedPodMetrics,
+    watchedPersistentVolumes,
+    watchedPersistentVolumeClaims,
     watchedMetrics,
     nodesLoaded,
     podsLoaded,
     eventsLoaded,
     podMetricsLoaded,
+    persistentVolumesLoaded,
+    persistentVolumeClaimsLoaded,
     metricsLoaded,
     nodesError,
     podsError,
     eventsError,
     podMetricsError,
+    persistentVolumesError,
+    persistentVolumeClaimsError,
     metricsError,
   ]);
 
@@ -756,11 +813,44 @@ export const useNodeData = (): UseNodeDataReturn => {
     processWatchedData();
   };
 
+  // Calculate network metrics from Prometheus data
+  const networkMetrics = (() => {
+    try {
+      const ingressMbps = networkIngressData?.data?.result?.[0]?.value?.[1] 
+        ? parseFloat(networkIngressData.data.result[0].value[1]) 
+        : 0;
+      
+      const egressMbps = networkEgressData?.data?.result?.[0]?.value?.[1] 
+        ? parseFloat(networkEgressData.data.result[0].value[1]) 
+        : 0;
+
+      const available = (networkIngressData?.data?.result?.length ?? 0) > 0 || (networkEgressData?.data?.result?.length ?? 0) > 0;
+
+      return {
+        ingressMbps: Math.round(ingressMbps * 100) / 100, // Round to 2 decimal places
+        egressMbps: Math.round(egressMbps * 100) / 100,   // Round to 2 decimal places
+        available
+      };
+    } catch (err) {
+      console.warn('Failed to parse network metrics from Prometheus:', err);
+      return {
+        ingressMbps: 0,
+        egressMbps: 0,
+        available: false
+      };
+    }
+  })();
+
   return {
     nodes,
     loading,
     error,
     refetch,
     metricsAvailable,
+    storageData: {
+      persistentVolumes: watchedPersistentVolumes,
+      persistentVolumeClaims: watchedPersistentVolumeClaims,
+    },
+    networkData: networkMetrics,
   };
 };

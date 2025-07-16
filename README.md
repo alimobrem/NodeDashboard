@@ -52,7 +52,7 @@ A **production-ready** OpenShift Console dynamic plugin for real-time monitoring
 - **Live Node Status**: Real-time view of all cluster nodes with unified live status indicator
 - **Cluster-Wide Resource Metrics**: Comprehensive summary cards showing:
   - **Node Status**: Total nodes, ready nodes, running pods, attention needed
-  - **Resource Utilization**: Total CPU cores, memory (GB), storage (TB), network throughput (Mbps)
+  - **Resource Utilization**: Total CPU cores, memory (GB), storage (TB), network throughput (Mbps via Prometheus)
 - **Responsive Grid Layout**: Optimized 3-nodes-per-row layout with responsive breakpoints
 - **Resource Monitoring**: Live CPU and memory usage with auto-refresh every 3 seconds
 - **Pod Statistics**: Running pod counts with dynamic updates
@@ -151,6 +151,8 @@ A **production-ready** OpenShift Console dynamic plugin for real-time monitoring
 - **Pod Metrics API**: Real CPU and memory usage from metrics server
 - **Events API**: System event streaming and notifications
 - **Metrics API**: Resource usage data with proper unit conversion
+- **Prometheus API**: Network throughput metrics via `/api/prometheus` endpoint with `usePrometheusPoll`
+- **PersistentVolume API**: Real storage capacity and utilization calculations
 - **Custom Resource Definitions**: Extended metadata and configuration
 - **Kubernetes Proxy API**: Direct log access through `/api/v1/nodes/{nodeName}/proxy/logs/{path}` endpoints
 - **Log Sources API**: Multiple log endpoints including journal, kubelet, containers, and control plane components
@@ -727,7 +729,7 @@ Integration-ready monitoring:
 - 🚫 **Zero Mock Data**: Complete elimination of all simulated values across the entire application
   - Removed artificial pod CPU/memory usage (hardcoded 0%)
   - Eliminated random storage utilization (Math.random())
-  - Removed fake network throughput calculations
+  - Replaced fake network throughput with real Prometheus-based metrics
   - Eliminated artificial historical patterns (Math.sin())
   - All displays now show real data or clear "N/A"/"Not available" indicators
 
@@ -756,6 +758,15 @@ Integration-ready monitoring:
   - Removed manualRefreshCooldown state and handleManualRefresh function
   - Fixed all TypeScript errors from unused imports/variables
   - Focus on automatic real-time updates every 3 seconds
+
+- 🌐 **Prometheus Network Metrics Integration**: Real-time network throughput monitoring
+  - Added `usePrometheusPoll` hooks for live network ingress/egress metrics
+  - Implemented cluster-wide network rate calculations using Prometheus queries:
+    - `node_network_receive_bytes_total{device!="lo"}` for ingress traffic
+    - `node_network_transmit_bytes_total{device!="lo"}` for egress traffic
+  - Real-time conversion from bytes/second to Mbps with 5-minute rate windows
+  - Network data auto-updates every 10 seconds via Prometheus API integration
+  - Graceful fallback to "N/A" when Prometheus data unavailable
 
 ### Previous Changes (v4.0.2) - CSS Architecture Refactoring & Performance Improvements
 
